@@ -685,6 +685,9 @@ app.get('/api/v3/toko/sources', async (req, res) => {
  * The endpoint intentionally returns source links instead of proxying media
  * bytes. Provider URLs often require their original headers, which are
  * included in each source for download clients that support them.
+ *
+ * Like the source endpoints, responses are SSE by default. Use `stream=0`
+ * when a single JSON response is preferred.
  */
 async function handleDownloadRequest(req, res) {
   const anilistId = Number(req.params.anilistId);
@@ -707,6 +710,7 @@ async function handleDownloadRequest(req, res) {
   const requestedLanguage = splitQueryValues(req.query.lang);
   const t = getToko();
   if (!t) return res.status(503).json({ error: 'Toko bundle is unavailable' });
+  const useSSE = req.query.stream !== '0';
 
   try {
     const opts = await optionsFromReq(req, { anilistId, episode });
@@ -714,22 +718,115 @@ async function handleDownloadRequest(req, res) {
     let result = cacheGet(key);
     let cached = true;
 
-    if (!result) {
-      const rawSources = typeof t.batch === 'function' ? await t.batch(opts) : [];
-      result = buildFinalResponse(rawSources, [], false);
-      cacheSet(key, result, STREAM_TTL_MS);
-      cached = false;
+    if (result) {
+      result.cached = true;
+      if (useSSE) {
+        startSSE(res);
+        for (const source of result.sources) {
+          const downloadSource = normalizeDownloadSource(source);
+          if (downloadTypeMatches(source, requestedType) && languageMatches(source, requestedLanguage)) {
+            sseEvent(res, 'source', downloadSource);
+          }
+        }
+        const response = buildDownloadResponse(
+          result.sources,
+          opts,
+          requestedLanguage,
+          requestedType,
+          true,
+        );
+        sseEvent(res, 'done', {
+          totalCount: response.count,
+          cached: true,
+          languages: response.languages,
+          subtitles: response.subtitles,
+        });
+        return res.end();
+      }
+      return res.json(buildDownloadResponse(
+        result.sources,
+        opts,
+        requestedLanguage,
+        requestedType,
+        true,
+      ));
     }
 
-    return res.json(buildDownloadResponse(
+    const allSources = [];
+    const providerStatus = [];
+    cached = false;
+    if (useSSE) startSSE(res);
+
+    const onChunk = (chunk) => {
+      providerStatus.push(chunk.diagnostic);
+      for (const source of chunk.results) {
+        if (!hasUsableUrl(source)) continue;
+        allSources.push(source);
+        const normalized = normalizeSource(source);
+        if (
+          downloadTypeMatches(normalized, requestedType)
+          && languageMatches(normalized, requestedLanguage)
+          && useSSE
+        ) {
+          sseEvent(res, 'source', normalizeDownloadSource(normalized));
+        }
+      }
+      if (useSSE) sseEvent(res, 'provider_status', chunk.diagnostic);
+    };
+
+    try {
+      if (typeof t.sourcesAll === 'function') {
+        await t.sourcesAll(opts, onChunk);
+      } else {
+        const rawSources = typeof t.batch === 'function' ? await t.batch(opts) : [];
+        onChunk({
+          results: rawSources,
+          diagnostic: {
+            provider: 'toko',
+            status: 'success',
+            durationMs: 0,
+            attempts: 1,
+            resultCount: rawSources.length,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('[toko/download]', err.message);
+      if (useSSE) {
+        sseEvent(res, 'error', { message: err.message });
+        return res.end();
+      }
+      return res.status(502).json({ error: err.message });
+    }
+
+    result = buildFinalResponse(allSources, providerStatus, false);
+    cacheSet(key, result, STREAM_TTL_MS);
+
+    const response = buildDownloadResponse(
       result.sources,
       opts,
       requestedLanguage,
       requestedType,
       cached,
-    ));
+    );
+    if (useSSE) {
+      sseEvent(res, 'done', {
+        totalCount: response.count,
+        cached: false,
+        languages: response.languages,
+        subtitles: response.subtitles,
+      });
+      return res.end();
+    }
+
+    return res.json(response);
   } catch (err) {
     console.error('[toko/download]', err.message);
+    if (useSSE && !res.headersSent) startSSE(res);
+    if (useSSE) {
+      sseEvent(res, 'error', { message: err.message });
+      return res.end();
+    }
     return res.status(502).json({ error: err.message });
   }
 }
