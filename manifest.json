@@ -20,7 +20,8 @@
     "routes": [
       "sources",
       "stream",
-      "torrent"
+      "torrent",
+      "download"
     ],
     "healthPath": "/health"
   },

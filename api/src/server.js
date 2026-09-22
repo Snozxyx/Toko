@@ -8,6 +8,7 @@
  *   GET /api/v3/toko/sources             — All sources: streams + torrents (SSE or JSON)
  *   GET /api/v3/toko/debug               — Raw diagnostics per provider
  *   GET /api/v3/toko/languages           — Language capabilities
+ *   GET /download/:anilistId/:episode    — Download-ready media sources
  *   GET /api/v3/toko/index/episodes      — Episode index
  *   GET /api/v3/toko/index/chapters      — Chapter index (stub)
  *
@@ -340,8 +341,8 @@ function parseTitles(query) {
   return Array.isArray(raw) ? raw.map(String) : [String(raw)];
 }
 
-async function optionsFromReq(req) {
-  const anilistId = Number(req.query.anilistId);
+async function optionsFromReq(req, overrides = {}) {
+  const anilistId = Number(overrides.anilistId ?? req.query.anilistId);
   const safeAnilistId = Number.isFinite(anilistId) && anilistId > 0 ? anilistId : 0;
 
   // Merge caller-provided titles with AniList-fetched canonical titles
@@ -367,7 +368,9 @@ async function optionsFromReq(req) {
   return {
     anilistId: safeAnilistId,
     titles,
-    episode: req.query.episode ? Number(req.query.episode) : 1,
+    episode: overrides.episode != null
+      ? Number(overrides.episode)
+      : (req.query.episode ? Number(req.query.episode) : 1),
     resolution: String(req.query.resolution || '1080p'),
     preferredLanguage: req.query.preferredLanguage ? String(req.query.preferredLanguage) : undefined,
     preferredLanguages: req.query.preferredLanguages
@@ -404,6 +407,152 @@ function buildFinalResponse(allSources, providerStatus, cached) {
     count: normalized.length,
     cached,
     fetchedAt: new Date().toISOString(),
+  };
+}
+
+// ── Download endpoint helpers ────────────────────────────────────────────────
+
+const DOWNLOAD_TYPES = new Set(['all', 'stream', 'hls', 'm3u8', 'mp4', 'torrent', 'mkv']);
+
+function normalizedQueryValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function splitQueryValues(value) {
+  return String(value || '')
+    .split(',')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function languageMatches(source, requestedLanguages) {
+  if (requestedLanguages.length === 0) return true;
+
+  const values = [
+    source.audioLanguage,
+    source.language,
+    ...(Array.isArray(source.subtitles)
+      ? source.subtitles.flatMap(track => [track.language, track.label])
+      : []),
+  ]
+    .filter(Boolean)
+    .map(value => String(value).toLowerCase());
+
+  return requestedLanguages.some(requested =>
+    values.some(value => value === requested || value.startsWith(`${requested}-`) || value.includes(requested)),
+  );
+}
+
+function downloadTypeMatches(source, requestedType) {
+  if (requestedType === 'all') return source.type === 'hls' || source.type === 'mp4' || source.type === 'torrent';
+  if (requestedType === 'stream') return source.type === 'hls' || source.type === 'mp4';
+  if (requestedType === 'hls' || requestedType === 'm3u8') return source.type === 'hls';
+  if (requestedType === 'torrent') return source.type === 'torrent';
+  if (requestedType === 'mkv') return source.type === 'torrent' && source.fileFormat === 'mkv';
+  if (requestedType === 'mp4') {
+    return source.type === 'mp4' || (source.type === 'torrent' && source.fileFormat === 'mp4');
+  }
+  return false;
+}
+
+function normalizeDownloadSource(source) {
+  const subtitles = Array.isArray(source.subtitles)
+    ? source.subtitles
+      .filter(track => track && track.url)
+      .map(track => ({
+        url: String(track.url),
+        label: String(track.label || track.language || 'Unknown'),
+        language: String(track.language || 'und'),
+        default: Boolean(track.default),
+      }))
+    : [];
+
+  const result = {
+    url: source.type === 'torrent' ? (source.magnetLink || source.url) : source.url,
+    source: source.source,
+    providerName: source.providerName,
+    providerKey: source.providerKey,
+    server: source.server,
+    type: source.type,
+    quality: source.quality,
+    headers: source.headers || {},
+    audioLanguage: source.audioLanguage || 'und',
+    language: source.language || LANG_LABEL_MAP[source.audioLanguage] || 'Unknown',
+    languageLabel: source.languageLabel,
+    isDub: Boolean(source.isDub),
+    subtitles,
+  };
+
+  if (source.type === 'torrent') {
+    result.torrent = {
+      title: source.torrentTitle || null,
+      fileFormat: source.fileFormat || 'video',
+      fileSize: source.fileSize || null,
+      magnetLink: source.magnetLink || (String(source.url).startsWith('magnet:') ? source.url : null),
+      torrentFileUrl: source.magnetLink ? (source.url !== source.magnetLink ? source.url : null) : source.url,
+      seeders: source.seeders ?? 0,
+      leechers: source.leechers ?? 0,
+      peers: source.peers ?? ((source.seeders ?? 0) + (source.leechers ?? 0)),
+      matchScore: source.matchScore ?? null,
+      releaseGroup: source.releaseGroup || null,
+    };
+  }
+
+  return result;
+}
+
+function collectSubtitles(sources) {
+  const seen = new Set();
+  const subtitles = [];
+
+  for (const source of sources) {
+    for (const subtitle of source.subtitles || []) {
+      const key = `${subtitle.url}\u0000${subtitle.language}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      subtitles.push({
+        ...subtitle,
+        providerName: source.providerName,
+        source: source.source,
+      });
+    }
+  }
+
+  return subtitles;
+}
+
+function buildDownloadResponse(sources, opts, requestedLanguage, requestedType, cached) {
+  const filtered = sources
+    .filter(source => downloadTypeMatches(source, requestedType))
+    .filter(source => languageMatches(source, requestedLanguage))
+    .map(normalizeDownloadSource);
+
+  const languages = [...new Map(
+    filtered.map(source => [
+      source.audioLanguage,
+      {
+        code: source.audioLanguage,
+        label: source.language,
+        isDub: source.isDub,
+        providers: [source.providerName],
+      },
+    ]),
+  ).values()].map(language => ({
+    ...language,
+    providers: [...new Set(language.providers)],
+  }));
+
+  return {
+    anilistId: opts.anilistId,
+    episode: opts.episode,
+    lang: requestedLanguage.length ? requestedLanguage : null,
+    type: requestedType,
+    count: filtered.length,
+    cached,
+    fetchedAt: new Date().toISOString(),
+    languages,
+    subtitles: collectSubtitles(filtered),
+    sources: filtered,
   };
 }
 
@@ -526,6 +675,67 @@ app.get('/api/v3/toko/sources', async (req, res) => {
   catch (err) { res.status(502).json({ error: err.message }); }
 });
 
+/**
+ * GET /download/:anilistId/:episode
+ *
+ * Returns direct HLS/MP4 sources and torrent links for one episode. `lang`
+ * accepts a language code or name, and may contain comma-separated values.
+ * `type` accepts all, stream, hls/m3u8, mp4, torrent, or mkv.
+ *
+ * The endpoint intentionally returns source links instead of proxying media
+ * bytes. Provider URLs often require their original headers, which are
+ * included in each source for download clients that support them.
+ */
+async function handleDownloadRequest(req, res) {
+  const anilistId = Number(req.params.anilistId);
+  const episode = Number(req.params.episode);
+
+  if (!Number.isInteger(anilistId) || anilistId <= 0) {
+    return res.status(400).json({ error: 'anilistId must be a positive integer' });
+  }
+  if (!Number.isFinite(episode) || episode <= 0) {
+    return res.status(400).json({ error: 'episode must be a positive number' });
+  }
+
+  const requestedType = normalizedQueryValue(req.query.type) || 'all';
+  if (!DOWNLOAD_TYPES.has(requestedType)) {
+    return res.status(400).json({
+      error: `type must be one of: ${[...DOWNLOAD_TYPES].join(', ')}`,
+    });
+  }
+
+  const requestedLanguage = splitQueryValues(req.query.lang);
+  const t = getToko();
+  if (!t) return res.status(503).json({ error: 'Toko bundle is unavailable' });
+
+  try {
+    const opts = await optionsFromReq(req, { anilistId, episode });
+    const key = cacheKey('download', opts);
+    let result = cacheGet(key);
+    let cached = true;
+
+    if (!result) {
+      const rawSources = typeof t.batch === 'function' ? await t.batch(opts) : [];
+      result = buildFinalResponse(rawSources, [], false);
+      cacheSet(key, result, STREAM_TTL_MS);
+      cached = false;
+    }
+
+    return res.json(buildDownloadResponse(
+      result.sources,
+      opts,
+      requestedLanguage,
+      requestedType,
+      cached,
+    ));
+  } catch (err) {
+    console.error('[toko/download]', err.message);
+    return res.status(502).json({ error: err.message });
+  }
+}
+
+app.get(['/download/:anilistId/:episode', '/api/v3/toko/download/:anilistId/:episode'], handleDownloadRequest);
+
 /** GET /api/v3/toko/debug — raw diagnostics per provider */
 app.get('/api/v3/toko/debug', async (req, res) => {
   const t = getToko();
@@ -607,7 +817,7 @@ app.use('/api/v3', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, HOST, () => {
   console.log(`[toko-api] listening on http://${HOST}:${PORT}/api/v3`);
-  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /debug  /health`);
+  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /download/:anilistId/:episode  /debug  /health`);
   getToko();
 });
 
