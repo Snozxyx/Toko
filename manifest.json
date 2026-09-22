@@ -2,7 +2,7 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "1.2.0",
+  "version": "3.0.0",
   "author": "Snozxyx",
   "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), and manga reading (Animesama, AsuraScan, Atsumaru, AllManga, MangaFire).",
   "categories": [
