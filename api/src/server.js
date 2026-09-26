@@ -10,7 +10,9 @@
  *   GET /api/v3/toko/languages           — Language capabilities
  *   GET /download/:anilistId/:episode    — Download-ready media sources
  *   GET /api/v3/toko/index/episodes      — Episode index
- *   GET /api/v3/toko/index/chapters      — Chapter index (stub)
+ *   GET /api/v3/toko/manga/chapters      — Manga chapters (all providers, merged)
+ *   GET /api/v3/toko/manga/pages         — Pages for one chapter (by chapterKey)
+ *   GET /api/v3/toko/index/chapters      — Chapter index (alias of manga/chapters)
  *
  * Add ?stream=0 to any endpoint to get a plain JSON response instead of SSE.
  *
@@ -83,6 +85,7 @@ function getToko() {
 
 const STREAM_TTL_MS  = 10 * 60 * 1000; // 10 minutes
 const TORRENT_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const MANGA_TTL_MS   = 30 * 60 * 1000; // 30 minutes (chapter lists change rarely)
 const MAX_CACHE_SIZE = 200;
 
 const cache = new Map(); // key → { data, expiresAt }
@@ -556,6 +559,55 @@ function buildDownloadResponse(sources, opts, requestedLanguage, requestedType, 
   };
 }
 
+// ── Manga helpers ─────────────────────────────────────────────────────────────
+//
+// Manga runs over the same bundle as streams, but a different contract:
+// `getMangaChapters` returns nested MangaChapterEntry[] and `getMangaPages`
+// returns a bare MangaPageEntry[]. We mirror the desktop IPC shape exactly
+// (desktop/ipc/ipc-runtime.cjs) so an HTTP caller and the in-app host see the
+// same JSON: chapters flatten to one row per source (carrying number, title,
+// volume, language, scanlator), pages carry imageUrl + replay headers.
+
+/** Build MangaChapterParams from the request query. */
+function mangaParamsFromReq(req) {
+  const anilistId = Number(req.query.anilistId);
+  const malId = Number(req.query.malId);
+  const titles = parseTitles(req.query).filter(Boolean);
+  return {
+    ...(Number.isFinite(anilistId) && anilistId > 0 ? { anilistId } : {}),
+    ...(Number.isFinite(malId) && malId > 0 ? { malId } : {}),
+    ...(req.query.title ? { title: String(req.query.title) } : {}),
+    ...(titles.length ? { titles } : {}),
+  };
+}
+
+/**
+ * Flatten nested MangaChapterEntry[] to one row per source, preserving the
+ * chapter-level title/volume and the source-level language/scanlator so the
+ * caller gets language, volume and title without a second lookup.
+ */
+function flattenMangaChapters(entries) {
+  const rows = [];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const sources = Array.isArray(entry?.sources) ? entry.sources : [];
+    for (const src of sources) {
+      if (!src?.chapterKey) continue;
+      rows.push({
+        number: entry.number,
+        title: entry.title ?? null,
+        volume: entry.volume ?? null,
+        provider: src.provider ?? null,
+        chapterKey: src.chapterKey,
+        providerChapterId: src.providerChapterId ?? src.chapterKey,
+        language: src.language ?? null,
+        scanlator: src.scanlator ?? null,
+        releaseDate: src.releaseDate ?? null,
+      });
+    }
+  }
+  return rows;
+}
+
 // ── Express app ───────────────────────────────────────────────────────────────
 
 const app = express();
@@ -875,9 +927,109 @@ app.get('/api/v3/toko/index/episodes', async (req, res) => {
   res.json({ provider: null, episodeCount: 0, episodes: [] });
 });
 
-app.get('/api/v3/toko/index/chapters', (_req, res) => {
-  res.json({ provider: null, chapterCount: 0, chapters: [] });
-});
+/**
+ * GET /api/v3/toko/manga/chapters — chapters from all manga providers, merged.
+ *
+ * Query: anilistId | malId | title | titles[]  (anilistId preferred — MangaDex
+ * maps deterministically; the bundle resolves titles for the fuzzy providers).
+ *
+ * Response: { provider, chapterCount, chapters: [{ number, title, volume,
+ * provider, chapterKey, providerChapterId, language, scanlator, releaseDate }] }
+ */
+async function handleMangaChapters(req, res) {
+  const t = getToko();
+  const empty = { provider: null, chapterCount: 0, chapters: [] };
+  if (!t || typeof t.getMangaChapters !== 'function') return res.json(empty);
+
+  const params = mangaParamsFromReq(req);
+  const key = `manga-chapters:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
+
+  const hit = cacheGet(key);
+  if (hit) return res.json({ ...hit, cached: true });
+
+  try {
+    const entries = await t.getMangaChapters(params);
+    const chapters = flattenMangaChapters(entries);
+    const providers = [...new Set(chapters.map((c) => c.provider).filter(Boolean))];
+    const result = {
+      provider: providers[0] || null,
+      providers,
+      chapterCount: chapters.length,
+      chapters,
+      cached: false,
+      fetchedAt: new Date().toISOString(),
+    };
+    if (chapters.length > 0) cacheSet(key, result, MANGA_TTL_MS);
+    return res.json(result);
+  } catch (err) {
+    console.error('[toko/manga/chapters]', err.message);
+    return res.status(502).json({ ...empty, error: err.message });
+  }
+}
+
+/**
+ * GET /api/v3/toko/manga/pages — pages for one chapter.
+ *
+ * Query: chapterKey (required, "<provider>:<providerChapterId>"), optional
+ * provider / providerChapterId / anilistId.
+ *
+ * Response: { pageCount, pages: [{ pageNumber, imageUrl, headers, width, height }] }
+ * `headers` are the CDN replay headers (e.g. Referer); the HTTP API returns the
+ * source URL + headers rather than proxying bytes (mirrors /download), so the
+ * caller replays them. MangaDex pages carry no headers.
+ */
+async function handleMangaPages(req, res) {
+  const t = getToko();
+  const empty = { pageCount: 0, pages: [] };
+  if (!t || typeof t.getMangaPages !== 'function') return res.json(empty);
+
+  const chapterKey = String(req.query.chapterKey || '').trim();
+  if (!chapterKey) return res.status(400).json({ ...empty, error: 'chapterKey is required' });
+
+  const anilistId = Number(req.query.anilistId);
+  const params = {
+    chapterKey,
+    ...(req.query.provider ? { provider: String(req.query.provider) } : {}),
+    ...(req.query.providerChapterId ? { providerChapterId: String(req.query.providerChapterId) } : {}),
+    ...(Number.isFinite(anilistId) && anilistId > 0 ? { anilistId } : {}),
+  };
+  const key = `manga-pages:${chapterKey}`;
+
+  const hit = cacheGet(key);
+  if (hit) return res.json({ ...hit, cached: true });
+
+  try {
+    const rawPages = await t.getMangaPages(params);
+    const pages = (Array.isArray(rawPages) ? rawPages : [])
+      .map((p, idx) => {
+        const imageUrl = String(p?.imageUrl || '');
+        if (!imageUrl) return null;
+        return {
+          pageNumber: Number.isFinite(p.pageNumber) ? p.pageNumber : idx + 1,
+          imageUrl,
+          headers: p.headers && typeof p.headers === 'object' ? p.headers : {},
+          width: p.width ?? null,
+          height: p.height ?? null,
+        };
+      })
+      .filter(Boolean);
+
+    const result = { pageCount: pages.length, pages, cached: false, fetchedAt: new Date().toISOString() };
+    if (pages.length > 0) cacheSet(key, result, MANGA_TTL_MS);
+    return res.json(result);
+  } catch (err) {
+    console.error('[toko/manga/pages]', err.message);
+    // getMangaPages throws ChapterNotFoundError when the provider yields nothing.
+    const status = /not found/i.test(err.message) ? 404 : 502;
+    return res.status(status).json({ ...empty, error: err.message });
+  }
+}
+
+app.get('/api/v3/toko/manga/chapters', handleMangaChapters);
+app.get('/api/v3/toko/manga/pages', handleMangaPages);
+
+// Chapter index — alias of manga/chapters for parity with index/episodes.
+app.get('/api/v3/toko/index/chapters', handleMangaChapters);
 
 // Cache management
 app.delete('/api/v3/toko/cache', (_req, res) => {
@@ -914,7 +1066,7 @@ app.use('/api/v3', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, HOST, () => {
   console.log(`[toko-api] listening on http://${HOST}:${PORT}/api/v3`);
-  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /download/:anilistId/:episode  /debug  /health`);
+  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /download/:anilistId/:episode  /manga/chapters  /manga/pages  /debug  /health`);
   getToko();
 });
 

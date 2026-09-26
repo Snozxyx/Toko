@@ -7,13 +7,14 @@
 import { fetchResponse } from '../utils/http/fetch.js';
 import { detectSourceType } from '../utils/scraping/quality.js';
 import { withProviderTimeout } from '../utils/common/timeout.js';
+import { resolveMangaTitles } from '../utils/manga/manga-title-resolver.js';
 import {
   runProviders,
   runProvidersProgressive,
   resolveProviderRunOptions,
 } from './provider-runner.js';
 import {
-  annotateTorrentResults,
+  annotateResults,
   mergeMangaChapters,
 } from './result-processor.js';
 
@@ -109,7 +110,7 @@ export class TokoBundleClass {
       undefined,
       resolveProviderRunOptions(opts.providerOptions)
     );
-    return annotateTorrentResults(results);
+    return annotateResults(results);
   }
 
   /**
@@ -123,7 +124,7 @@ export class TokoBundleClass {
       diagnostics,
       resolveProviderRunOptions(opts.providerOptions)
     );
-    return { results: annotateTorrentResults(results), diagnostics };
+    return { results: annotateResults(results), diagnostics };
   }
 
   /**
@@ -137,7 +138,7 @@ export class TokoBundleClass {
     const options = resolveProviderRunOptions(opts.providerOptions);
     return runProvidersProgressive(
       STREAM_PROVIDERS,
-      async p => stampPriority(annotateTorrentResults(await p.single(opts)), p.name),
+      async p => stampPriority(annotateResults(await p.single(opts)), p.name),
       onChunk,
       options,
       { lead: LEAD_STREAM_PROVIDERS, priorityOf: providerPriorityOf }
@@ -156,7 +157,7 @@ export class TokoBundleClass {
       runProviders(STREAM_PROVIDERS, async p => stampPriority(await p.single(opts), p.name), undefined, options),
       runProviders(TORRENT_PROVIDERS, async p => stampPriority(await p.batch(opts), p.name), undefined, options),
     ]);
-    return annotateTorrentResults([...stream, ...torrent]);
+    return annotateResults([...stream, ...torrent]);
   }
 
   /**
@@ -169,7 +170,7 @@ export class TokoBundleClass {
       runProviders(STREAM_PROVIDERS, async p => stampPriority(await p.single(opts), p.name), diagnostics, options),
       runProviders(TORRENT_PROVIDERS, async p => stampPriority(await p.batch(opts), p.name), diagnostics, options),
     ]);
-    return { results: annotateTorrentResults([...stream, ...torrent]), diagnostics };
+    return { results: annotateResults([...stream, ...torrent]), diagnostics };
   }
 
   /**
@@ -182,7 +183,7 @@ export class TokoBundleClass {
     const options = resolveProviderRunOptions(opts.providerOptions);
     return runProvidersProgressive(
       TORRENT_PROVIDERS,
-      async p => stampPriority(annotateTorrentResults(await p.batch(opts)), p.name),
+      async p => stampPriority(annotateResults(await p.batch(opts)), p.name),
       onChunk,
       options,
       { priorityOf: providerPriorityOf }
@@ -200,7 +201,7 @@ export class TokoBundleClass {
     const [streamResults, torrentResults] = await Promise.all([
       runProvidersProgressive(
         STREAM_PROVIDERS,
-        async p => stampPriority(annotateTorrentResults(await p.single(opts)), p.name),
+        async p => stampPriority(annotateResults(await p.single(opts)), p.name),
         onChunk,
         options,
         // Nebula's sources reach the app before any other provider's, so the
@@ -210,7 +211,7 @@ export class TokoBundleClass {
       ),
       runProvidersProgressive(
         TORRENT_PROVIDERS,
-        async p => stampPriority(annotateTorrentResults(await p.batch(opts)), p.name),
+        async p => stampPriority(annotateResults(await p.batch(opts)), p.name),
         onChunk,
         options,
         { priorityOf: providerPriorityOf }
@@ -269,7 +270,7 @@ export class TokoBundleClass {
     if (stream) {
       await runProvidersProgressive(
         [stream],
-        async p => stampPriority(annotateTorrentResults(await p.single(opts)), p.name),
+        async p => stampPriority(annotateResults(await p.single(opts)), p.name),
         capture,
         options,
         { priorityOf: providerPriorityOf }
@@ -277,7 +278,7 @@ export class TokoBundleClass {
     } else {
       await runProvidersProgressive(
         [torrent!],
-        async p => stampPriority(annotateTorrentResults(await p.batch(opts)), p.name),
+        async p => stampPriority(annotateResults(await p.batch(opts)), p.name),
         capture,
         options,
         { priorityOf: providerPriorityOf }
@@ -312,7 +313,7 @@ export class TokoBundleClass {
       undefined,
       resolveProviderRunOptions(opts.providerOptions)
     );
-    return annotateTorrentResults(results);
+    return annotateResults(results);
   }
 
   // ── Language Capabilities ───────────────────────────────────────────────
@@ -336,13 +337,30 @@ export class TokoBundleClass {
   // ── Manga Support ───────────────────────────────────────────────────────
 
   /**
+   * Resolve AniList titles once, up front, so the whole provider fan-out shares
+   * one GraphQL round trip instead of each fuzzy-matching provider re-querying
+   * AniList. MangaDex maps deterministically and ignores `titles`, but AllManga
+   * and Mangaball rely on it. No-op when the caller already supplied titles.
+   */
+  private async enrichMangaParams(params: MangaChapterParams): Promise<MangaChapterParams> {
+    if (params.titles && params.titles.length > 0) return params;
+    try {
+      const titles = await resolveMangaTitles(params);
+      return titles.length > 0 ? { ...params, titles } : params;
+    } catch {
+      return params;
+    }
+  }
+
+  /**
    * Returns manga chapters merged by chapter number
    * Multiple providers returning the same chapter number are merged
    */
   async getMangaChapters(params: MangaChapterParams): Promise<MangaChapterEntry[]> {
+    const enriched = await this.enrichMangaParams(params);
     const all = await runProviders(
       MANGA_PROVIDERS,
-      p => p.getChapters(params)
+      p => p.getChapters(enriched)
     ) as MangaChapterEntry[];
     return mergeMangaChapters(all);
   }
@@ -353,10 +371,11 @@ export class TokoBundleClass {
   async debugMangaChapters(
     params: MangaChapterParams
   ): Promise<DebugProviderResult<MangaChapterEntry>> {
+    const enriched = await this.enrichMangaParams(params);
     const diagnostics: ProviderDiagnostic[] = [];
     const all = await runProviders(
       MANGA_PROVIDERS,
-      p => p.getChapters(params),
+      p => p.getChapters(enriched),
       diagnostics
     ) as MangaChapterEntry[];
     return { results: mergeMangaChapters(all), diagnostics };

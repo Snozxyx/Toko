@@ -86,18 +86,67 @@ export const TORRENT_PROVIDERS: TorrentProvider[] = [
 ];
 
 // ── Manga providers ───────────────────────────────────────────────────────────
-import allmanga from './manga/allmanga.js';
+// Order is priority order (same as stream providers). `mangadex` and `comick`
+// lead: they are the deterministic mappers (the AniList/MAL id is stamped on
+// each title — `attributes.links.al` on MangaDex, `links.al`/`links.mal` on
+// Comick) and expose clean public JSON APIs. The HTML scrapers follow: mangapill
+// and mangakatana serve images over plain HTTP, while weebcentral and nelomanga
+// are Cloudflare-gated and fetch through the shared browser-bypass helper. All
+// six map by title when the id link is absent, and the reader's cross-source
+// fallback skips any source whose pages come back empty.
+//
+// Removed 2026-09: `allmanga` (AllAnime's `chapterPages` op now hard-returns
+// NEED_CAPTCHA — chapters still list but pages are unfetchable without solving
+// an interactive captcha the CF bypass cannot clear) and `mangaball` (its
+// Laravel CSRF handshake now sits behind a Cloudflare 403 and was best-effort to
+// begin with). The earlier `mangafire`/`animesama`/`asura` stubs stay dropped —
+// none had working page extraction.
+//
+// 2026-09-26 re-probe of four requested sites: only `toongod` shipped (below).
+// `mangadot.net` and `mangaball.net` sit behind a full-site Cloudflare *managed*
+// challenge (`Cf-Mitigated: challenge` on every path, robots.txt/wp-json
+// included) — not scrapable from CI, and mangadot's stack could not be
+// fingerprinted to write selectors against, so both are held rather than shipped
+// blind. `mangafire.to` is now a token-signed (`window.__config`) rolldown SPA
+// whose reader images remain scramble-offset (canvas-descrambled, not plain
+// URLs), so it stays infeasible per the "no scrambled pages" rule. `atsu` was re-added 2026-09: its JSON API
+// (search → allChapters → read/chapter) has clean, verified page extraction and
+// covers the Korean/Chinese webtoons the manga-first catalogues miss. `webtoons`
+// (2026-09) is the official LINE Webtoon site — a plain-HTTP search + mobile
+// episodes JSON + viewer scrape, best-in-class quality for the vertical-scroll
+// titles it hosts, mapped by fuzzy title. `demonicscans` (2026-09) is a plain
+// server-rendered aggregator: search.php → /manga/<Slug> chapter list →
+// /chaptered.php 302→ reader; panels are `img.imgholder` on the mangareadon CDN
+// (no hotlink protection, so images load direct with no proxy), fuzzy-mapped.
+// `toongod` (2026-09) is a Madara/WordPress adult-manhwa site behind a full-site
+// Cloudflare managed challenge; it fetches through the same browser-bypass helper
+// as weebcentral/nelomanga. It leans on Madara's stable contract (admin-ajax
+// search → `<detail>/ajax/chapters/` → `.reading-content img`) and the detail URL
+// the search returns, so the post-type slug is never guessed. Panels hotlink-
+// protect → Referer + local-proxy replay. Appended last (lowest priority) among
+// the manga sources.
+import mangadex from './manga/mangadex.js';
+import comick from './manga/comick.js';
+import mangapill from './manga/mangapill.js';
+import mangakatana from './manga/mangakatana.js';
+import weebcentral from './manga/weebcentral.js';
+import nelomanga from './manga/nelomanga.js';
 import atsu from './manga/atsu.js';
-import mangafire from './manga/mangafire.js';
-import animesama from './manga/animesama.js';
-import asura from './manga/asura.js';
+import webtoons from './manga/webtoons.js';
+import demonicscans from './manga/demonicscans.js';
+import toongod from './manga/toongod.js';
 
 export const MANGA_PROVIDERS: MangaProvider[] = [
-  allmanga,
+  mangadex,
+  mangapill,
+  mangakatana,
+  weebcentral,
+  nelomanga,
+  comick,
   atsu,
-  mangafire,
-  animesama,
-  asura,
+  webtoons,
+  demonicscans,
+  toongod,
 ];
 
 // ── Priority ──────────────────────────────────────────────────────────────────

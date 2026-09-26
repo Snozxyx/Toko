@@ -49,6 +49,14 @@ export interface SourceResult {
   url: string;
   quality: string;
   headers: Record<string, string>;
+  /**
+   * Ordered list of `Referer` values the app should try (best-first) when
+   * proxying this stream. The core proxy is content-agnostic and no longer
+   * knows which site a given CDN expects; the extension supplies that here.
+   * `headers.Referer` is the primary and is always the first candidate.
+   * Only meaningful for direct-stream results (hls/mp4).
+   */
+  refererCandidates?: string[];
   subtitles: SubtitleTrack[];
   /**
    * BCP 47 / ISO 639-1 code for the audio track (e.g. "ar", "fr", "ja").

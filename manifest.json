@@ -4,7 +4,7 @@
   "type": "custom",
   "version": "3.0.0",
   "author": "Snozxyx",
-  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), and manga reading (Animesama, AsuraScan, Atsumaru, AllManga, MangaFire).",
+  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), and manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod).",
   "categories": [
     "Anime Stream",
     "Torrent",
@@ -12,8 +12,10 @@
   ],
   "capabilities": [
     "manga",
-    "preview"
+    "preview",
+    "websiteIndex"
   ],
+  "priority": 0,
   "apiServer": {
     "namespace": "toko",
     "contract": "streaming-sources-v3",
@@ -21,7 +23,9 @@
       "sources",
       "stream",
       "torrent",
-      "download"
+      "download",
+      "manga/chapters",
+      "manga/pages"
     ],
     "healthPath": "/health"
   },
@@ -76,11 +80,24 @@
     "network:domain:releases.moe",
     "network:domain:nekobt.com",
     "network:domain:acgnx.se",
-    "network:domain:allmanga.to",
+    "network:domain:api.mangadex.org",
+    "network:domain:api.comick.dev",
+    "network:domain:comick.io",
+    "network:domain:meo.comick.pictures",
+    "network:domain:mangapill.com",
+    "network:domain:cdn.readdetectiveconan.com",
+    "network:domain:mangakatana.com",
+    "network:domain:i1.mangakatana.com",
+    "network:domain:i2.mangakatana.com",
+    "network:domain:i3.mangakatana.com",
+    "network:domain:weebcentral.com",
+    "network:domain:nelomanga.com",
+    "network:domain:www.nelomanga.com",
     "network:domain:atsu.moe",
-    "network:domain:mangafire.to",
-    "network:domain:anime-sama.fr",
-    "network:domain:asuracomic.net",
+    "network:domain:cdn.atsu.moe",
+    "network:domain:www.webtoons.com",
+    "network:domain:m.webtoons.com",
+    "network:domain:webtoon-phinf.pstatic.net",
     "network:domain:animesalt.cx",
     "network:domain:animesalt.ac",
     "network:domain:toonstream.dad",
@@ -102,6 +119,12 @@
     "network:domain:xin-cdn.xyz",
     "network:domain:watchanimeworld.one",
     "network:domain:anilibria.top",
-    "network:domain:tr.libria.fun"
+    "network:domain:tr.libria.fun",
+    "network:domain:demonicscans.org",
+    "network:domain:mangareadon.org",
+    "network:domain:demoniclibs.com",
+    "network:domain:readermc.org",
+    "network:domain:toongod.org",
+    "network:domain:www.toongod.org"
   ]
 }
