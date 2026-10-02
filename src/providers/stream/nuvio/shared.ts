@@ -479,6 +479,49 @@ export function parseAvailableSeasons(html: string, pattern: RegExp): number[] {
   return [...seasons].sort((a, b) => a - b);
 }
 
+// ── Episode-link selection ───────────────────────────────────────────────────
+
+/**
+ * Pick an episode's href from a season/detail page by season+episode number.
+ *
+ * The ported scrapers used `a[href*="${season}"][href*="${episode}"]`, a bare
+ * substring match that for low numbers (S1E1) matches almost any anchor — so the
+ * wrong link was followed. This scans every anchor and matches the real Latino
+ * URL shapes precisely, preferring the most specific:
+ *   1. `1x01` / `1x1`           (SxE, zero-pad tolerant)
+ *   2. `temporada-1 … capitulo-2` / `…-episodio-2` (both numbers, in order)
+ *   3. `/1-2/` or `-1-2-`       (season-episode pair on word boundaries)
+ */
+export function pickEpisodeHref(
+  $: TokoCheerio,
+  season: number,
+  episode: number,
+): string | null {
+  const sxe = new RegExp(`(?:^|[^0-9])${season}x0*${episode}(?:[^0-9]|$)`, 'i');
+  const tempCap = new RegExp(
+    `temporada[^0-9]*${season}[^0-9][\\s\\S]*?(?:cap(?:itulo)?|ep(?:isodio)?)[^0-9]*0*${episode}(?:[^0-9]|$)`,
+    'i',
+  );
+  const pair = new RegExp(`(?:^|[^0-9])${season}[-_x]0*${episode}(?:[^0-9]|$)`, 'i');
+
+  let best: string | null = null;
+  let bestRank = 99;
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') ?? '';
+    if (!href) return;
+    const hay = `${href} ${$(el).text() ?? ''}`;
+    let rank = 99;
+    if (sxe.test(hay)) rank = 0;
+    else if (tempCap.test(hay)) rank = 1;
+    else if (pair.test(hay)) rank = 2;
+    if (rank < bestRank) {
+      bestRank = rank;
+      best = href;
+    }
+  });
+  return best;
+}
+
 // ── Server naming ────────────────────────────────────────────────────────────
 
 const SERVER_NAMES: Array<[RegExp, string]> = [

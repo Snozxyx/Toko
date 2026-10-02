@@ -13,8 +13,10 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 function normalizeLang(text: string): { name: string; code: string; isDub: boolean } {
   const l = text.toLowerCase();
-  if (l.includes('deutsch') || l.includes('german')) return { name: 'German', code: 'de', isDub: true };
+  // Sub variants first: "German Sub" contains "german", so the dub branch below
+  // would otherwise claim it and mislabel subtitled audio as a German dub.
   if (l.includes('ger-sub') || l.includes('german sub')) return { name: 'German Sub', code: 'de-sub', isDub: false };
+  if (l.includes('deutsch') || l.includes('german')) return { name: 'German', code: 'de', isDub: true };
   if (l.includes('englisch') || l.includes('english')) return { name: 'English', code: 'en', isDub: true };
   if (l.includes('japanisch') || l.includes('japanese')) return { name: 'Japanese', code: 'ja', isDub: false };
   return { name: text || 'German', code: 'de', isDub: true };

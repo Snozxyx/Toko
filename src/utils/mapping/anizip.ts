@@ -67,6 +67,15 @@ export interface AniZipResponse {
 export interface TmdbTarget {
   /** TMDB id as a string, or null when ani.zip has no TMDB mapping. */
   tmdbId: string | null;
+  /**
+   * IMDb id (`tt…`), or null when ani.zip has no IMDb mapping.
+   *
+   * ani.zip returns this in the same `mappings` block as the TMDB id, so the
+   * providers that search by IMDb id (pelisgo, sololatino, xupalace, vegamovies,
+   * 4khdhub, vaplayer, vidking) get it for free. Without it they would each have
+   * to call TMDB's `/external_ids`, which needs an api_key Toko does not carry.
+   */
+  imdbId: string | null;
   /** The `type` argument these providers expect. */
   type: 'movie' | 'tv';
   /** TMDB/TVDB season. Undefined for movies. */
@@ -305,9 +314,11 @@ export async function resolveTmdbTarget(
 
   const type = normalizeType(mappings?.type);
   const titles = buildTitleList(response, options.language, fallbackTitles);
+  const rawImdb = mappings?.imdb_id;
+  const imdbId = rawImdb ? String(rawImdb) : null;
 
   if (type === 'movie') {
-    return { tmdbId, type: 'movie', titles, mapped: Boolean(tmdbId) };
+    return { tmdbId, imdbId, type: 'movie', titles, mapped: Boolean(tmdbId) };
   }
 
   const { season, episode, absoluteEpisode, mapped } = convertEpisode(
@@ -317,6 +328,7 @@ export async function resolveTmdbTarget(
 
   return {
     tmdbId,
+    imdbId,
     type: 'tv',
     season,
     episode,

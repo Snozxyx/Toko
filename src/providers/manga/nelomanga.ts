@@ -1,5 +1,8 @@
 /**
- * Nelomanga — https://www.nelomanga.com (Mangakakalot / Manganato family)
+ * Nelomanga — https://www.nelomanga.net (Mangakakalot / Manganato family)
+ *
+ * The old `www.nelomanga.com` host 301s to `www.nelomanga.net` (same brand,
+ * same reader), so point BASE at the `.net` terminus directly.
  *
  * Cloudflare-gated server-rendered HTML. Search, the detail chapter list and
  * the chapter reader are plain pages fetched through `fetchTextWithBypass`,
@@ -21,7 +24,7 @@ import { loadHtml } from '../../utils/http/fetch.js';
 import { fetchTextWithBypass } from '../../utils/common/fetch-bypass.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
 
-const BASE = 'https://www.nelomanga.com';
+const BASE = 'https://www.nelomanga.net';
 const PROVIDER_NAME = 'nelomanga';
 const IMAGE_HEADERS = { Referer: `${BASE}/` };
 

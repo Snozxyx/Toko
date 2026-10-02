@@ -33,13 +33,17 @@ const LABEL = 'Papadustream';
 /** Only `.club` carries HLS; `.fr` and `.net` mirror the catalogue without media. */
 const SITES = [SITE];
 
-/** Search result permalinks. The site exposes IMDb ids directly in the href. */
-const SERIES_ID_PATTERN = /\/series\/(tt\d+)/g;
+/**
+ * Search result permalinks. The site keys series by `/series/{id}` where the id
+ * is the IMDb number with a `tt` or (since a 2026 relayout) `mx` prefix — e.g.
+ * Game of Thrones moved from `tt0944947` to `mx0944947`. Films still use `tt`.
+ */
+const SERIES_ID_PATTERN = /\/series\/((?:tt|mx)\d+)/g;
 const FILM_ID_PATTERN = /\/(?:films?|movies?)\/(tt\d+)/g;
 
-/** `/hls/s{shard}/serial/{imdb}/{season}/{episode}/playlist.m3u8` */
+/** `/hls/s{shard}/serial/{id}/{season}/{episode}/playlist.m3u8` (id tt|mx). */
 const SERIAL_HLS_PATTERN =
-  /\/hls\/s\d+\/serial\/tt\d+\/(\d+)\/(\d+)\/playlist\.m3u8/g;
+  /\/hls\/s\d+\/serial\/(?:tt|mx)\d+\/(\d+)\/(\d+)\/playlist\.m3u8/g;
 
 /**
  * Any playlist on a film page.

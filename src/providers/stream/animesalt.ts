@@ -186,6 +186,8 @@ async function resolvePageSources(html: string, pageUrl: string, base: string): 
                 quality: normalizeQuality('HD'),
                 headers: { Referer: pageUrl, 'User-Agent': UA },
                 subtitles: [],
+                audioLanguage: 'ja',
+                language: 'Japanese',
                 sourceType: detectSourceType(raw),
               }];
             }
@@ -198,6 +200,8 @@ async function resolvePageSources(html: string, pageUrl: string, base: string): 
                 quality: normalizeQuality('HD'),
                 headers: { Referer: pageUrl, 'User-Agent': UA },
                 subtitles: [],
+                audioLanguage: 'ja',
+                language: 'Japanese',
                 sourceType: detectSourceType(iframeMatch[1]),
               }];
             }
@@ -210,6 +214,8 @@ async function resolvePageSources(html: string, pageUrl: string, base: string): 
               quality: normalizeQuality('HD'),
               headers: { Referer: pageUrl, 'User-Agent': UA },
               subtitles: [],
+              audioLanguage: 'ja',
+              language: 'Japanese',
               sourceType: 'hls',
             }];
           }
@@ -229,7 +235,7 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
 
   const m3u8 = html.match(/["'`](https?:\/\/[^"'`\s]+\.m3u8[^"'`\s]*)["'`]/i);
   if (m3u8) {
-    results.push({ source: 'animesalt', url: m3u8[1], quality: normalizeQuality('HD'), headers, subtitles: [], sourceType: 'hls' });
+    results.push({ source: 'animesalt', url: m3u8[1], quality: normalizeQuality('HD'), headers, subtitles: [], audioLanguage: 'ja', language: 'Japanese', sourceType: 'hls' });
   }
 
   if (results.length === 0) {
@@ -237,7 +243,7 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
       html.match(/<source[^>]+src=["']([^"']+\.mp4[^"']*)["']/i) ||
       html.match(/["'`](https?:\/\/[^"'`\s]+\.mp4[^"'`\s]*)["'`]/i);
     if (mp4) {
-      results.push({ source: 'animesalt', url: mp4[1], quality: normalizeQuality('HD'), headers, subtitles: [], sourceType: 'mp4' });
+      results.push({ source: 'animesalt', url: mp4[1], quality: normalizeQuality('HD'), headers, subtitles: [], audioLanguage: 'ja', language: 'Japanese', sourceType: 'mp4' });
     }
   }
 
@@ -256,6 +262,8 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
         quality: normalizeQuality('HD'),
         headers,
         subtitles: [],
+        audioLanguage: 'ja',
+        language: 'Japanese',
         sourceType: detectSourceType(embed),
       });
     }

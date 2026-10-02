@@ -1,5 +1,5 @@
 /**
- * MovieBox — movie & TV stream adapter (moviebox.ph / movieboxhd.net).
+ * MovieBox — movie & TV stream adapter (movieboxhd.net; old moviebox.ph 301s here).
  *
  * Ported from walterwhite-69/Moviebox-API (FastAPI reference) to Toko's
  * StreamProvider contract. MovieBox is a general movie/TV catalog, so this
@@ -7,7 +7,7 @@
  * episodes, `movie()` resolves films.
  *
  * Upstream flow (h5-api.aoneroom.com/wefeed-h5api-bff):
- *   1. GET  {API}/home?host=moviebox.ph      → guest JWT in `x-user` header
+ *   1. GET  {API}/home?host=movieboxhd.net  → guest JWT in `x-user` header
  *   2. POST {API}/subject/search             → { items: [{ subject: { subjectId, detailPath, title, subjectType } }] }
  *   3. GET  {API}/media-player/get-domain    → player origin (e.g. https://netfilm.world)
  *   4. GET  {domain}/wefeed-h5api-bff/subject/play?subjectId=&se=&ep=&detailPath=
@@ -23,7 +23,9 @@ import { buildSearchQueries, scoreMatch } from '../../utils/scraping/title-norma
 import type { StreamProvider, SourceOptions, SourceResult, SubtitleTrack } from '../../types/index.js';
 import { fetchResponse } from '../../utils/http/fetch.js';
 
-const SITE_URL = 'https://moviebox.ph';
+// Live site host (moviebox.ph 301s here). Drives Referer/Origin and the aoneroom
+// `host=` brand key below, so Referer/Origin/host stay consistent.
+const SITE_URL = 'https://movieboxhd.net';
 const API_BASE = 'https://h5-api.aoneroom.com/wefeed-h5api-bff';
 const FALLBACK_DOMAIN = 'https://netfilm.world';
 
@@ -73,14 +75,16 @@ function extractTokenFromHeader(raw: string | null): string | null {
 
 function extractTokenFromCookie(raw: string | null): string | null {
   if (!raw) return null;
-  return raw.match(/(?:^|[\s,;]token=)([^;\s]+)/)?.[1] ?? null;
+  return raw.match(/(?:^|[\s,;])token=([^;\s]+)/)?.[1] ?? null;
 }
 
 async function getBearerToken(timeoutMs: number): Promise<string> {
   if (bearerToken && Date.now() - tokenFetchedAt < TOKEN_TTL_MS) return bearerToken;
 
   try {
-    const res = await fetchResponse(`${API_BASE}/home?host=moviebox.ph`, {
+    // host= is the aoneroom brand key; kept in sync with SITE_URL. Verify in
+    // deployment that the backend still issues a guest JWT for this brand host.
+    const res = await fetchResponse(`${API_BASE}/home?host=${new URL(SITE_URL).host}`, {
       headers: DEFAULT_HEADERS,
       timeoutMs,
     });

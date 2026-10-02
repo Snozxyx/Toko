@@ -1,5 +1,10 @@
 /**
- * HDMovie2 — Hindi/Multi-audio streaming site at hdmovie2.com.se.
+ * HDMovie2 — Hindi/Multi-audio streaming site at hdmo2.com.
+ *
+ * The old `hdmovie2.com.se` host 301-chains through several mirrors
+ * (`.com.se`→`.org.uk`→`hdmovie2a.com`→`.net`) and finally lands on `hdmo2.com`,
+ * dropping the `?s=` query on the last hop — so point at the `hdmo2.com` terminus
+ * directly. Search is bot-gated and only yields results from a real browser.
  *
  * Ported from temp/HindiAPI/HindiAPI/providers/hdmovie2.js.
  * Search by title, get the movie/episode page, extract download/stream links.
@@ -17,7 +22,7 @@ import {
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
 
-const SITE = 'https://hdmovie2.com.se';
+const SITE = 'https://hdmo2.com';
 const LABEL = 'HDMovie2';
 
 function inferLangFromTitle(text: string): string {

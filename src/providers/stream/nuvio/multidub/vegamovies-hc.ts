@@ -1,5 +1,5 @@
 /**
- * VegaMovies (HC/VC) — HubCloud + VCloud CDN resolver for vegamovies.market.
+ * VegaMovies (HC/VC) — HubCloud + VCloud CDN resolver for 1vegamovies.lat.
  *
  * Ported from temp/multi-clone/src/providers/solunix.rs.
  * This is the Eclipsia variant of VegaMovies that follows HubCloud links through
@@ -19,7 +19,9 @@ import {
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
 
-const DEFAULT_SITE = 'https://vegamovies.market';
+// Old `vegamovies.market` 301-chains to 1vegamovies.lat (verified live); the
+// codeberg manifest overrides cachedBase at runtime anyway.
+const DEFAULT_SITE = 'https://1vegamovies.lat';
 const DOMAINS_URL  = 'https://codeberg.org/eclipsia-404/eclipsia/raw/branch/main/urls.json';
 const LABEL = 'VegaMovies·HC';
 
@@ -116,8 +118,8 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   await refreshDomains(ctx.signal);
   const base = cachedBase;
 
-  let imdbId: string | null = null;
-  if (ctx.tmdbId) {
+  let imdbId: string | null = ctx.imdbId ?? null;
+  if (!imdbId && ctx.tmdbId) {
     const ext = await siteFetchJson<{ imdb_id?: string }>(
       `https://api.themoviedb.org/3/${ctx.type === 'tv' ? 'tv' : 'movie'}/${ctx.tmdbId}/external_ids`,
       { timeoutMs: 5_000, signal: ctx.signal }

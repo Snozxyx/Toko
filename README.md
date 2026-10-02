@@ -20,20 +20,20 @@
 
 ---
 
-## Release v3
+## Release v4
 
-Toko v3 includes the unified provider registry, progressive source delivery, language-aware filtering, subtitle aggregation, torrent metadata, and the download API.
+Toko v4 is a full cleanup and stabilization release. It includes provider health audits with live-mirror repairs, removal of dead/broken providers, a full provider registry rebuild, progressive source delivery, language-aware filtering, subtitle aggregation, torrent metadata, and the download API.
 
 ## Coverage
 
-The current registry contains **95 providers**:
+The current registry contains **104 providers**:
 
 | Category | Total | Coverage |
 |:--|--:|:--|
-| **Streaming** | **84** | Anime, movies, and TV with HLS, MP4, embeds, captions, and language metadata |
+| **Streaming** | **82** | Anime, movies, and TV with HLS, MP4, embeds, captions, and language metadata |
 | **Torrent** | **6** | Magnet links, `.torrent` links, release metadata, file format, seeders, and leechers |
-| **Manga** | **5** | Chapter listing, page fetching, and scanlator metadata |
-| **Total** | **95** | Unified provider interface |
+| **Manga** | **16** | Chapter listing, page fetching, and scanlator metadata |
+| **Total** | **104** | Unified provider interface |
 
 ### Language support
 
@@ -56,20 +56,20 @@ Toko is the official unified extension for the [Tatakai](https://github.com/snoz
 
 | Category | Providers | Capabilities |
 |:--|:--:|:--|
-| **Stream** | 84 | Direct-stream sources across native anime, French, Latino, Hindi, and multi-dub providers |
+| **Stream** | 82 | Direct-stream sources across native anime, French, Latino, Hindi, and multi-dub providers |
 | **Torrent** | 6 | Magnet links and torrent files |
-| **Manga** | 5 | Chapters, pages, and scanlator metadata |
+| **Manga** | 16 | Chapters, pages, and scanlator metadata |
 
 ### Streaming
 
-- 16 native anime/movie direct-stream providers
-- 68 Nuvio-adapter stream providers across French, Latino, Hindi, and multi-dub catalogs
+- 24 native anime/movie direct-stream providers
+- 58 Nuvio-adapter stream providers across French, Latino, Hindi, and multi-dub catalogs
 - MovieBox for movies & TV (direct MP4/HLS + captions)
 - Support for single episodes
 - Optional movie support
 - Optional language information
 
-#### Provider health audit (2026-08)
+#### Provider health audit (v4)
 
 Every provider was checked against its live origin and repaired, kept, or removed:
 
@@ -90,7 +90,7 @@ Every provider was checked against its live origin and repaired, kept, or remove
 
 ### Manga
 
-- 5 manga providers
+- 16 manga providers
 - Chapter listing and retrieval
 - Page fetching
 - Scanlator metadata
@@ -123,3 +123,23 @@ npm run build
 ```
 
 This writes `dist/bundle.js` and the installable `dist/toko.kai` package.
+
+---
+
+## Installation
+
+Install the extension in Tatakai by sideloading `dist/toko.kai` from the Extensions settings page.
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+```
+
+The build script (`build.ts`) bundles `src/index.ts` with esbuild (CJS, all deps inlined except Node built-ins) and packages it with the manifest and icon into a `.kai` ZIP archive.

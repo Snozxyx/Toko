@@ -27,9 +27,9 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   const startTime = Date.now();
 
-  // Try to get IMDB id for better lookup
-  let imdbId: string | null = null;
-  if (ctx.tmdbId) {
+  // ani.zip usually carries the IMDb id; TMDB (keyless) is the fallback.
+  let imdbId: string | null = ctx.imdbId ?? null;
+  if (!imdbId && ctx.tmdbId) {
     const ext = await siteFetchJson<{ imdb_id?: string }>(
       `https://api.themoviedb.org/3/${ctx.type === 'tv' ? 'tv' : 'movie'}/${ctx.tmdbId}/external_ids`,
       { timeoutMs: 5_000, signal: ctx.signal }

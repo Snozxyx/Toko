@@ -383,19 +383,22 @@ const provider: StreamProvider = {
     const servers = await getServers(episode.ids, anime.base);
     if (servers.length === 0) return [];
 
-    // Prefer sub, then HD-1/Vidstreaming-2, then any.
-    const sub = servers.filter(s => (s.type || 'sub').toLowerCase() === 'sub');
-    const pool = sub.length > 0 ? sub : servers;
-    const ranked = [...pool].sort((a, b) => {
+    // Rank sub ahead of dub, and HD-1/Vidstreaming-2 ahead of the rest, but
+    // emit EVERY server/mirror that resolves — not just the first — so both
+    // audio tracks and all mirrors reach the reader.
+    const ranked = [...servers].sort((a, b) => {
       const score = (s: ServerRef) => {
         const n = s.name.toLowerCase();
-        if (n.includes('hd-1') || n.includes('vidstreaming-2')) return 0;
-        if (n.includes('hd-2') || n.includes('vidcloud-1')) return 1;
-        return 2;
+        const audioBase = (s.type || 'sub').toLowerCase() === 'dub' ? 4 : 0;
+        if (n.includes('hd-1') || n.includes('vidstreaming-2')) return audioBase + 0;
+        if (n.includes('hd-2') || n.includes('vidcloud-1')) return audioBase + 1;
+        return audioBase + 2;
       };
       return score(a) - score(b);
     });
 
+    const out: SourceResult[] = [];
+    const seen = new Set<string>();
     for (const server of ranked) {
       const resolved = await resolveServer(server.linkId, anime.base);
       if (!resolved?.url) continue;
@@ -403,9 +406,15 @@ const provider: StreamProvider = {
       const direct = await resolveEmbedToStream(resolved.url, `${anime.base}/`);
       const finalUrl = direct?.url || resolved.url;
       const type = direct?.type || 'custom';
+      if (seen.has(finalUrl)) continue;
+      seen.add(finalUrl);
 
-      return [{
-        source: 'anikoto',
+      const isDub = (server.type || '').toLowerCase() === 'dub';
+      const nameSlug =
+        server.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
+        (isDub ? 'dub' : 'sub');
+      out.push({
+        source: isDub ? 'anikoto-dub' : 'anikoto-sub',
         url: finalUrl,
         quality: normalizeQuality('HD'),
         headers: {
@@ -413,10 +422,13 @@ const provider: StreamProvider = {
           'User-Agent': UA,
         },
         subtitles: [],
-        audioLanguage: (server.type || '').toLowerCase() === 'dub' ? 'en' : 'ja',
+        audioLanguage: isDub ? 'en' : 'ja',
+        language: isDub ? 'English' : 'Japanese',
+        server: `anikoto-${nameSlug}`,
         sourceType: type,
-      }];
+      });
     }
+    if (out.length > 0) return out;
 
     // Last resort: direct watch-page extraction.
     return extractDirectFromWatchPage(anime.slug, anime.base, targetEp);

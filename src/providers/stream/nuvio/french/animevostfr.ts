@@ -1,5 +1,5 @@
 /**
- * AnimeVOSTFR — French VOSTFR catalogue (v2.animevostfr.org), a WordPress site on
+ * AnimeVOSTFR — French VOSTFR catalogue (animevostfr.org), a WordPress site on
  * the ToroPlay theme.
  *
  * Ported from temp/French/French/src/animevostfr. ToroPlay never puts a player
@@ -32,7 +32,7 @@ import {
   FR_ACCEPT_LANGUAGE,
 } from '../shared.js';
 
-const SITE = 'https://v2.animevostfr.org';
+const SITE = 'https://animevostfr.org';
 const LABEL = 'AnimeVOSTFR';
 
 const SEARCH_TIMEOUT_MS = 10_000;

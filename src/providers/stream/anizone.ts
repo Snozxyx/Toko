@@ -272,6 +272,7 @@ function extractVidstackSources(html: string, epUrl: string): SourceResult[] {
                 default: t.default ?? false,
               })),
             audioLanguage: 'ja',
+            language: 'Japanese',
             sourceType: src.includes('.m3u8') ? 'hls' : 'mp4',
           });
           return out;
@@ -291,6 +292,7 @@ function extractVidstackSources(html: string, epUrl: string): SourceResult[] {
       headers,
       subtitles: [],
       audioLanguage: 'ja',
+      language: 'Japanese',
       sourceType: 'hls',
     });
   }
@@ -315,6 +317,7 @@ function extractStreams(html: string, epUrl: string): SourceResult[] {
       headers,
       subtitles: [],
       audioLanguage: 'ja',
+      language: 'Japanese',
       sourceType: 'mp4',
     });
     return out;
@@ -331,6 +334,7 @@ function extractStreams(html: string, epUrl: string): SourceResult[] {
         headers,
         subtitles: [],
         audioLanguage: 'ja',
+        language: 'Japanese',
         sourceType: detectSourceType(src),
       });
     }

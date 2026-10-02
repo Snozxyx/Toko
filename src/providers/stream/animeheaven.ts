@@ -195,6 +195,7 @@ const provider: StreamProvider = {
       },
       subtitles: [],
       audioLanguage: 'ja',
+      language: 'Japanese',
       sourceType: 'mp4',
     }];
   },

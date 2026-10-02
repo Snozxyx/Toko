@@ -41,7 +41,7 @@ import {
   FR_ACCEPT_LANGUAGE,
 } from '../shared.js';
 
-const SITE = 'https://french-stream.one';
+const SITE = 'https://french-stream.net';
 const BASE_URLS = [SITE];
 const LABEL = 'Frenchstream';
 

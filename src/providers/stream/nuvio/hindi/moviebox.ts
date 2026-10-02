@@ -16,7 +16,9 @@ import {
 } from '../shared.js';
 
 const WORKER = 'https://moviebox.s4nch1tt.workers.dev';
-const SITE = 'https://themoviebox.org';
+// siteUrl label only (not fetched); themoviebox.org 301s here. The real backend
+// is the Cloudflare worker above.
+const SITE = 'https://officialmoviebox.com';
 const LABEL = 'MovieBox';
 
 interface WorkerStream {

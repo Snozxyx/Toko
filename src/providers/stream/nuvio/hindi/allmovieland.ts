@@ -1,5 +1,8 @@
 /**
- * AllMovieLand — Multi-audio WordPress scraper on allmovieland.io
+ * AllMovieLand — Multi-audio WordPress scraper on allmovieland.art
+ *
+ * The old `.io` host 301-chains away (`.io`→`.you`→`.one`→`.art`); `.art` is the
+ * live terminus, so this points there directly to skip the redirect hops.
  *
  * Search strategy: POST form search, pick best title match. The player uses an
  * AWS-hosted stream domain and token-based playlist. Each quality stream has its
@@ -18,7 +21,7 @@ import {
   NUVIO_UA,
 } from '../shared.js';
 
-const SITE = 'https://allmovieland.io';
+const SITE = 'https://allmovieland.art';
 const LABEL = 'AllMovieLand';
 
 const SITE_HEADERS = {

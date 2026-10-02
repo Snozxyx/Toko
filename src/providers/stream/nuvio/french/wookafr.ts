@@ -36,10 +36,11 @@ import {
   FR_ACCEPT_LANGUAGE,
 } from '../shared.js';
 
-const SITE = 'https://wookafr.center';
+const SITE = 'https://wookafr.boston';
 const LABEL = 'Wookafr';
 
 const DOMAINS = [
+  'https://wookafr.boston',
   'https://wookafr.center',
   'https://wookafr.cymru',
   'https://wookafr.fyi',
@@ -433,7 +434,7 @@ async function searchViaWpApi(
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return null;
 
     const posts = await siteFetchJson<WpPost[]>(
-      `${domain}/wp-json/v2/posts?search=${encodeURIComponent(query)}&per_page=10`,
+      `${domain}/wp-json/wp/v2/posts?search=${encodeURIComponent(query)}&per_page=10`,
       { acceptLanguage: FR_ACCEPT_LANGUAGE, signal: ctx.signal, timeoutMs: 8_000 }
     );
     if (!Array.isArray(posts) || posts.length === 0) continue;

@@ -1,5 +1,5 @@
 /**
- * 4KHDHub — Hindi/Multi-audio WordPress scraper on 4khdhub.dad
+ * 4KHDHub — Hindi/Multi-audio WordPress scraper on 4khdhub.one
  *
  * Search strategy: WordPress REST API with tmdbId, fallback to title keyword
  * search. Hubcloud links are extracted and resolved via FSL/workers.dev/r2.dev
@@ -19,8 +19,10 @@ import {
   NUVIO_UA,
 } from '../shared.js';
 
-const SITE = 'https://4khdhub.dad';
+const SITE = 'https://4khdhub.one';
 const LABEL = '4KHDHub';
+// Upstream domains manifest (self-heals the main host). The old `Xyr0nX/NGEX`
+// manifest 404s, so getMainUrl falls back to SITE until a live manifest exists.
 const DOMAINS_URL = 'https://raw.githubusercontent.com/Xyr0nX/NGEX/refs/heads/main/manifest.json';
 
 /** Domains for FSL (fast) stream resolution, in descending priority. */

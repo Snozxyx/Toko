@@ -45,15 +45,18 @@ interface VaData {
 }
 
 async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
-  if (isAborted(ctx.signal) || !ctx.tmdbId) return [];
+  if (isAborted(ctx.signal)) return [];
 
-  // Resolve IMDB id
-  const endpoint = ctx.type === 'tv' ? 'tv' : 'movie';
-  const extData = await siteFetchJson<{ imdb_id?: string; external_ids?: { imdb_id?: string } }>(
-    `https://api.themoviedb.org/3/${endpoint}/${ctx.tmdbId}?append_to_response=external_ids`,
-    { timeoutMs: 5_000, signal: ctx.signal }
-  );
-  const imdbId = extData?.imdb_id ?? extData?.external_ids?.imdb_id;
+  // ani.zip usually carries the IMDb id; the keyless TMDB call is a fallback.
+  let imdbId = ctx.imdbId ?? undefined;
+  if (!imdbId && ctx.tmdbId) {
+    const endpoint = ctx.type === 'tv' ? 'tv' : 'movie';
+    const extData = await siteFetchJson<{ imdb_id?: string; external_ids?: { imdb_id?: string } }>(
+      `https://api.themoviedb.org/3/${endpoint}/${ctx.tmdbId}?append_to_response=external_ids`,
+      { timeoutMs: 5_000, signal: ctx.signal }
+    );
+    imdbId = extData?.imdb_id ?? extData?.external_ids?.imdb_id ?? undefined;
+  }
   if (!imdbId) return [];
 
   if (isAborted(ctx.signal)) return [];

@@ -120,8 +120,8 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   // Try IMDB id search via WP REST
   let posts: WpPost[] = [];
 
-  let imdbId: string | null = null;
-  if (ctx.tmdbId) {
+  let imdbId: string | null = ctx.imdbId ?? null;
+  if (!imdbId && ctx.tmdbId) {
     const ext = await siteFetchJson<{ imdb_id?: string }>(
       `https://api.themoviedb.org/3/${ctx.type === 'tv' ? 'tv' : 'movie'}/${ctx.tmdbId}/external_ids`,
       { timeoutMs: 5_000, signal: ctx.signal }

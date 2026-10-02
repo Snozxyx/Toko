@@ -63,6 +63,15 @@ export interface NuvioStream {
 export interface NuvioContext {
   /** TMDB id, or null when ani.zip has no mapping — fall back to title search. */
   tmdbId: string | null;
+  /**
+   * IMDb id (`tt…`) from ani.zip, or null when it has no IMDb mapping.
+   *
+   * Providers that key off IMDb (pelisgo, sololatino, xupalace, vegamovies,
+   * 4khdhub, vaplayer, vidking) should read this first and only fall back to a
+   * TMDB `/external_ids` call when it is null — Toko carries no TMDB api_key, so
+   * that fallback is best-effort.
+   */
+  imdbId: string | null;
   type: 'movie' | 'tv';
   season?: number;
   episode?: number;
@@ -450,6 +459,7 @@ export function createNuvioProvider(
 
       const ctx: NuvioContext = {
         tmdbId: target.tmdbId,
+        imdbId: target.imdbId,
         type: kind === 'movie' ? 'movie' : target.type,
         season: target.season,
         episode: target.episode,

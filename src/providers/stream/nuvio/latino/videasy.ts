@@ -1,14 +1,15 @@
 /**
- * Videasy — Multi-server encrypted API at api.videasy.net / api2.videasy.net.
+ * Videasy — Multi-server encrypted API at api.videasy.net.
  *
  * Ported from temp/Latino/Latino/providers/videasy.js.
- * Four servers each have an endpoint that returns an encrypted response. The
+ * Three servers each have an endpoint that returns an encrypted response. The
  * response is decrypted via enc-dec.app/api/dec-videasy by posting the
  * ciphertext + TMDB id. The decrypted JSON carries `.sources[].url`. We query
- * all four servers concurrently and aggregate the streams.
+ * all servers concurrently and aggregate the streams.
  *
- * brazucaplay.js is structurally identical to videasy.js but only uses the
- * Gekko (Cuevana) server — that is handled in brazucaplay.ts.
+ * The Gekko (Cuevana) server on api2.videasy.net was dropped: that host is
+ * NXDOMAIN (the same deadness that removed the brazucaplay provider, which
+ * relied on it as its sole endpoint).
  */
 
 import { createNuvioProvider, type NuvioStream, type NuvioContext } from '../adapter.js';
@@ -22,20 +23,19 @@ import {
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
 
-const SITE = 'https://player.videasy.net';
+const SITE = 'https://player.videasy.to';
 const LABEL = 'Videasy';
 const API_DEC = 'https://enc-dec.app/api/dec-videasy';
 
 const CINEBY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0 (Edition std-2)';
 const ANDROID_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
-  'Referer': 'https://player.videasy.net/',
-  'Origin': 'https://player.videasy.net',
+  'Referer': 'https://player.videasy.to/',
+  'Origin': 'https://player.videasy.to',
 };
 
 const SERVERS: Array<{ id: string; url: string; label: string; lang: string; useAndroidHeaders?: boolean }> = [
   { id: 'Omen',   url: 'https://api.videasy.net/lamovie/sources-with-title',  label: 'L-Movie',   lang: 'LAT' },
-  { id: 'Gekko',  url: 'https://api2.videasy.net/cuevana/sources-with-title', label: 'Cuevana',   lang: 'LAT' },
   { id: 'Vimeos', url: 'https://api.videasy.net/vimeos/sources-with-title',   label: 'Vimeos',    lang: 'LAT' },
   { id: 'Raze',   url: 'https://api.videasy.net/superflix/sources-with-title',label: 'Superflix', lang: 'LAT', useAndroidHeaders: true },
 ];

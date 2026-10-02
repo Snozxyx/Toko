@@ -125,13 +125,32 @@ async function getEpisodeSources(animeSession: string, epSession: string): Promi
       const html = await res.text();
       const sources: AnimePaheSource[] = [];
       const seen = new Set<string>();
-      const re = /https?:\/\/(kwik\.[a-z]+|pahe\.win|kwik\.cx)\/e\/[A-Za-z0-9_-]+/gi;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(html))) {
-        const u = m[0];
+
+      // Primary: the resolution buttons carry the per-stream audio track and
+      // resolution (`data-audio="jpn|eng"`, `data-resolution="1080"`), so a dub
+      // mirror is distinguishable from the sub one.
+      const btnRe =
+        /<button[^>]*\bdata-src=["'](https?:\/\/(?:kwik\.[a-z]+|pahe\.win|kwik\.cx)\/e\/[A-Za-z0-9_-]+)["'][^>]*>/gi;
+      let bm: RegExpExecArray | null;
+      while ((bm = btnRe.exec(html))) {
+        const u = bm[1];
         if (seen.has(u)) continue;
         seen.add(u);
-        sources.push({ kwik: u, quality: 'auto', audio: 'japanese' });
+        const audio = /\bdata-audio=["']?([a-z]+)/i.exec(bm[0])?.[1]?.toLowerCase() ?? 'jpn';
+        const resolution = /\bdata-resolution=["']?(\d{3,4})/i.exec(bm[0])?.[1];
+        sources.push({ kwik: u, quality: resolution ? `${resolution}p` : 'auto', audio });
+      }
+
+      // Fallback: a loose scan for kwik links when the button markup changes.
+      if (sources.length === 0) {
+        const re = /https?:\/\/(kwik\.[a-z]+|pahe\.win|kwik\.cx)\/e\/[A-Za-z0-9_-]+/gi;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(html))) {
+          const u = m[0];
+          if (seen.has(u)) continue;
+          seen.add(u);
+          sources.push({ kwik: u, quality: 'auto', audio: 'jpn' });
+        }
       }
       if (sources.length === 0) throw new Error('no sources');
       return sources;
@@ -276,14 +295,17 @@ const provider: StreamProvider = {
           const directUrl = await extractDirectKwikStream(s.kwik);
           const streamUrl = directUrl || s.kwik;
           const isHls = streamUrl.includes('.m3u8');
+          const isDub = s.audio === 'eng' || s.audio === 'english';
 
           results.push({
-            source: 'animepahe',
+            source: isDub ? 'animepahe-dub' : 'animepahe-sub',
             url: streamUrl,
             quality: normalizeQuality(s.quality ?? ''),
             headers: { Referer: 'https://kwik.cx/' },
             subtitles: [],
-            audioLanguage: s.audio === 'jpn' ? 'ja' : (s.audio || undefined),
+            audioLanguage: isDub ? 'en' : 'ja',
+            language: isDub ? 'English' : 'Japanese',
+            server: isDub ? 'animepahe-dub' : 'animepahe-sub',
             sourceType: isHls ? 'hls' : detectSourceType(streamUrl),
           });
         }

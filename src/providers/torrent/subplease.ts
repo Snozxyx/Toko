@@ -7,7 +7,7 @@
 import { normalizeQuality } from '../../utils/scraping/quality.js';
 import type { TorrentProvider, SourceOptions, SourceResult } from '../../types/index.js';
 import { fetchResponse } from '../../utils/http/fetch.js';
-import { scoreEpisodeMatch } from '../../utils/torrent/matcher.js';
+import { scoreEpisodeMatch, isBatchTitle } from '../../utils/torrent/matcher.js';
 
 interface SubPleaseDownload {
   res: string;
@@ -34,7 +34,10 @@ function parseEpisodeNumber(key: string): number | null {
 
 /** Check if title looks like a batch pack */
 function isBatch(key: string): boolean {
-  return /\d+\s*[-~]\s*\d+/.test(key) || /\bbatch\b/i.test(key) || /\bseries\b/i.test(key) || /\bcomplete\b/i.test(key);
+  // Delegate to the shared detector: it guards the episode-range test (needs a
+  // 5+ span) so a digit-suffixed show title like "86 - 11" is not misread as a
+  // "11-episode batch" and dropped.
+  return isBatchTitle(key);
 }
 
 /** Normalize title for matching by removing extra spaces, brackets, version tags */

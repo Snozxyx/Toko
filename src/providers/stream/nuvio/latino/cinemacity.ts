@@ -22,8 +22,10 @@ import {
 const SITE = 'https://cinemacity.cc';
 const LABEL = 'CinemaCity';
 
+// DLE search and content pages are public; the port originally shipped a baked-in
+// `dle_user_id`/`dle_password` session cookie, but that is a stale credential that
+// does nothing once expired. Send only a Referer and let the public pages resolve.
 const SITE_HEADERS = {
-  'Cookie': 'dle_user_id=32729; dle_password=894171c6a8dab18ee594d5c652009a35;',
   'Referer': `${SITE}/`,
 };
 

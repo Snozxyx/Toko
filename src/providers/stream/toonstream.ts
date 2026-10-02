@@ -18,12 +18,15 @@ import { resolveAsCdnSource } from './toonstream/embed/as-cdn.js';
 import { resolveRubystmSource, RUBYSTM_ORIGIN } from './toonstream/embed/rubystm.js';
 import { resolveMultiEmbed, detectEmbedLanguage } from './toonstream/embed/multi-embed.js';
 
-// Live mirrors re-verified 2026-08. Everything now funnels into
-// toon-stream.site (toonstream.one/.dad 30x there; .co 500s; .day/.link dead).
-// toon.snvhost.com is the episode host the site's own support comments link to.
-const PRIMARY = 'https://toon-stream.site';
+// Live mirrors re-verified 2026-10. The WordPress install migrated again:
+// toon-stream.site now 301-redirects to toonstream.us, so .us is the live
+// primary. The old hosts are kept as fallbacks (toonstream.one/.dad 30x into
+// the current primary; toon.snvhost.com is the episode host the site's own
+// support comments link to).
+const PRIMARY = 'https://toonstream.us';
 const MIRRORS = [
   PRIMARY,
+  'https://toon-stream.site',
   'https://toonstream.dad',
   'https://toon.snvhost.com',
   'https://toonstream.net',
@@ -161,7 +164,7 @@ function collectEpisodeEmbedUrls(
   if (out.length > 0) return out;
 
   // ── Legacy structure fallback: aside#aa-options iframe ────────────────────
-  $('aside#aa-options iframe').each((_: number, el: any) => {
+  $.find('aside#aa-options iframe').each((_: number, el: any) => {
     const src = el.attr?.('data-src') ?? el.attr?.('src') ?? '';
     const label = getServerLabel(el);
     const url = src.startsWith('/') ? `${base}${src}` : src;
@@ -170,7 +173,7 @@ function collectEpisodeEmbedUrls(
 
   // Server tab buttons
   if (out.length === 0) {
-    $('ul.aa-series-servers li a, .servers-tabs a, a[data-server]').each((_: number, el: any) => {
+    $.find('ul.aa-series-servers li a, .servers-tabs a, a[data-server]').each((_: number, el: any) => {
       const href = el.attr?.('href') ?? el.attr?.('data-url') ?? '';
       const label = getServerLabel(el);
       if (href) add(href, label);
@@ -357,7 +360,9 @@ async function resolveEpisodeSources(epPath: string, referer: string): Promise<S
   const results: SourceResult[] = [];
   const seenUrls = new Set<string>();
 
-  // Process in parallel batches of 4; stop early once we have ≥1 direct stream
+  // Process in parallel batches of 4; resolve every server tab so all mirrors
+  // (and both sub/dub tracks on multi-dub titles) are emitted, not just the
+  // first batch that yields a direct stream.
   for (let i = 0; i < playerEntries.length; i += BATCH) {
     const slice = playerEntries.slice(i, i + BATCH);
     const settled = await Promise.allSettled(
@@ -374,9 +379,6 @@ async function resolveEpisodeSources(epPath: string, referer: string): Promise<S
         }
       }
     }
-    // Return early if we have at least one direct stream (not just custom embeds)
-    const hasDirectStream = results.some(s => s.sourceType === 'hls' || s.sourceType === 'mp4');
-    if (hasDirectStream) return results;
   }
 
   if (results.length > 0) return results;

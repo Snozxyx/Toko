@@ -50,6 +50,13 @@ interface MdChapter {
   relationships?: Array<{ type: string; attributes?: { name?: string } }>;
 }
 
+/** Order a chapter's sources English-first, then alphabetically by language. */
+function orderSources(a: MangaChapterSource, b: MangaChapterSource): number {
+  const rank = (l: string) => (l === 'en' ? 0 : 1);
+  const r = rank(a.language) - rank(b.language);
+  return r !== 0 ? r : a.language.localeCompare(b.language);
+}
+
 function allNames(m: MdManga): string[] {
   const names: string[] = [];
   const title = m.attributes?.title ?? {};
@@ -105,12 +112,15 @@ const provider: MangaProvider = {
       let offset = 0;
       let total = Infinity;
 
-      // Page through the English feed. limit=500 clears most series in one or
-      // two requests; cap total pages so a pathological title can't spin.
-      while (offset < total && offset < 5000) {
+      // Page through the feed in ALL translated languages — each language's
+      // chapter becomes its own source and the reader picks per chapter.
+      // limit=500 (MangaDex max) clears most series in a couple of requests;
+      // the offset cap is raised to absorb the larger all-language feed while
+      // still bounding a pathological title.
+      while (offset < total && offset < 20000) {
         const url =
           `${API}/manga/${mangaId}/feed?limit=${limit}&offset=${offset}` +
-          `&translatedLanguage[]=en&order[chapter]=asc&order[volume]=asc` +
+          `&order[chapter]=asc&order[volume]=asc` +
           `&includes[]=scanlation_group` +
           CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join('');
         const res = await fetchJson<{ data?: MdChapter[]; total?: number }>(url, { timeoutMs: 12000 });
@@ -146,7 +156,9 @@ const provider: MangaProvider = {
         offset += limit;
       }
 
-      return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
+      const entries = Array.from(byNumber.values());
+      for (const e of entries) e.sources.sort(orderSources);
+      return entries.sort((a, b) => a.number - b.number);
     } catch {
       return [];
     }

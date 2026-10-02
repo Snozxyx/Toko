@@ -169,11 +169,14 @@ async function extractMp4UploadSources(watchUrl: string, episode: number): Promi
     const $ = loadHtml(html);
 
     const sources: SourceResult[] = [];
+    const seen = new Set<string>();
 
-    // Check for embedded mp4upload iframes
+    // Emit every embed the watch page exposes (mp4upload, vidnest, …) as its
+    // own server rather than stopping at the first.
     $.find('iframe[src*="mp4upload"], iframe[src*="vidnest"]').each((_: number, el: any) => {
       const src: string = el.attr?.('src') ?? '';
-      if (src && !sources.length) {
+      if (src && !seen.has(src)) {
+        seen.add(src);
         sources.push({
           source: 'animeya-mp4upload',
           url: src,
@@ -193,7 +196,8 @@ async function extractMp4UploadSources(watchUrl: string, episode: number): Promi
     $.find('script').each((_: number, el: any) => {
       const text: string = el.text?.() ?? '';
       const m3u8Match = text.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)['"]/);
-      if (m3u8Match && !sources.length) {
+      if (m3u8Match && !seen.has(m3u8Match[1])) {
+        seen.add(m3u8Match[1]);
         sources.push({
           source: 'animeya-mp4upload',
           url: m3u8Match[1],
@@ -206,7 +210,8 @@ async function extractMp4UploadSources(watchUrl: string, episode: number): Promi
         });
       }
       const mp4Match = text.match(/["'](https?:\/\/[^"']+\.mp4[^"']*)['"]/);
-      if (mp4Match && !sources.length) {
+      if (mp4Match && !seen.has(mp4Match[1])) {
+        seen.add(mp4Match[1]);
         sources.push({
           source: 'animeya-mp4upload',
           url: mp4Match[1],

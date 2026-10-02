@@ -143,6 +143,7 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
         headers,
         subtitles: [],
         audioLanguage: 'ja',
+        language: 'Japanese',
         sourceType: 'hls',
       });
     }
@@ -162,6 +163,7 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
           headers,
           subtitles: [],
           audioLanguage: 'ja',
+          language: 'Japanese',
           sourceType: detectSourceType(url),
         });
       }
@@ -179,6 +181,7 @@ function extractStreams(html: string, pageUrl: string): SourceResult[] {
           headers,
           subtitles: [],
           audioLanguage: 'ja',
+          language: 'Japanese',
           sourceType: detectSourceType(url),
         });
       }

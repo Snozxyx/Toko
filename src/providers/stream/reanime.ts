@@ -18,7 +18,7 @@ import type { StreamProvider, SourceOptions, SourceResult, SubtitleTrack } from 
 import { fetchResponse } from '../../utils/http/fetch.js';
 
 const BASE_URL = 'https://reanime.to';
-const ALT_BASE_URL = 'https://reanime.net';
+// The old `reanime.net` fallback is a dead parked domain (unbound), removed 2026-10.
 
 interface FlixServer {
   $id?: string;
@@ -34,11 +34,6 @@ interface FlixResponse {
   servers?: FlixServer[];
 }
 
-function languageLabel(dataType?: string): string {
-  if (dataType === 'dub' || dataType === 's-dub') return 'English/Dub';
-  return 'Japanese/Sub';
-}
-
 function absoluteUrl(url: string, base: string): string {
   try {
     return new URL(url, base).toString();
@@ -47,8 +42,13 @@ function absoluteUrl(url: string, base: string): string {
   }
 }
 
+/** FlixCloud marks dubbed tracks `dub`; `s-dub` is a soft-subbed dub. */
+function isDubType(dataType?: string): boolean {
+  return dataType === 'dub' || dataType === 's-dub';
+}
+
 async function fetchFlix(anilistId: number, episode: number): Promise<FlixServer[]> {
-  const bases = [BASE_URL, ALT_BASE_URL];
+  const bases = [BASE_URL];
   for (const base of bases) {
     try {
       const url = `${base}/api/flix/${anilistId}/${episode}`;
@@ -74,7 +74,7 @@ async function fetchFlix(anilistId: number, episode: number): Promise<FlixServer
 
 const provider: StreamProvider = {
   name: 'reanime',
-  sites: [BASE_URL, ALT_BASE_URL],
+  sites: [BASE_URL],
 
   async single(opts: SourceOptions): Promise<SourceResult[]> {
     const anilistId = opts.anilistId;
@@ -99,8 +99,8 @@ const provider: StreamProvider = {
       .sort((a, b) => {
         const byServer = preference(a.serverName) - preference(b.serverName);
         if (byServer !== 0) return byServer;
-        const aDub = a.dataType === 'dub' ? 1 : 0;
-        const bDub = b.dataType === 'dub' ? 1 : 0;
+        const aDub = isDubType(a.dataType) ? 1 : 0;
+        const bDub = isDubType(b.dataType) ? 1 : 0;
         return aDub - bDub;
       });
 
@@ -129,8 +129,8 @@ const provider: StreamProvider = {
         quality: normalizeQuality(server.serverName || 'auto'),
         headers: { Referer: `${BASE_URL}/` },
         subtitles,
-        audioLanguage: server.dataType === 'dub' ? 'en' : 'ja',
-        language: server.dataType === 'dub' ? 'English Dub' : 'Japanese',
+        audioLanguage: isDubType(server.dataType) ? 'en' : 'ja',
+        language: isDubType(server.dataType) ? 'English Dub' : 'Japanese',
         server: server.serverName || 'hd',
         // FlixCloud always serves HLS once decrypted; embed fallback is custom.
         sourceType: resolved ? detectSourceType(streamUrl) : 'custom',

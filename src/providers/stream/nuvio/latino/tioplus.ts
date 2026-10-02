@@ -15,6 +15,7 @@ import {
   isAborted,
   isBudgetExhausted,
   normalize,
+  pickEpisodeHref,
   ES_ACCEPT_LANGUAGE,
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
@@ -83,14 +84,8 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
     });
     if (serieHtml) {
       const $s = loadHtml(serieHtml);
-      let epUrl: string | null = null;
-      $s(`a[href*="${ctx.season}"][href*="${ctx.episode}"]`).each((_, el) => {
-        if (!epUrl) {
-          const h = $s(el).attr('href') ?? '';
-          if (h) epUrl = h.startsWith('http') ? h : `${SITE}${h}`;
-        }
-      });
-      if (epUrl) targetUrl = epUrl;
+      const h = pickEpisodeHref($s, ctx.season, ctx.episode);
+      if (h) targetUrl = h.startsWith('http') ? h : `${SITE}${h}`;
     }
   }
 

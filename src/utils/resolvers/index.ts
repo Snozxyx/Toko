@@ -317,3 +317,65 @@ export async function resolveEmbed(
     return null;
   }
 }
+
+/** The embed URL made directly playable, or the embed itself as a fallback. */
+export interface DirectOrEmbed {
+  url: string;
+  headers?: Record<string, string>;
+  quality?: string;
+  /** SourceResult.sourceType union: direct media is 'hls'/'mp4', an embed is 'custom'. */
+  sourceType: 'hls' | 'mp4' | 'custom';
+  /** true when `url` is a direct m3u8/mp4; false when it is the embed fallback. */
+  direct: boolean;
+}
+
+/** Map a resolver media hint (or the URL) to the SourceResult.sourceType union. */
+function toSourceType(url: string, mediaType?: string): 'hls' | 'mp4' | 'custom' {
+  const t = mediaType ?? inferMediaType(url);
+  if (t === 'hls') return 'hls';
+  if (t === 'mp4' || t === 'mkv' || t === 'webm') return 'mp4';
+  return 'custom';
+}
+
+/**
+ * Resolve an embed/player URL to a direct m3u8/mp4 when possible, otherwise hand
+ * the embed back so the app's webview resolver can still play it.
+ *
+ * This is the shape the non-native stream providers want — "extract hls/m3u8 if
+ * possible, else keep the embed as a fallback" — and it mirrors the direct-else-
+ * embed convention already used by anikoto.ts.
+ *
+ * Returns `null` only when `embedUrl` is not an http(s) URL at all.
+ */
+export async function resolveToDirectOrEmbed(
+  embedUrl: string,
+  referer?: string
+): Promise<DirectOrEmbed | null> {
+  const url = String(embedUrl || '').trim();
+  if (!/^https?:\/\//i.test(url)) return null;
+
+  // Already a direct media URL — pass through with its container type.
+  if (isPlayableMediaUrl(url)) {
+    const out: DirectOrEmbed = { url, sourceType: toSourceType(url), direct: true };
+    if (referer) out.headers = { Referer: referer };
+    return out;
+  }
+
+  // Try to pull a direct m3u8/mp4 out of the embed page.
+  const resolved = await resolveEmbed(url, referer).catch(() => null);
+  if (resolved && isPlayableMediaUrl(resolved.url)) {
+    const out: DirectOrEmbed = {
+      url: resolved.url,
+      sourceType: toSourceType(resolved.url, resolved.type),
+      direct: true,
+    };
+    if (resolved.headers && Object.keys(resolved.headers).length > 0) out.headers = resolved.headers;
+    if (resolved.quality) out.quality = resolved.quality;
+    return out;
+  }
+
+  // Fallback: the embed page itself, for the app's webview resolver.
+  const out: DirectOrEmbed = { url, sourceType: 'custom', direct: false };
+  if (referer) out.headers = { Referer: referer };
+  return out;
+}

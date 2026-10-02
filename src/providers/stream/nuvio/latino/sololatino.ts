@@ -6,6 +6,13 @@
  * contains a token needed to POST to /s.php for the direct stream URL. We need
  * an IMDB id to build the /f/IMDBID[–SxEE] path, but since ctx only carries a
  * TMDB id we call TMDB's external_ids endpoint once to get the IMDB id.
+ *
+ * ⚠ DEPLOYMENT-VERIFY (2026-10): player.pelisserieshoy.com now 302s to
+ * google.com — that hardcoded player host is dead and this provider yields no
+ * streams until PLAYER is repointed. sololatino.net itself is alive (bot-walled
+ * from this CI, so the current embed host can't be rediscovered here). In your
+ * deployment, scrape a sololatino.net watch page for the live player origin and
+ * update PLAYER below.
  */
 
 import { createNuvioProvider, type NuvioStream, type NuvioContext } from '../adapter.js';
@@ -33,16 +40,19 @@ const HEADERS = {
 };
 
 async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
-  if (isAborted(ctx.signal) || !ctx.tmdbId) return [];
+  if (isAborted(ctx.signal)) return [];
   const startTime = Date.now();
 
-  // Resolve IMDB id from TMDB
-  const tmdbEndpoint = ctx.type === 'tv' ? 'tv' : 'movie';
-  const extData = await siteFetchJson<{ imdb_id?: string; external_ids?: { imdb_id?: string } }>(
-    `https://api.themoviedb.org/3/${tmdbEndpoint}/${ctx.tmdbId}/external_ids`,
-    { timeoutMs: 5_000, signal: ctx.signal }
-  );
-  const imdbId = extData?.imdb_id ?? extData?.external_ids?.imdb_id;
+  // ani.zip usually supplies the IMDb id; the keyless TMDB call is a fallback.
+  let imdbId = ctx.imdbId ?? undefined;
+  if (!imdbId && ctx.tmdbId) {
+    const tmdbEndpoint = ctx.type === 'tv' ? 'tv' : 'movie';
+    const extData = await siteFetchJson<{ imdb_id?: string; external_ids?: { imdb_id?: string } }>(
+      `https://api.themoviedb.org/3/${tmdbEndpoint}/${ctx.tmdbId}/external_ids`,
+      { timeoutMs: 5_000, signal: ctx.signal }
+    );
+    imdbId = extData?.imdb_id ?? extData?.external_ids?.imdb_id ?? undefined;
+  }
   if (!imdbId) return [];
 
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];

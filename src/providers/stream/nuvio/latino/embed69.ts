@@ -44,11 +44,16 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   if (isAborted(ctx.signal)) return [];
   const startTime = Date.now();
 
-  // Build the player URL. embed69 uses IMDb IDs; we may not have one, so fall
-  // back to a title-based search of the site when tmdbId looks like a number.
+  // Build the player URL. embed69 keys on IMDb ids (/f/IMDBID). Use the id
+  // directly when we have one; otherwise fall back to a title search of the
+  // site, whose result pages expose the /f/tt… link.
   let targetUrl: string | null = null;
 
-  if (ctx.tmdbId && /^\d+$/.test(ctx.tmdbId)) {
+  if (ctx.imdbId && /^tt\d+$/.test(ctx.imdbId)) {
+    targetUrl = `${SITE}/f/${ctx.imdbId}`;
+  }
+
+  if (!targetUrl && ctx.titles[0]) {
     // Try to find via search — the page HTML often exposes the IMDb id
     const searchHtml = await siteFetchText(
       `${SITE}/?s=${encodeURIComponent(ctx.titles[0] ?? '')}`,

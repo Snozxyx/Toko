@@ -20,7 +20,7 @@ import {
   NUVIO_UA,
 } from '../shared.js';
 
-const SITE = 'https://hindmovie.icu';
+const SITE = 'https://hindmovie.dev';
 const LABEL = 'HindMovie';
 const MAX_1080P = 3;
 

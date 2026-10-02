@@ -1,5 +1,5 @@
 /**
- * HDHub4u — Multi-language streaming site at hdhub4u.cl.
+ * HDHub4u — Multi-language streaming site at hdhub4u.free.
  *
  * Ported from temp/multi-clone/src/providers/qyrvaen.rs.
  * Uses a Typesense/Pingora search index. Post HTML contains HubCloud links
@@ -18,7 +18,9 @@ import {
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
 
-const DEFAULT_SITE = 'https://new3.hdhub4u.cl';
+// Old `new3.hdhub4u.cl` 301s here; used mainly as sites[] match + post-page
+// referer (search runs through search.pingora.fyi, which returns full permalinks).
+const DEFAULT_SITE = 'https://new1.hdhub4u.free';
 const SEARCH_EP = 'https://search.pingora.fyi/collections/post/documents/search';
 const LABEL = 'HDHub4u';
 

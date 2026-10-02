@@ -6,7 +6,10 @@
  * dynamic base URL from a GitHub-hosted config JSON). Posts contain NexDrive
  * links which redirect to HubCloud or direct CDN URLs.
  *
- * Domain refresh: checked every 4 h from SaurabhKaperwan's Utils repo.
+ * Domain refresh: checked every 4 h from SaurabhKaperwan's Utils repo. The old
+ * `vegamovies.market` constant 301-chains to 1vegamovies.lat and is stale, so the
+ * fallback now points at the current live config domain `vegamovies.gallery`;
+ * refreshDomains() overrides it at runtime anyway.
  * Search: /search.php?q=QUERY — returns Typesense hits with post IDs.
  * Post content: /wp-json/wp/v2/posts/ID (falls back to raw HTML).
  * Stream extraction: scan for hubcloud.[tld]/drive/[id] patterns and follow redirects.
@@ -26,7 +29,7 @@ import {
   NUVIO_UA,
 } from '../shared.js';
 
-const DEFAULT_SITE = 'https://vegamovies.market';
+const DEFAULT_SITE = 'https://vegamovies.gallery';
 const DOMAINS_URL  = 'https://raw.githubusercontent.com/SaurabhKaperwan/Utils/refs/heads/main/urls.json';
 const LABEL = 'VegaMovies';
 
@@ -184,9 +187,9 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   await refreshDomains(ctx.signal);
   const base = cachedBase;
 
-  // Get IMDB id for better search precision
-  let imdbId: string | null = null;
-  if (ctx.tmdbId) {
+  // ani.zip usually carries the IMDb id; TMDB (keyless) is the fallback.
+  let imdbId: string | null = ctx.imdbId ?? null;
+  if (!imdbId && ctx.tmdbId) {
     const ext = await siteFetchJson<{ imdb_id?: string }>(
       `https://api.themoviedb.org/3/${ctx.type === 'tv' ? 'tv' : 'movie'}/${ctx.tmdbId}/external_ids`,
       { timeoutMs: 5_000, signal: ctx.signal }

@@ -210,16 +210,18 @@ function extractSources(html: string, pageUrl: string, base: string): SourceResu
     } catch { /* fall through */ }
   }
 
-  // Fallback: direct HLS/MP4 in page
+  // Fallback: direct HLS/MP4 in page. WAW is a Hindi/Indian-dub catalogue, so
+  // label the unlabelled fallbacks with its primary audio rather than leaving
+  // them unset (which drops them from the language filter).
   const m3u8 = html.match(/(https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*)/i);
   if (m3u8) {
-    out.push({ source: 'watchanimeworld', url: m3u8[1], quality: normalizeQuality('HD'), headers, subtitles: [], sourceType: 'hls' });
+    out.push({ source: 'watchanimeworld', url: m3u8[1], quality: normalizeQuality('HD'), headers, subtitles: [], audioLanguage: 'hi', language: 'Hindi', sourceType: 'hls' });
     return out;
   }
 
   const mp4 = html.match(/<source[^>]+src=["']([^"']+\.mp4[^"']*)["']/i) ?? html.match(/(https?:\/\/[^\s"'<>]+\.mp4[^\s"'<>]*)/i);
   if (mp4) {
-    out.push({ source: 'watchanimeworld', url: mp4[1], quality: normalizeQuality('HD'), headers, subtitles: [], sourceType: 'mp4' });
+    out.push({ source: 'watchanimeworld', url: mp4[1], quality: normalizeQuality('HD'), headers, subtitles: [], audioLanguage: 'hi', language: 'Hindi', sourceType: 'mp4' });
     return out;
   }
 
@@ -228,7 +230,7 @@ function extractSources(html: string, pageUrl: string, base: string): SourceResu
   $.find('iframe[src], iframe[data-src]').each((_: number, el: any) => {
     const src: string = el.attr?.('src') ?? el.attr?.('data-src') ?? '';
     if (isSkippableIframe(src)) return;
-    out.push({ source: 'watchanimeworld', url: src, quality: normalizeQuality(''), headers, subtitles: [], sourceType: detectSourceType(src) });
+    out.push({ source: 'watchanimeworld', url: src, quality: normalizeQuality(''), headers, subtitles: [], audioLanguage: 'hi', language: 'Hindi', sourceType: detectSourceType(src) });
   });
 
   return out;

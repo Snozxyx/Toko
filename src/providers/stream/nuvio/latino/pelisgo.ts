@@ -30,15 +30,20 @@ function langTag(lang: string): string {
 }
 
 async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
-  if (isAborted(ctx.signal) || !ctx.tmdbId) return [];
+  if (isAborted(ctx.signal)) return [];
   const startTime = Date.now();
 
-  const tmdbEndpoint = ctx.type === 'tv' ? 'tv' : 'movie';
-  const extData = await siteFetchJson<{ imdb_id?: string }>(
-    `https://api.themoviedb.org/3/${tmdbEndpoint}/${ctx.tmdbId}/external_ids`,
-    { timeoutMs: 5_000, signal: ctx.signal }
-  );
-  const imdbId = extData?.imdb_id;
+  // ani.zip usually carries the IMDb id already; only hit TMDB (keyless, so
+  // best-effort) when it did not, and that needs a TMDB id to query.
+  let imdbId = ctx.imdbId ?? undefined;
+  if (!imdbId && ctx.tmdbId) {
+    const tmdbEndpoint = ctx.type === 'tv' ? 'tv' : 'movie';
+    const extData = await siteFetchJson<{ imdb_id?: string }>(
+      `https://api.themoviedb.org/3/${tmdbEndpoint}/${ctx.tmdbId}/external_ids`,
+      { timeoutMs: 5_000, signal: ctx.signal }
+    );
+    imdbId = extData?.imdb_id ?? undefined;
+  }
   if (!imdbId) return [];
 
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];

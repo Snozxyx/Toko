@@ -65,7 +65,7 @@ function extractSvLinks(html: string): Array<{ lang: string; url: string; server
   while ((m = entryRe.exec(match[1])) !== null) {
     try {
       const entry = m[0]
-        .replace(/(\w+)\s*:/g, '"$1":')  // unquoted keys → quoted
+        .replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":')  // unquoted keys → quoted
         .replace(/'/g, '"');
       const obj = JSON.parse(entry) as Record<string, string>;
       const lang = obj.lang ?? obj.language ?? 'lat';

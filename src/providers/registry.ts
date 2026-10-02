@@ -37,8 +37,25 @@ import animesalt from './stream/animesalt.js';
 import animeblkom from './stream/animeblkom.js';
 import desidub from './stream/desidub.js';
 import moviebox from './stream/moviebox.js';
+// Added 2026-10: eight native anime scrapers requested by the user. Authored
+// against clean-IP recon (this CI egress is bot-blocked, so none could be
+// end-to-end run here); each is best-effort and carries in-file
+// `best-effort: unverified` markers where a step is assumed. Placed after the
+// proven natives, before the slower Nuvio groups. `senshi.to` is currently a
+// placeholder — its scraper detects that and returns [] until the site ships.
+import shahiid from './stream/shahiid.js';
+import anipm from './stream/anipm.js';
+import animexin from './stream/animexin.js';
+import fireani from './stream/fireani.js';
+import turkanime from './stream/turkanime.js';
+import oneanime from './stream/oneanime.js';
+import mkissa from './stream/mkissa.js';
+import senshi from './stream/senshi.js';
 
-// ── Nuvio providers — Latino (18), Hindi (13), Multi-dub (11) ─────────────────
+// ── Nuvio providers — French (26), Latino (14), Hindi (8), Multi-dub (10) ─────
+// Counts reflect the 2026-10 live-origin audit: ten confirmed-dead Nuvio
+// providers (NXDOMAIN / explicit-shutdown origins) were removed from the
+// latino/hindi/multidub groups — see each group's index.ts removal note.
 import { FRENCH_PROVIDERS } from './stream/nuvio/french/index.js';
 import { LATINO_PROVIDERS } from './stream/nuvio/latino/index.js';
 import { HINDI_PROVIDERS }  from './stream/nuvio/hindi/index.js';
@@ -61,6 +78,18 @@ export const STREAM_PROVIDERS: StreamProvider[] = [
   animeblkom,
   desidub,
   moviebox,
+  // Native anime scrapers added 2026-10 (best-effort; see import note). Hardsub
+  // providers (anipm = English dubtitles, animexin = burned-in Multi-Sub,
+  // 1anime kaih mirror) flag the burn-in only in each source's `language`
+  // label, never in the provider name/source key.
+  shahiid,
+  anipm,
+  animexin,
+  fireani,
+  turkanime,
+  oneanime,
+  mkissa,
+  senshi,
   // Nuvio provider groups — appended after native providers so the fast anime
   // providers always answer first; these scrapers are slower by design.
   ...FRENCH_PROVIDERS,
@@ -135,6 +164,20 @@ import atsu from './manga/atsu.js';
 import webtoons from './manga/webtoons.js';
 import demonicscans from './manga/demonicscans.js';
 import toongod from './manga/toongod.js';
+// Added 2026-10 (user request). toonily + onisaga are Madara/WordPress behind a
+// full-site Cloudflare managed challenge → fetched through the browser-bypass
+// helper like toongod. mgeko (plain HTML, imgsrv5.com panels), scansgg (Nuxt
+// SPA JSON API at api.scans.gg), leercapitulo (plain Spanish reader), novelcool
+// (plain multi-page reader; panels on the signed *.movietop.cc CDN). Authored
+// against clean-IP recon — this CI egress is bot-blocked — so page extraction
+// is best-effort and marked in-file; onisaga was fully 403-blocked and assumes
+// the standard Madara contract. Appended last (lowest manga priority).
+import toonily from './manga/toonily.js';
+import onisaga from './manga/onisaga.js';
+import mgeko from './manga/mgeko.js';
+import scansgg from './manga/scansgg.js';
+import leercapitulo from './manga/leercapitulo.js';
+import novelcool from './manga/novelcool.js';
 
 export const MANGA_PROVIDERS: MangaProvider[] = [
   mangadex,
@@ -147,6 +190,12 @@ export const MANGA_PROVIDERS: MangaProvider[] = [
   webtoons,
   demonicscans,
   toongod,
+  toonily,
+  onisaga,
+  mgeko,
+  scansgg,
+  leercapitulo,
+  novelcool,
 ];
 
 // ── Priority ──────────────────────────────────────────────────────────────────

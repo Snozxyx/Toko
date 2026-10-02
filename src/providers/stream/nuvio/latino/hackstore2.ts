@@ -13,6 +13,7 @@ import {
   resolveEmbedsUntil,
   isAborted,
   isBudgetExhausted,
+  pickEpisodeHref,
   ES_ACCEPT_LANGUAGE,
   PROVIDER_BUDGET_MS,
 } from '../shared.js';
@@ -43,7 +44,7 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
   });
   if (!contentUrl) return [];
 
-  let targetUrl = contentUrl;
+  let targetUrl: string = contentUrl;
   if (ctx.type === 'tv' && ctx.season && ctx.episode) {
     const serieHtml = await siteFetchText(contentUrl, {
       headers: { Referer: `${SITE}/` },
@@ -53,10 +54,7 @@ async function extract(ctx: NuvioContext): Promise<NuvioStream[]> {
     });
     if (serieHtml) {
       const $s = loadHtml(serieHtml);
-      let epUrl: string | null = null;
-      $s(`a[href*="${ctx.season}"][href*="${ctx.episode}"]`).each((_, el) => {
-        if (!epUrl) epUrl = $s(el).attr('href') ?? null;
-      });
+      const epUrl = pickEpisodeHref($s, ctx.season, ctx.episode);
       if (epUrl) targetUrl = epUrl;
     }
   }

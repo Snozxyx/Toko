@@ -7,7 +7,7 @@
  * constructing its URLs: `/film/<slug>/` for films and `/episode/<slug>-<S>x<E>/`
  * for episodes. Several slug spellings exist per title, which is why a handful of
  * candidates are probed rather than one. WordPress underneath means
- * `/wp-json/v2/posts?search=` is available as a real search, kept as the fallback
+ * `/wp-json/wp/v2/posts?search=` is available as a real search, kept as the fallback
  * when every guessed slug 404s.
  *
  * Coflix moves between domains frequently; all five known hosts are tried in
@@ -33,6 +33,7 @@ import {
 
 /** Ordered by reliability; the later hosts are usually dead but occasionally revive. */
 const DOMAINS = [
+  'https://coflix.esq',
   'https://coflix.boston',
   'https://coflix.to',
   'https://coflix.cymru',
@@ -278,7 +279,7 @@ async function searchViaWpApi(
   signal: AbortSignal
 ): Promise<Found | null> {
   const posts = await fetchJsonPath<WpPost[]>(
-    `/wp-json/v2/posts?search=${encodeURIComponent(query)}&per_page=10`,
+    `/wp-json/wp/v2/posts?search=${encodeURIComponent(query)}&per_page=10`,
     signal
   );
   if (!Array.isArray(posts) || posts.length === 0) return null;
