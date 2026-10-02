@@ -3,7 +3,8 @@
   "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsx build.ts"
+    "build": "tsx build.ts",
+    "sign": "npm run build && tsx sign.ts"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

@@ -5,6 +5,9 @@ package-lock.json
 # Build output
 dist/
 
+# Signing keys — private.pem must never be committed
+keys/
+
 # Environment variables
 .env
 .env.local
