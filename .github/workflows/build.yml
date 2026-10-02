@@ -59,7 +59,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: toko-kai-build-${{ github.sha }}
-          path: dist/toko-signed.kai
+          path: |
+            dist/toko-signed.kai
+            dist/public-key.pem
           retention-days: 30
 
       - name: Add build summary

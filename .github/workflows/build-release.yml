@@ -66,6 +66,8 @@ jobs:
             1. Download `toko-signed.kai`
             2. Install in Tatakai via Settings → Extensions → Install from file
 
+            > `public-key.pem` is attached for verification.
+
             ### Coverage
             - **Stream**: 82 providers — anime, movies, and TV (HLS, MP4, captions, language metadata)
             - **Torrent**: 6 providers — magnet links, `.torrent` files, seeders/leechers
@@ -80,6 +82,7 @@ jobs:
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.version }}
           files: |
             dist/toko-signed.kai
+            dist/public-key.pem
           draft: false
           prerelease: false
         env:
