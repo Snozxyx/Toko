@@ -2,14 +2,11 @@
  * Toko Extension Build Script
  *
  * Bundles src/index.ts → dist/bundle.js (CJS, all deps inlined except Node
- * built-ins), then packages it with the manifest, README, and icon into
- * dist/toko.kai (sideload build — no signature, sideloaded: true).
- *
- * Signing into dist/toko-signed.kai is handled by sign.ts.
+ * built-ins), then packages manifest.json, bundle.js, README.md, and icon.png
+ * into dist/toko.kai (sideload build).
  *
  * Run:
- *   npm run build   — bundle + sideload .kai (dist/toko.kai)
- *   npm run sign    — build + sign → dist/toko-signed.kai + dist/public-key.pem
+ *   npm run build
  */
 
 import * as esbuild from 'esbuild';
@@ -26,7 +23,7 @@ const ROOT = path.resolve(
 const DIST = path.join(ROOT, 'dist');
 
 async function main(): Promise<void> {
-  // ── Step 1: Bundle src/index.ts → dist/bundle.js ──────────────────────────
+  // ── Step 1: Bundle ─────────────────────────────────────────────────────────
   fs.mkdirSync(DIST, { recursive: true });
 
   await esbuild.build({
@@ -37,26 +34,10 @@ async function main(): Promise<void> {
     outfile: path.join(DIST, 'bundle.js'),
     external: [
       'node:*',
-      // puppeteer-real-browser carries native bindings and dynamic requires
-      // that do not survive bundling; it is loaded lazily at runtime and
-      // degrades gracefully to plain fetch inside the worker sandbox.
       'puppeteer-real-browser',
-      'fs',
-      'path',
-      'os',
-      'crypto',
-      'url',
-      'util',
-      'stream',
-      'events',
-      'http',
-      'https',
-      'net',
-      'tls',
-      'zlib',
-      'buffer',
-      'child_process',
-      'worker_threads',
+      'fs', 'path', 'os', 'crypto', 'url', 'util', 'stream',
+      'events', 'http', 'https', 'net', 'tls', 'zlib', 'buffer',
+      'child_process', 'worker_threads',
     ],
     minify: false,
     sourcemap: false,
@@ -64,7 +45,7 @@ async function main(): Promise<void> {
 
   console.log('[toko/build] Bundled src/index.ts → dist/bundle.js');
 
-  // ── Step 2: Package sideload .kai (sideloaded: true, no signature) ────────
+  // ── Step 2: Package .kai ───────────────────────────────────────────────────
   const requiredFiles: Array<{ name: string; src: string }> = [
     { name: 'manifest.json', src: path.join(ROOT, 'manifest.json') },
     { name: 'bundle.js',     src: path.join(DIST, 'bundle.js') },
@@ -76,10 +57,7 @@ async function main(): Promise<void> {
   const missing: string[] = [];
 
   for (const { name, src } of requiredFiles) {
-    if (!fs.existsSync(src)) {
-      missing.push(name);
-      continue;
-    }
+    if (!fs.existsSync(src)) { missing.push(name); continue; }
     zip.file(name, fs.readFileSync(src));
   }
 

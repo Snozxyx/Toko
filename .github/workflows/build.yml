@@ -26,28 +26,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and sign extension
-        run: npm run sign
-        env:
-          TATAKAI_EXT_PRIVATE_KEY: ${{ secrets.TATAKAI_EXT_PRIVATE_KEY }}
+      - name: Build extension
+        run: npm run build
 
       - name: Verify build output
         run: |
-          if [ ! -f dist/toko-signed.kai ]; then
-            echo "Error: toko-signed.kai not found in dist/"
-            exit 1
-          fi
           if [ ! -f dist/toko.kai ]; then
             echo "Error: toko.kai not found in dist/"
             exit 1
           fi
 
-          FILE_SIZE=$(stat -c%s dist/toko-signed.kai)
+          FILE_SIZE=$(stat -c%s dist/toko.kai)
           FILE_SIZE_MB=$(echo "scale=2; $FILE_SIZE / 1024 / 1024" | bc)
 
           echo "Build successful!"
-          echo "toko-signed.kai: ${FILE_SIZE_MB}MB (${FILE_SIZE} bytes)"
-          echo "toko.kai: $(stat -c%s dist/toko.kai) bytes"
+          echo "toko.kai: ${FILE_SIZE_MB}MB (${FILE_SIZE} bytes)"
 
           MAX_SIZE=$((10 * 1024 * 1024))
           if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
@@ -56,34 +49,24 @@ jobs:
           fi
 
       - name: List bundle contents
-        run: |
-          echo "Bundle contents:"
-          unzip -l dist/toko-signed.kai
+        run: unzip -l dist/toko.kai
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: toko-kai-build-${{ github.sha }}
-          path: |
-            dist/toko-signed.kai
-            dist/toko.kai
-            dist/public-key.pem
+          path: dist/toko.kai
           retention-days: 30
 
       - name: Add build summary
         run: |
-          FILE_SIZE=$(stat -c%s dist/toko-signed.kai)
+          FILE_SIZE=$(stat -c%s dist/toko.kai)
           FILE_SIZE_MB=$(echo "scale=2; $FILE_SIZE / 1024 / 1024" | bc)
-          SHA256=$(sha256sum dist/toko-signed.kai | cut -d' ' -f1)
+          SHA256=$(sha256sum dist/toko.kai | cut -d' ' -f1)
 
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **File**: toko-signed.kai" >> $GITHUB_STEP_SUMMARY
+          echo "- **File**: toko.kai" >> $GITHUB_STEP_SUMMARY
           echo "- **Size**: ${FILE_SIZE_MB}MB (${FILE_SIZE} bytes)" >> $GITHUB_STEP_SUMMARY
           echo "- **SHA256**: \`${SHA256}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Bundle Contents" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          unzip -l dist/toko-signed.kai >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
