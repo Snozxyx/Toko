@@ -154,5 +154,6 @@ npm run build:api
 wasmer deploy
 ```
 
-Wasmer supplies the `PORT` environment variable at runtime. The API health
-check is available at `/api/v3/health`.
+Wasmer supplies the `PORT` environment variable at runtime. The API bootstrap
+installs the API's production dependencies on first start, and the health check
+is available at `/api/v3/health`.
