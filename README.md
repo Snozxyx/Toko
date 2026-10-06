@@ -143,3 +143,16 @@ npm run build
 ```
 
 The build script (`build.ts`) bundles `src/index.ts` with esbuild (CJS, all deps inlined except Node built-ins) and packages it with the manifest and icon into a `.kai` ZIP archive.
+
+## Deploying the API to Wasmer Edge
+
+The API is configured as a Wasmer app in `app.yaml`. Replace `<YOUR-NAME>`
+with your Wasmer username, then build and deploy from the repository root:
+
+```bash
+npm run build:api
+wasmer deploy
+```
+
+Wasmer supplies the `PORT` environment variable at runtime. The API health
+check is available at `/api/v3/health`.

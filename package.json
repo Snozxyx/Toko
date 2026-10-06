@@ -3,7 +3,9 @@
   "version": "4.2.0",
   "type": "module",
   "scripts": {
-    "build": "tsx build.ts"
+    "build": "tsx build.ts",
+    "build:api": "npm --prefix api install --omit=dev && npm run build",
+    "start": "node api/src/server.js"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

@@ -1,0 +1,4 @@
+kind: wasmer.io/App.v0
+name: toko-api
+owner: <YOUR-NAME>
+package: ./wasmer.toml

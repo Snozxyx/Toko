@@ -1,0 +1,13 @@
+[package]
+name = "toko-api"
+version = "1.0.0"
+description = "Toko streaming, torrent, and manga API"
+
+[command]
+name = "start"
+module = "node"
+package = "./api"
+args = ["src/server.js"]
+
+[fs]
+"/app" = "."
