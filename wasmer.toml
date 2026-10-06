@@ -6,8 +6,8 @@ description = "Toko streaming, torrent, and manga API"
 [command]
 name = "start"
 module = "node"
-package = "./api"
+package = "."
 args = ["src/start.js"]
 
 [fs]
-"/app" = "."
+"/app" = "./api"

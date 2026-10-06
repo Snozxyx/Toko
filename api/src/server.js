@@ -41,7 +41,10 @@ const HOST = process.env.TOKO_API_HOST || '0.0.0.0';
 
 // ── Bundle loading ────────────────────────────────────────────────────────────
 
-const TOKO_BUNDLE_SRC = path.resolve(__dirname, '../../dist/bundle.js');
+const TOKO_BUNDLE_SRC = [
+  path.resolve(__dirname, '../dist/bundle.js'),
+  path.resolve(__dirname, '../../dist/bundle.js'),
+].find(existsSync) || path.resolve(__dirname, '../dist/bundle.js');
 const TOKO_BUNDLE_DIR = path.join(os.tmpdir(), 'toko-api-bundle');
 
 let _bundleLoadCount = 0;

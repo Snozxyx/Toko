@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsx build.ts",
-    "build:api": "npm --prefix api install --omit=dev && npm run build",
+    "build:api": "npm --prefix api install --omit=dev && npm run build && mkdir -p api/dist && cp dist/bundle.js api/dist/bundle.js",
     "start": "node api/src/server.js"
   },
   "devDependencies": {
