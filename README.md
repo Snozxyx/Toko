@@ -22,6 +22,19 @@
 
 ## Release v4
 
+### Novel provider repairs in v4.5.3
+
+- NovelBuddy searches with `q`, loads the complete public chapter archive, refreshes stale Next.js build IDs, and uses published chapter numbers rather than sorting ordinals.
+- NovelCool uses its own search and chapter markup. Re:Library uses its translation pages; Novgo uses its paginated catalog; WoopRead loads its complete embedded catalog.
+- Novel requests detect challenge pages even when the server returns HTTP 200. The desktop host supplies its permitted provider browser to portable bundles.
+- NovelCool, Toonily, OniSaga, and ToonGod are also searched for novels. A chapter must return prose before a mixed catalog is offered in the novel reader; comic panel readers are rejected.
+- Request errors remain visible in diagnostics. Empty results can still mean a title is unavailable from a provider; access restrictions and unavailable sites can still prevent individual providers from answering.
+- Normal novel discovery starts public catalogs first and returns the first readable source within an eight-second provider budget. Later results are retained and the app updates the source list while checks finish. An explicit full scan keeps the longer challenge-solving budget.
+- Novel queries preserve parts/subtitles, successful pages are cached, simultaneous catalog requests are shared, and recently blocked providers are not retried for every alias and title. A valid empty HTTP answer does not trigger a duplicate IPC scan.
+- Ascendance of a Bookworm: Part 5 is available from its author's Syosetu publication as 217 Japanese chapters (original chapters 461–677), kept separate from earlier English catalogs and labeled Japanese.
+- Android and iOS use the same registered native proxy route. Native clearance is replayed for POST catalogs, and HTTP 200 challenge pages are recognized. The portable bundle does not try to launch Node/Puppeteer in a mobile WebView.
+- On mobile, the fast scan uses public catalogs; the full scan also checks browser-challenged sources. This keeps a slow challenge from occupying the native request slots needed for the next novel.
+
 Toko v4 is a full cleanup and stabilization release. It includes provider health audits with live-mirror repairs, removal of dead/broken providers, a full provider registry rebuild, progressive source delivery, language-aware filtering, subtitle aggregation, torrent metadata, and the download API.
 
 ## Coverage

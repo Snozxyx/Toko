@@ -1074,8 +1074,8 @@ async function handleNovelChapters(req, res) {
   const empty = { provider: null, providers: [], chapterCount: 0, chapters: [] };
   if (!t || typeof t.getNovelChapters !== 'function') return res.json(empty);
 
-  const params = { ...mangaParamsFromReq(req), provider: req.query.provider || undefined, seriesId: req.query.seriesId || undefined };
-  const key = `novel-chapters:${params.provider || ''}:${params.seriesId || ''}:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
+  const params = { ...mangaParamsFromReq(req), provider: req.query.provider || undefined, seriesId: req.query.seriesId || undefined, fullScan: req.query.fullScan === '1' };
+  const key = `novel-chapters:${params.fullScan ? 'full' : 'fast'}:${params.provider || ''}:${params.seriesId || ''}:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
 
   const hit = cacheGet(key);
   if (hit) return res.json({ ...hit, cached: true });
@@ -1083,10 +1083,12 @@ async function handleNovelChapters(req, res) {
   try {
     let entries;
     let providerStatus = [];
+    let partial = false;
     if (typeof t.debugNovelChapters === 'function') {
       const debug = await t.debugNovelChapters(params);
       entries = debug && Array.isArray(debug.results) ? debug.results : [];
       providerStatus = debug && Array.isArray(debug.diagnostics) ? debug.diagnostics : [];
+      partial = debug?.complete === false;
     } else {
       entries = await t.getNovelChapters(params);
     }
@@ -1098,10 +1100,11 @@ async function handleNovelChapters(req, res) {
       chapterCount: chapters.length,
       chapters,
       providerStatus,
+      partial,
       cached: false,
       fetchedAt: new Date().toISOString(),
     };
-    if (chapters.length > 0) cacheSet(key, result, MANGA_TTL_MS);
+    if (chapters.length > 0 && !partial) cacheSet(key, result, MANGA_TTL_MS);
     return res.json(result);
   } catch (err) {
     console.error('[toko/novel/chapters]', err.message);

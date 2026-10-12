@@ -1,8 +1,18 @@
 /** Preserve subtitles and sequel numbers when automatically matching novels. */
 import { pickBestMangaCandidate } from './manga/manga-title-resolver.js';
 const fullTitle = (value:string) => value.normalize('NFKC').toLowerCase().replace(/\((?:light\s*)?novel\)/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+/** Anime query normalization removes "Part N"; novel parts are distinct works. */
+export function buildNovelSearchQueries(titles: string[]): string[] {
+ const seen = new Set<string>();
+ return titles.map(title=>title.normalize('NFKC').replace(/\((?:light\s*)?novel\)/gi,'').replace(/\s+/g,' ').trim()).filter(title=>{
+  const key=title.toLowerCase();if(!key||seen.has(key))return false;seen.add(key);return true;
+ });
+}
 export function pickBestNovelCandidate(titles:string[], candidates:Array<{id:string;title:string}>) {
- const targets=titles.map(fullTitle).filter(Boolean);
+ const part=(value:string)=>value.match(/\bpart\s*(\d+)\b/i)?.[1];
+ const requestedParts=[...new Set(titles.map(part).filter(Boolean))];
+ const scopedTitles=requestedParts.length===1 ? titles.filter(title=>part(title)===requestedParts[0]) : titles;
+ const targets=scopedTitles.map(fullTitle).filter(Boolean);
  const exact=candidates.find(row=>targets.includes(fullTitle(row.title)));
  if(exact)return {candidate:exact,score:1};
  const eligible=candidates.filter(row=>{
@@ -13,5 +23,5 @@ export function pickBestNovelCandidate(titles:string[], candidates:Array<{id:str
    return ratio>=.85 && numbers(name)===numbers(target);
   });
  });
- return pickBestMangaCandidate(titles,eligible,row=>[row.title],.85);
+ return pickBestMangaCandidate(scopedTitles,eligible,row=>[row.title],.85);
 }

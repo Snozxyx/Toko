@@ -213,8 +213,10 @@ import lightnovelto from './novel/lightnovelto.js';
 import divinedaolibrary from './novel/divinedaolibrary.js';
 import novelbuddy from './novel/novelbuddy.js';
 import { scraperNovelProviders } from './novel/scraper-sites.js';
+import syosetu from './novel/syosetu.js';
 
 export const NOVEL_PROVIDERS: NovelProvider[] = [
+  syosetu,
   wuxiaworld,
   webnovel,
   justlightnovels,

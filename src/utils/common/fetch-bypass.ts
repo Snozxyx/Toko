@@ -27,6 +27,8 @@ import {
 } from './cf-bypass.js';
 
 export interface FetchBypassOptions {
+  /** Reuse a response already fetched by the caller. */
+  response?: Response;
   headers?: Record<string, string>;
   timeoutMs?: number;
   method?: string;
@@ -68,7 +70,7 @@ async function attempt(
   options: FetchBypassOptions
 ): Promise<AttemptResult | null> {
   try {
-    const response = await fetchResponse(url, {
+    const response = options.response ?? await fetchResponse(url, {
       headers: applySession(url, options.headers || {}),
       timeoutMs: options.timeoutMs,
       method: options.method,
@@ -99,7 +101,7 @@ export async function fetchTextWithBypass(
   }
 
   const looksWalled =
-    first === null || isChallengeResponse(first.status, first.body);
+    first === null || first.status === 403 || isChallengeResponse(first.status, first.body);
 
   if (!looksWalled) {
     // A real HTTP error (404, 500). Escalating would not help.
@@ -123,11 +125,11 @@ export async function fetchTextWithBypass(
   // The solve already rendered the target page — use it directly. Only fall back
   // to a fresh fetch when the browser landed somewhere unexpected (a redirect
   // chain that ended off-target), in which case the session is still valuable.
-  if (solved.html && !isChallengeResponse(200, solved.html)) {
+  if ((!options.method || options.method === 'GET') && solved.html && solved.finalUrl === url && !isChallengeResponse(200, solved.html)) {
     return solved.html;
   }
 
-  const retry = await attempt(url, options);
+  const retry = await attempt(url, { ...options, response: undefined });
   if (retry?.ok && !isChallengeResponse(retry.status, retry.body)) {
     return retry.body;
   }

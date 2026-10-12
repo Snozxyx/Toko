@@ -21,7 +21,7 @@ import type {
   NovelContentEntry,
 } from '../../types/index.js';
 
-import { fetchText, fetchJson, loadHtml } from '../../utils/http/fetch.js';
+import { fetchJson, loadHtml } from '../../utils/http/fetch.js';
 import { fetchNovelSearchHtml } from './novel-http.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
 
@@ -137,7 +137,7 @@ const provider: NovelProvider = {
       const href = params.seriesId || await resolveSeriesHref(params);
       if (!href) return [];
       if (new URL(toUrl(href)).origin !== BASE) throw new Error('Invalid LightNovel.to title URL');
-      const html = await fetchText(toUrl(href), { timeoutMs: 12000 });
+      const html = await fetchNovelSearchHtml(toUrl(href), { timeoutMs: 12000 });
       if (!html) return [];
       const $ = loadHtml(html);
       const byNumber = new Map<number, NovelChapterEntry>();
@@ -173,9 +173,7 @@ const provider: NovelProvider = {
         byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
       });
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
-    }
+    } catch (error) { throw error; }
   },
 
   async getContent(chapterKey: string): Promise<NovelContentEntry | null> {
@@ -183,7 +181,7 @@ const provider: NovelProvider = {
       const rest = chapterKey.includes(':') ? chapterKey.slice(chapterKey.indexOf(':') + 1) : chapterKey;
       const url = decodeURIComponent(rest);
       if (!url || new URL(toUrl(url)).origin !== BASE) return null;
-      const html = await fetchText(url.startsWith('http') ? url : toUrl(url), { timeoutMs: 15000 });
+      const html = await fetchNovelSearchHtml(url.startsWith('http') ? url : toUrl(url), { timeoutMs: 15000 });
       if (!html) return null;
       const $ = loadHtml(html);
       const title =

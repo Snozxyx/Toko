@@ -44,6 +44,8 @@ export interface NovelContentEntry {
 }
 
 export interface NovelChapterParams {
+  /** Explicit diagnostics can wait for every provider; normal reading returns early. */
+  fullScan?: boolean;
   /** Explicit provider match chosen by the user; skips fuzzy mapping. */
   provider?: string;
   seriesId?: string;

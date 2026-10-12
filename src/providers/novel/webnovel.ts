@@ -30,7 +30,7 @@ import type {
 } from '../../types/index.js';
 
 import { fetchJsonWithBypass } from '../../utils/common/fetch-bypass.js';
-import { fetchText, loadHtml } from '../../utils/http/fetch.js';
+import { loadHtml } from '../../utils/http/fetch.js';
 import { fetchNovelSearchHtml } from './novel-http.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
 
@@ -151,7 +151,7 @@ const provider: NovelProvider = {
 
       // Prefer the embedded Next.js payload (full chapter index, paginated API
       // as fallback is rate-limited); scrape the book page HTML.
-      const html = await fetchText(bookUrl(bookId), { timeoutMs: 12000 });
+      const html = await fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12000 });
       if (!html) return [];
       const $ = loadHtml(html);
 
@@ -224,9 +224,7 @@ const provider: NovelProvider = {
         byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
       });
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
-    }
+    } catch (error) { throw error; }
   },
 
   async getContent(chapterKey: string): Promise<NovelContentEntry | null> {
@@ -237,7 +235,7 @@ const provider: NovelProvider = {
 
       // Chapter URL shape: /book/<bookId>/<anything>_<chapterId> — the slug
       // segment is cosmetic, so the bare id pair resolves via search-page link.
-      const html = await fetchText(`${BASE}/book/${bookId}/${chapterId}`, { timeoutMs: 15000 });
+      const html = await fetchNovelSearchHtml(`${BASE}/book/${bookId}/${chapterId}`, { timeoutMs: 15000 });
       if (!html) return null;
       const $ = loadHtml(html);
 

@@ -27,7 +27,7 @@ import type {
   NovelContentEntry,
 } from '../../types/index.js';
 
-import { fetchText, loadHtml } from '../../utils/http/fetch.js';
+import { loadHtml } from '../../utils/http/fetch.js';
 import { fetchNovelSearchHtml } from './novel-http.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
 
@@ -111,7 +111,7 @@ async function getChapters(params: NovelChapterParams): Promise<NovelChapterEntr
     if (new URL(url).origin !== BASE || !/^\/story\/[^/]+\/$/.test(new URL(url).pathname)) {
       throw new Error('Invalid DivineDaoLibrary title URL');
     }
-    const html = await fetchText(url, { timeoutMs: 15000 });
+    const html = await fetchNovelSearchHtml(url, { timeoutMs: 15000 });
     if (!html) return [];
     const $ = loadHtml(html);
     const byNumber = new Map<number, NovelChapterEntry>();
@@ -171,9 +171,7 @@ async function getChapters(params: NovelChapterParams): Promise<NovelChapterEntr
       }
     }
     return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-  } catch {
-    return [];
-  }
+  } catch (error) { throw error; }
 }
 
 function extractParagraphs($: ReturnType<typeof loadHtml>): string[] {
@@ -205,7 +203,7 @@ const provider: NovelProvider = {
       if (!chapterKey.startsWith(prefix)) return null;
       const url = decodeURIComponent(chapterKey.slice(prefix.length));
       if (!url.startsWith(BASE) || !/\/story\/[^/]+\/[^/]+\//.test(new URL(url).pathname)) return null;
-      const html = await fetchText(url, { timeoutMs: 15000 });
+      const html = await fetchNovelSearchHtml(url, { timeoutMs: 15000 });
       if (!html) return null;
       const $ = loadHtml(html);
       const title = $('h1.chapter__title').first().text().trim() || null;

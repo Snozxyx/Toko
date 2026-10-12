@@ -23,6 +23,45 @@
 
 import { ensureBrowserRuntime } from './browser-runtime-bootstrap.js';
 
+interface ProviderBrowser {
+  navigate(url: string): Promise<unknown>;
+  evaluate(expression: string): Promise<any>;
+  executeCDP(method: string, params: unknown): Promise<any>;
+  sleep(ms: number): Promise<unknown>;
+  close(): Promise<unknown>;
+}
+interface BrowserRuntime { newBrowser(options: { headless: boolean; timeout: number }): Promise<ProviderBrowser>; }
+declare const __tatakai_chromedp__: BrowserRuntime | undefined;
+let browserRuntime: BrowserRuntime | undefined;
+export function setCloudflareBrowserRuntime(runtime?: BrowserRuntime): void { browserRuntime = runtime; }
+function getBrowserRuntime(): BrowserRuntime | undefined {
+  return browserRuntime ?? (typeof __tatakai_chromedp__ !== 'undefined' ? __tatakai_chromedp__ : undefined);
+}
+
+// The desktop host already owns a permitted Electron browser. Portable .kai
+// bundles cannot resolve puppeteer from the temporary directory they load in.
+async function solveWithHostBrowser(options: CloudflareBypassOptions, runtime: BrowserRuntime): Promise<CloudflareBypassResult | null> {
+  let browser: ProviderBrowser | undefined;
+  try {
+    browser = await runtime.newBrowser({ headless: true, timeout: Math.ceil((options.timeout ?? 15000) / 1000) });
+    await browser.navigate(options.url);
+    const deadline = Date.now() + (options.timeout ?? 15000);
+    while (Date.now() < deadline) {
+      const page = await browser.evaluate('({html:document.documentElement.outerHTML,url:location.href,ua:navigator.userAgent})');
+      if (page?.html && !isChallengeResponse(200, page.html)) {
+        if (new URL(page.url).origin !== new URL(options.url).origin) return null;
+        const { cookies } = await browser.executeCDP('Network.getCookies', { urls: [options.url] });
+        const session: CloudflareSession = { origin: originOf(options.url), cookie: (cookies || []).map((c: any) => `${c.name}=${c.value}`).join('; '), userAgent: page.ua, expiresAt: Date.now() + SESSION_TTL_MS };
+        storeSession(session);
+        return { html: page.html, finalUrl: page.url, session };
+      }
+      await browser.sleep(500);
+    }
+  } catch { /* Report an unavailable provider without breaking the fan-out. */ }
+  finally { try { await browser?.close(); } catch {} }
+  return null;
+}
+
 export interface CloudflareBypassOptions {
   url: string;
   /** Overall budget for solving the challenge. Default 45s. */
@@ -208,6 +247,7 @@ async function loadConnect(): Promise<ConnectFn | null> {
 /** True when a real browser could plausibly be launched in this environment. */
 export async function isBypassAvailable(): Promise<boolean> {
   if (!BYPASS_ENABLED) return false;
+  if (getBrowserRuntime()) return true;
   const connect = await loadConnect();
   if (!connect) return false;
   try {
@@ -359,7 +399,8 @@ export async function bypassCloudflare(
   if (existing && !options.forceRefresh) return existing;
 
   const task = (async () => {
-    const result = await solveChallenge(options);
+    const runtime = getBrowserRuntime();
+    const result = runtime ? await solveWithHostBrowser(options, runtime) : await solveChallenge(options);
     if (!result) failures.set(origin, Date.now() + FAILURE_COOLDOWN_MS);
     else failures.delete(origin);
     return result;

@@ -4,7 +4,7 @@
  * Next.js site: search/series/chapter pages are client-rendered, but the
  * framework's own `/_next/data/<buildId>/…json` endpoints serve the same
  * payloads as JSON — the contract the web client itself uses:
- *   - search   → `/_next/data/<buildId>/search.json?keyword=<q>`
+ *   - search   → `/_next/data/<buildId>/search.json?q=<q>`
  *                `pageProps.ssrItems[]` → `{ slug, name }`; series URL is
  *                `/<slug>` (single segment, no `/novel/` prefix).
  *   - chapters → `/_next/data/<buildId>/<series-slug>.json`
@@ -35,6 +35,7 @@ import type {
 
 import { fetchJson, fetchResponse, loadHtml } from '../../utils/http/fetch.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { fetchNovelSearchHtml } from './novel-http.js';
 
 const BASE = 'https://novelbuddy.me';
 const PROVIDER_NAME = 'novelbuddy';
@@ -42,14 +43,21 @@ const PROVIDER_NAME = 'novelbuddy';
 const KNOWN_ORIGINS = new Set([BASE, 'https://www.novelbuddy.me', 'https://novelbuddy.com', 'https://www.novelbuddy.com']);
 
 let cachedBuildId: string | null = null;
+async function pageData(path: string): Promise<any> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const buildId = await getBuildId();
+    const response = await fetchResponse(`${BASE}/_next/data/${buildId}/${path}`, { timeoutMs: 12000, headers: { Accept: 'application/json' } });
+    if (response.status === 404 && attempt === 0) { cachedBuildId = null; continue; }
+    if (!response.ok) throw new Error(`novelbuddy returned HTTP ${response.status}`);
+    const data = await response.json();
+    if (!data?.pageProps) throw new Error('novelbuddy returned an invalid page payload');
+    return data;
+  }
+}
 
 async function getBuildId(): Promise<string> {
   if (cachedBuildId) return cachedBuildId;
-  const res = await fetchResponse(`${BASE}/search`, { timeoutMs: 12000 });
-  if (!res.ok) {
-    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? ' (access blocked)' : ''}`);
-  }
-  const html = await res.text().catch(() => '');
+  const html = await fetchNovelSearchHtml(`${BASE}/search`);
   const match = html.match(/\/_next\/static\/([A-Za-z0-9_-]+)\/_buildManifest\.js/);
   if (!match) throw new Error('novelbuddy search is unavailable (site layout changed)');
   cachedBuildId = match[1];
@@ -62,16 +70,7 @@ interface BuddyCandidate {
 }
 
 async function searchSeries(query: string): Promise<BuddyCandidate[]> {
-  const buildId = await getBuildId();
-  const url = `${BASE}/_next/data/${buildId}/search.json?keyword=${encodeURIComponent(query)}`;
-  const res = await fetchResponse(url, {
-    timeoutMs: 15000,
-    headers: { Accept: 'application/json' },
-  });
-  if (!res.ok) {
-    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? ' (access blocked)' : ''}`);
-  }
-  const json = await res.json().catch(() => null);
+  const json = await pageData(`search.json?q=${encodeURIComponent(query)}`);
   const items = json?.pageProps?.ssrItems;
   if (!Array.isArray(items)) return [];
   const out: BuddyCandidate[] = [];
@@ -117,7 +116,8 @@ function seriesSlugFrom(params: NovelChapterParams, resolved: string | null): st
     try {
       const u = new URL(params.seriesId.startsWith('http') ? params.seriesId : `${BASE}${params.seriesId.startsWith('/') ? '' : '/'}${params.seriesId}`);
       if (!KNOWN_ORIGINS.has(u.origin)) throw new Error('Invalid novelbuddy title URL');
-      const slug = u.pathname.split('/').filter(Boolean)[0] || '';
+      const segments = u.pathname.split('/').filter(Boolean);
+      const slug = segments[0] === 'novel' ? segments[1] || '' : segments[0] || '';
       if (/^[A-Za-z0-9-]+$/.test(slug)) return slug;
       return null;
     } catch {
@@ -136,23 +136,27 @@ const provider: NovelProvider = {
 
   async getChapters(params: NovelChapterParams): Promise<NovelChapterEntry[]> {
     try {
-      const slug = seriesSlugFrom(params, await resolveSeriesSlug(params).catch(() => null));
+      const slug = seriesSlugFrom(params, params.seriesId ? null : await resolveSeriesSlug(params));
       if (!slug) return [];
-      const buildId = await getBuildId();
-      const data = await fetchJson<{ pageProps?: { initialManga?: { chapters?: unknown } } }>(
-        `${BASE}/_next/data/${buildId}/${encodeURIComponent(slug)}.json`,
-        { timeoutMs: 15000 },
-      );
-      const rows = data?.pageProps?.initialManga?.chapters;
+      const data = await pageData(`${encodeURIComponent(slug)}.json`);
+      const manga = data?.pageProps?.initialManga;
+      let rows = manga?.chapters;
+      if (/^[A-Za-z0-9]+$/.test(manga?.id || '')) {
+        const archive = await fetchJson<any>(`https://api.novelbuddy.me/titles/${manga.id}/chapters`, { timeoutMs: 12000 });
+        if (Array.isArray(archive?.data?.chapters)) rows = archive.data.chapters;
+      }
       if (!Array.isArray(rows)) return [];
       const entries: NovelChapterEntry[] = [];
       const seen = new Set<number>();
       for (const row of rows) {
-        const r = row as { number?: unknown; name?: unknown; url?: unknown; updatedAt?: unknown; date?: unknown };
-        const number = Number(r.number);
+        const r = row as { number?: unknown; name?: unknown; url?: unknown; updatedAt?: unknown; updated_at?: unknown; date?: unknown };
+        // The API's "number" is a sort ordinal (Overgeared is off by one).
+        // Use the published chapter label when available for cross-site merging.
+        const labelNumber = /\b(?:vol(?:ume)?\.?|part)\s*\d/i.test(String(r.name || '')) ? undefined : String(r.name || '').match(/chapter\s*(\d+(?:\.\d+)?)/i)?.[1];
+        const number = Number(labelNumber ?? r.number);
         if (!Number.isFinite(number) || number <= 0 || seen.has(number)) continue;
-        const chapterUrl = `${BASE}${String(r.url || '')}`;
-        if (!chapterUrl.startsWith(`${BASE}/`)) continue;
+        const chapterUrl = new URL(String(r.url || ''), BASE).href;
+        if (!r.url || new URL(chapterUrl).origin !== BASE) continue;
         seen.add(number);
         const source: NovelChapterSource = {
           provider: PROVIDER_NAME,
@@ -160,7 +164,7 @@ const provider: NovelProvider = {
           providerChapterId: chapterUrl,
           language: 'en',
           translator: null,
-          releaseDate: typeof r.updatedAt === 'string' ? r.updatedAt : typeof r.date === 'string' ? r.date : null,
+          releaseDate: typeof r.updatedAt === 'string' ? r.updatedAt : typeof r.updated_at === 'string' ? r.updated_at : typeof r.date === 'string' ? r.date : null,
         };
         entries.push({
           number,
@@ -170,8 +174,8 @@ const provider: NovelProvider = {
         });
       }
       return entries.sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
 
@@ -183,11 +187,7 @@ const provider: NovelProvider = {
       if (!KNOWN_ORIGINS.has(u.origin)) return null;
       const segs = u.pathname.split('/').filter(Boolean);
       if (segs.length < 2 || !/^[A-Za-z0-9-]+$/.test(segs[0]) || !/^[A-Za-z0-9-]+$/.test(segs[1])) return null;
-      const buildId = await getBuildId();
-      const data = await fetchJson<{ pageProps?: { initialChapter?: unknown } }>(
-        `${BASE}/_next/data/${buildId}/${segs[0]}/${segs[1]}.json`,
-        { timeoutMs: 15000 },
-      );
+      const data = await pageData(`${segs[0]}/${segs[1]}.json`);
       const ch = data?.pageProps?.initialChapter as
         | { name?: unknown; number?: unknown; content?: unknown }
         | undefined;
@@ -199,7 +199,7 @@ const provider: NovelProvider = {
         if (text) texts.push(text);
       });
       if (texts.length === 0) return null;
-      const number = Number(ch.number);
+      const number = Number((/\b(?:vol(?:ume)?\.?|part)\s*\d/i.test(String(ch.name || '')) ? undefined : String(ch.name || '').match(/chapter\s*(\d+(?:\.\d+)?)/i)?.[1]) ?? ch.number);
       return {
         title: typeof ch.name === 'string' && ch.name.trim() ? ch.name.trim() : null,
         number: Number.isFinite(number) ? number : null,

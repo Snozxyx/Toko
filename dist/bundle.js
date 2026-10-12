@@ -13831,8 +13831,8 @@ var require_pool_base = __commonJS({
       }
       get [kPending]() {
         let ret = this[kQueued];
-        for (const { [kPending]: pending } of this[kClients]) {
-          ret += pending;
+        for (const { [kPending]: pending2 } of this[kClients]) {
+          ret += pending2;
         }
         return ret;
       }
@@ -18312,19 +18312,19 @@ var require_mock_agent = __commonJS({
       }
       pendingInterceptors() {
         const mockAgentClients = this[kClients];
-        return Array.from(mockAgentClients.entries()).flatMap(([origin, result]) => result.dispatcher[kDispatches].map((dispatch) => ({ ...dispatch, origin }))).filter(({ pending }) => pending);
+        return Array.from(mockAgentClients.entries()).flatMap(([origin, result]) => result.dispatcher[kDispatches].map((dispatch) => ({ ...dispatch, origin }))).filter(({ pending: pending2 }) => pending2);
       }
       assertNoPendingInterceptors({ pendingInterceptorsFormatter = new PendingInterceptorsFormatter() } = {}) {
-        const pending = this.pendingInterceptors();
-        if (pending.length === 0) {
+        const pending2 = this.pendingInterceptors();
+        if (pending2.length === 0) {
           return;
         }
         throw new UndiciError(
-          pending.length === 1 ? `1 interceptor is pending:
+          pending2.length === 1 ? `1 interceptor is pending:
 
-${pendingInterceptorsFormatter.format(pending)}`.trim() : `${pending.length} interceptors are pending:
+${pendingInterceptorsFormatter.format(pending2)}`.trim() : `${pending2.length} interceptors are pending:
 
-${pendingInterceptorsFormatter.format(pending)}`.trim()
+${pendingInterceptorsFormatter.format(pending2)}`.trim()
         );
       }
     };
@@ -45686,8 +45686,20 @@ function pickBestMangaCandidate(titles, candidates, getNames, threshold = 0.6) {
 
 // src/utils/novel-title-match.ts
 var fullTitle = (value) => value.normalize("NFKC").toLowerCase().replace(/\((?:light\s*)?novel\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function buildNovelSearchQueries(titles) {
+  const seen = /* @__PURE__ */ new Set();
+  return titles.map((title) => title.normalize("NFKC").replace(/\((?:light\s*)?novel\)/gi, "").replace(/\s+/g, " ").trim()).filter((title) => {
+    const key = title.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 function pickBestNovelCandidate(titles, candidates) {
-  const targets = titles.map(fullTitle).filter(Boolean);
+  const part = (value) => value.match(/\bpart\s*(\d+)\b/i)?.[1];
+  const requestedParts = [...new Set(titles.map(part).filter(Boolean))];
+  const scopedTitles = requestedParts.length === 1 ? titles.filter((title) => part(title) === requestedParts[0]) : titles;
+  const targets = scopedTitles.map(fullTitle).filter(Boolean);
   const exact = candidates.find((row) => targets.includes(fullTitle(row.title)));
   if (exact) return { candidate: exact, score: 1 };
   const eligible = candidates.filter((row) => {
@@ -45698,7 +45710,486 @@ function pickBestNovelCandidate(titles, candidates) {
       return ratio >= 0.85 && numbers(name) === numbers(target);
     });
   });
-  return pickBestMangaCandidate(titles, eligible, (row) => [row.title], 0.85);
+  return pickBestMangaCandidate(scopedTitles, eligible, (row) => [row.title], 0.85);
+}
+
+// src/utils/common/browser-runtime-bootstrap.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs = require("node:fs");
+var import_node_path = __toESM(require("node:path"), 1);
+var isLinux = process.platform === "linux";
+var isWindows = process.platform === "win32";
+var isMac = process.platform === "darwin";
+var AUTO_INSTALL_ENABLED = String(process.env.CF_BYPASS_AUTO_INSTALL || "true").toLowerCase() !== "false";
+var LOCAL_BROWSER_CACHE_DIR = process.env.CF_BYPASS_BROWSER_CACHE_DIR || import_node_path.default.join(process.cwd(), ".cache", "browser-runtime");
+var CHROME_CANDIDATES = [
+  "google-chrome-stable",
+  "google-chrome",
+  "chromium-browser",
+  "chromium",
+  "chrome",
+  "chrome.exe",
+  "msedge.exe"
+];
+var WINDOWS_CHROME_PATHS = [
+  "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+  "C:/Program Files/Chromium/Application/chrome.exe",
+  "C:/Program Files (x86)/Chromium/Application/chrome.exe",
+  "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+];
+var PORTABLE_BROWSER_EXECUTABLE_NAMES = isWindows ? ["chrome.exe", "msedge.exe"] : isMac ? ["Google Chrome for Testing", "Google Chrome"] : ["chrome", "chromium", "google-chrome", "google-chrome-stable"];
+var commandExists = (command) => {
+  const isPathLike = command.includes("/") || command.includes("\\") || import_node_path.default.isAbsolute(command);
+  if (isPathLike) {
+    try {
+      (0, import_node_fs.accessSync)(command, isWindows ? import_node_fs.constants.F_OK : import_node_fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  const locator = isWindows ? "where" : "which";
+  const probe = (0, import_node_child_process.spawnSync)(locator, [command], { encoding: "utf8" });
+  return probe.status === 0 && probe.stdout.trim().length > 0;
+};
+var resolveCommandPath = (command) => {
+  const locator = isWindows ? "where" : "which";
+  const probe = (0, import_node_child_process.spawnSync)(locator, [command], { encoding: "utf8" });
+  if (probe.status !== 0) return null;
+  const lines = probe.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return lines.length > 0 ? lines[0] : null;
+};
+var resolveKnownWindowsChrome = () => {
+  if (!isWindows) return null;
+  for (const candidate of WINDOWS_CHROME_PATHS) {
+    if (commandExists(candidate)) return candidate;
+  }
+  return null;
+};
+var findExecutableRecursively = (root2, executableNames, maxDepth = 8) => {
+  if (!(0, import_node_fs.existsSync)(root2)) return null;
+  const visited = /* @__PURE__ */ new Set();
+  const queue = [{ dir: root2, depth: 0 }];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    if (visited.has(current.dir)) continue;
+    visited.add(current.dir);
+    let entries = [];
+    try {
+      entries = (0, import_node_fs.readdirSync)(current.dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const fullPath = import_node_path.default.join(current.dir, entry);
+      let stats;
+      try {
+        stats = (0, import_node_fs.statSync)(fullPath);
+      } catch {
+        continue;
+      }
+      if (stats.isFile()) {
+        if (!executableNames.some((name) => entry.toLowerCase() === name.toLowerCase())) {
+          continue;
+        }
+        if (commandExists(fullPath)) {
+          return fullPath;
+        }
+      }
+      if (stats.isDirectory() && current.depth < maxDepth) {
+        queue.push({ dir: fullPath, depth: current.depth + 1 });
+      }
+    }
+  }
+  return null;
+};
+var resolvePortableInstalledChrome = () => {
+  return findExecutableRecursively(LOCAL_BROWSER_CACHE_DIR, PORTABLE_BROWSER_EXECUTABLE_NAMES, 10);
+};
+var runPortableBrowserInstall = () => {
+  if (!AUTO_INSTALL_ENABLED) return false;
+  const npxCommand = isWindows ? "npx.cmd" : "npx";
+  const install = (0, import_node_child_process.spawnSync)(
+    npxCommand,
+    [
+      "-y",
+      "@puppeteer/browsers",
+      "install",
+      "chrome@stable",
+      "--path",
+      LOCAL_BROWSER_CACHE_DIR
+    ],
+    { stdio: "ignore" }
+  );
+  return install.status === 0;
+};
+var bootstrapped = null;
+var ensureBrowserRuntime = () => {
+  if (bootstrapped) return bootstrapped;
+  let hasXvfb = commandExists("Xvfb");
+  let chromePath = (process.env.CHROME_PATH || "").trim();
+  if (chromePath.length === 0 || !commandExists(chromePath)) {
+    chromePath = "";
+    for (const candidate of CHROME_CANDIDATES) {
+      const resolved = resolveCommandPath(candidate);
+      if (resolved) {
+        chromePath = resolved;
+        break;
+      }
+    }
+    if (!chromePath) chromePath = resolveKnownWindowsChrome() || "";
+    if (!chromePath) chromePath = resolvePortableInstalledChrome() || "";
+  }
+  if (!chromePath && AUTO_INSTALL_ENABLED) {
+    if (runPortableBrowserInstall()) {
+      chromePath = resolvePortableInstalledChrome() || "";
+    }
+  }
+  if (chromePath) {
+    process.env.CHROME_PATH = chromePath;
+  }
+  bootstrapped = {
+    hasXvfb,
+    chromePath: chromePath || null
+  };
+  return bootstrapped;
+};
+
+// src/utils/common/cf-bypass.ts
+var browserRuntime;
+function setCloudflareBrowserRuntime(runtime) {
+  browserRuntime = runtime;
+}
+function getBrowserRuntime() {
+  return browserRuntime ?? (typeof __tatakai_chromedp__ !== "undefined" ? __tatakai_chromedp__ : void 0);
+}
+async function solveWithHostBrowser(options, runtime) {
+  let browser;
+  try {
+    browser = await runtime.newBrowser({ headless: true, timeout: Math.ceil((options.timeout ?? 15e3) / 1e3) });
+    await browser.navigate(options.url);
+    const deadline = Date.now() + (options.timeout ?? 15e3);
+    while (Date.now() < deadline) {
+      const page = await browser.evaluate("({html:document.documentElement.outerHTML,url:location.href,ua:navigator.userAgent})");
+      if (page?.html && !isChallengeResponse(200, page.html)) {
+        if (new URL(page.url).origin !== new URL(options.url).origin) return null;
+        const { cookies } = await browser.executeCDP("Network.getCookies", { urls: [options.url] });
+        const session = { origin: originOf(options.url), cookie: (cookies || []).map((c) => `${c.name}=${c.value}`).join("; "), userAgent: page.ua, expiresAt: Date.now() + SESSION_TTL_MS };
+        storeSession(session);
+        return { html: page.html, finalUrl: page.url, session };
+      }
+      await browser.sleep(500);
+    }
+  } catch {
+  } finally {
+    try {
+      await browser?.close();
+    } catch {
+    }
+  }
+  return null;
+}
+var SESSION_TTL_MS = 20 * 60 * 1e3;
+var DEFAULT_SOLVE_TIMEOUT_MS = 45e3;
+var BYPASS_ENABLED = String(process.env.CF_BYPASS_ENABLED || "true").toLowerCase() !== "false";
+var HEADLESS = String(process.env.CF_BYPASS_HEADLESS || "true").toLowerCase() !== "false";
+var CHALLENGE_MARKERS = [
+  "cf-browser-verification",
+  "cf_chl_opt",
+  "__cf_chl_",
+  "challenge-platform",
+  "cf-challenge-running",
+  "turnstile",
+  "just a moment",
+  "checking your browser",
+  "enable javascript and cookies to continue",
+  "attention required! | cloudflare",
+  "ddos-guard"
+];
+function isChallengeResponse(status, body) {
+  const haystack = (body || "").slice(0, 6e3).toLowerCase();
+  if (!haystack) return status === 403 || status === 503;
+  const hasMarker = CHALLENGE_MARKERS.some((m) => haystack.includes(m));
+  if (hasMarker) return true;
+  if ((status === 403 || status === 503 || status === 429) && haystack.length < 2e3) {
+    return haystack.includes("cloudflare") || haystack.includes("cf-ray");
+  }
+  return false;
+}
+function originOf(url) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
+  }
+}
+var sessions = /* @__PURE__ */ new Map();
+var inflight = /* @__PURE__ */ new Map();
+var failures = /* @__PURE__ */ new Map();
+var FAILURE_COOLDOWN_MS = 10 * 60 * 1e3;
+function getCachedSession(url) {
+  const origin = originOf(url);
+  const hit = sessions.get(origin);
+  if (!hit) return null;
+  if (Date.now() >= hit.expiresAt) {
+    sessions.delete(origin);
+    return null;
+  }
+  return hit;
+}
+function storeSession(session) {
+  sessions.set(session.origin, session);
+}
+function clearSession(url) {
+  sessions.delete(originOf(url));
+}
+function isCoolingDown(origin) {
+  const until = failures.get(origin);
+  if (until === void 0) return false;
+  if (Date.now() >= until) {
+    failures.delete(origin);
+    return false;
+  }
+  return true;
+}
+var connectFn;
+async function loadConnect() {
+  if (connectFn !== void 0) return connectFn;
+  connectFn = null;
+  const moduleName = "puppeteer-real-browser";
+  try {
+    const req = globalThis.require;
+    if (typeof req === "function") {
+      const mod = req(moduleName);
+      if (typeof mod?.connect === "function") connectFn = mod.connect;
+    }
+  } catch {
+  }
+  if (!connectFn) {
+    try {
+      const mod = await import(
+        /* @vite-ignore */
+        moduleName + ""
+      );
+      const candidate = mod?.connect ?? mod?.default?.connect;
+      if (typeof candidate === "function") connectFn = candidate;
+    } catch {
+      connectFn = null;
+    }
+  }
+  return connectFn ?? null;
+}
+async function solveChallenge(options) {
+  const connect = await loadConnect();
+  if (!connect) return null;
+  const { chromePath, hasXvfb } = ensureBrowserRuntime();
+  if (!chromePath) return null;
+  const timeout = options.timeout ?? DEFAULT_SOLVE_TIMEOUT_MS;
+  const origin = originOf(options.url);
+  let browser = null;
+  let page = null;
+  try {
+    const connection = await connect({
+      headless: HEADLESS,
+      customConfig: { chromePath },
+      turnstile: true,
+      connectOption: { defaultViewport: null },
+      disableXvfb: !hasXvfb,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-blink-features=AutomationControlled"
+      ]
+    });
+    browser = connection.browser;
+    page = connection.page;
+    if (options.headers && Object.keys(options.headers).length > 0) {
+      const safe = {};
+      for (const [k, v] of Object.entries(options.headers)) {
+        const key = k.toLowerCase();
+        if (key === "user-agent" || key === "cookie" || key === "host") continue;
+        safe[k] = v;
+      }
+      if (Object.keys(safe).length > 0) {
+        try {
+          await page.setExtraHTTPHeaders(safe);
+        } catch {
+        }
+      }
+    }
+    await page.goto(options.url, { waitUntil: "domcontentloaded", timeout });
+    const deadline = Date.now() + timeout;
+    let html3 = "";
+    while (Date.now() < deadline) {
+      html3 = await page.content().catch(() => "");
+      if (html3 && !isChallengeResponse(200, html3)) break;
+      await new Promise((r) => setTimeout(r, 1e3));
+    }
+    if (!html3) return null;
+    if (isChallengeResponse(200, html3)) return null;
+    const rawCookies = await page.cookies().catch(() => []) || [];
+    const cookie = rawCookies.filter((c) => c && c.name).map((c) => `${c.name}=${c.value}`).join("; ");
+    const userAgent = await page.evaluate(() => navigator.userAgent).catch(() => "");
+    const finalUrl = await page.url?.().catch?.(() => options.url) || options.url;
+    const session = {
+      origin,
+      cookie,
+      userAgent: userAgent || "",
+      expiresAt: Date.now() + SESSION_TTL_MS
+    };
+    if (cookie.includes("cf_clearance") || cookie.length > 0) {
+      storeSession(session);
+    }
+    return { html: html3, session, finalUrl };
+  } catch {
+    return null;
+  } finally {
+    try {
+      await page?.close?.();
+    } catch {
+    }
+    try {
+      await browser?.close?.();
+    } catch {
+    }
+  }
+}
+async function bypassCloudflare(options) {
+  if (!BYPASS_ENABLED) return null;
+  const origin = originOf(options.url);
+  if (!options.forceRefresh && isCoolingDown(origin)) return null;
+  const existing = inflight.get(origin);
+  if (existing && !options.forceRefresh) return existing;
+  const task = (async () => {
+    const runtime = getBrowserRuntime();
+    const result = runtime ? await solveWithHostBrowser(options, runtime) : await solveChallenge(options);
+    if (!result) failures.set(origin, Date.now() + FAILURE_COOLDOWN_MS);
+    else failures.delete(origin);
+    return result;
+  })().finally(() => {
+    inflight.delete(origin);
+  });
+  inflight.set(origin, task);
+  return task;
+}
+
+// src/utils/common/fetch-bypass.ts
+function applySession(url, headers) {
+  const session = getCachedSession(url);
+  if (!session) return headers;
+  const merged = { ...headers };
+  const hasCookie = Object.keys(merged).some((k) => k.toLowerCase() === "cookie");
+  if (!hasCookie && session.cookie) merged.Cookie = session.cookie;
+  if (session.userAgent) merged["User-Agent"] = session.userAgent;
+  return merged;
+}
+async function attempt(url, options) {
+  try {
+    const response = options.response ?? await fetchResponse(url, {
+      headers: applySession(url, options.headers || {}),
+      timeoutMs: options.timeoutMs,
+      method: options.method,
+      body: options.body
+    });
+    const body = await response.text().catch(() => "");
+    return { status: response.status, body, ok: response.ok };
+  } catch {
+    return null;
+  }
+}
+async function fetchTextWithBypass(url, options = {}) {
+  const first2 = await attempt(url, options);
+  if (first2?.ok && !isChallengeResponse(first2.status, first2.body)) {
+    return first2.body;
+  }
+  const looksWalled = first2 === null || first2.status === 403 || isChallengeResponse(first2.status, first2.body);
+  if (!looksWalled) {
+    return null;
+  }
+  if (options.noBypass) return null;
+  if (getCachedSession(url)) clearSession(url);
+  const solved = await bypassCloudflare({
+    url,
+    timeout: options.bypassTimeoutMs,
+    headers: options.headers
+  });
+  if (!solved) return null;
+  if ((!options.method || options.method === "GET") && solved.html && solved.finalUrl === url && !isChallengeResponse(200, solved.html)) {
+    return solved.html;
+  }
+  const retry = await attempt(url, { ...options, response: void 0 });
+  if (retry?.ok && !isChallengeResponse(retry.status, retry.body)) {
+    return retry.body;
+  }
+  return null;
+}
+async function fetchJsonWithBypass(url, options = {}) {
+  const text3 = await fetchTextWithBypass(url, {
+    ...options,
+    headers: { Accept: "application/json, text/plain, */*", ...options.headers || {} }
+  });
+  if (!text3) return null;
+  const trimmed = text3.trim();
+  try {
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      return JSON.parse(trimmed);
+    }
+    const first2 = trimmed.indexOf("{");
+    const last2 = trimmed.lastIndexOf("}");
+    if (first2 !== -1 && last2 > first2) {
+      return JSON.parse(trimmed.substring(first2, last2 + 1));
+    }
+  } catch {
+  }
+  return null;
+}
+
+// src/providers/novel/novel-http.ts
+var pages = /* @__PURE__ */ new Map();
+var pending = /* @__PURE__ */ new Map();
+function clearNovelHttpCache() {
+  pages.clear();
+  pending.clear();
+}
+async function fetchNovelSearchHtml(url, options = {}) {
+  const headers = new Headers(options.headers);
+  const session = getCachedSession(url);
+  if (session?.cookie && !headers.has("Cookie")) headers.set("Cookie", session.cookie);
+  if (session?.userAgent) headers.set("User-Agent", session.userAgent);
+  const cacheable = !options.method || options.method.toUpperCase() === "GET";
+  const key = JSON.stringify([url, [...headers.entries()].sort()]);
+  const ttl = new URL(url).pathname === "/translations/" ? 15 * 6e4 : 6e4;
+  const hit = cacheable ? pages.get(key) : void 0;
+  if (hit && Date.now() - hit.at < ttl) return hit.html;
+  const running = cacheable ? pending.get(key) : void 0;
+  if (running) return running;
+  const request = fetchPage(url, { ...options, headers }).then((html3) => {
+    if (cacheable && html3.length < 2 * 1024 * 1024) {
+      pages.set(key, { at: Date.now(), html: html3 });
+      if (pages.size > 40) pages.delete(pages.keys().next().value);
+    }
+    return html3;
+  }).finally(() => pending.delete(key));
+  if (cacheable) pending.set(key, request);
+  return request;
+}
+async function fetchPage(url, options) {
+  const timeoutMs = process.browser ? 55e3 : options.timeoutMs ?? 12e3;
+  const response = await fetchResponse(url, { ...options, timeoutMs });
+  const html3 = await fetchTextWithBypass(url, {
+    response,
+    method: options.method,
+    body: typeof options.body === "string" ? options.body : void 0,
+    headers: Object.fromEntries(new Headers(options.headers).entries()),
+    timeoutMs,
+    bypassTimeoutMs: 15e3
+  });
+  if (html3) return html3;
+  throw new Error(`${new URL(url).hostname} returned HTTP ${response.status}${response.status === 403 ? " (access blocked)" : response.ok ? " (challenge page or unreadable response)" : ""}`);
 }
 
 // src/core/provider-runner.ts
@@ -45738,24 +46229,24 @@ function resolveProviderRunOptions(opts) {
       raw.timeoutMs,
       DEFAULT_PROVIDER_RUN_OPTIONS.timeoutMs,
       1e3,
-      3e4
+      process.browser ? 6e4 : 3e4
     )
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider51, fn, options) {
+async function runProviderWithRetry(provider52, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider51)),
+        Promise.resolve().then(() => fn(provider52)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider51.name,
+          provider: provider52.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -45768,7 +46259,7 @@ async function runProviderWithRetry(provider51, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider51.name,
+            provider: provider52.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -45786,7 +46277,7 @@ async function runProviderWithRetry(provider51, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider51.name,
+      provider: provider52.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -45862,15 +46353,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider51 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider51, fn, options);
+      const provider52 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider52, fn, options);
       emit(
         {
-          provider: provider51.name,
+          provider: provider52.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider51.name.toLowerCase())
+        leadNames.has(provider52.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -46226,7 +46717,7 @@ var API_HEADERS = {
 };
 var SERVERS = ["megaplay", "animegg"];
 var isHlsUrl = (url) => /\.m3u8($|[?#/])/i.test(url);
-function originOf(referer) {
+function originOf2(referer) {
   try {
     return new URL(referer).origin;
   } catch {
@@ -46291,7 +46782,7 @@ function mapSources(stream, server, audio) {
       ...streamHeaders,
       ...s.headers || {}
     };
-    const origin = originOf(headers.Referer || headers.referer || "");
+    const origin = originOf2(headers.Referer || headers.referer || "");
     if (origin) headers.Origin = origin;
     out.push({
       // `source` is what the UI labels the button with, so it names the server
@@ -47742,7 +48233,7 @@ function normalizeLangCode(langCode) {
 // src/utils/common/flixcloud.ts
 async function resolveFlixCloud(playerUrl, fetchImpl = fetchResponse) {
   try {
-    const origin = originOf2(playerUrl);
+    const origin = originOf3(playerUrl);
     const res = await fetchImpl(playerUrl, {
       headers: {
         Accept: "text/html,application/json,*/*",
@@ -47818,7 +48309,7 @@ function deepFindVideoUrl(value) {
 async function decryptFlixCloudSource(playerUrl, html3, fetchImpl) {
   const cryptoData = extractCryptoData(html3);
   if (!cryptoData) return null;
-  const origin = originOf2(playerUrl);
+  const origin = originOf3(playerUrl);
   const tokenResponse = await fetchImpl(`${origin}/api/m3u8/${cryptoData.token}`, {
     headers: {
       Accept: "application/json,*/*",
@@ -48403,7 +48894,7 @@ function videoType(url) {
 function cleanUrl(url) {
   return url.replace(/\\\//g, "/").replace(/&amp;/g, "&").trim();
 }
-function originOf2(url) {
+function originOf3(url) {
   try {
     return new URL(url).origin;
   } catch {
@@ -48624,7 +49115,7 @@ function atobOrSelf(value) {
 function hostOf(url) {
   return url.match(/^https?:\/\/([^/]+)/)?.[1] || "";
 }
-function originOf3(url) {
+function originOf4(url) {
   return url.match(/^https?:\/\/[^/]+/)?.[0] || "";
 }
 function maybeUnpack(html3) {
@@ -49024,7 +49515,7 @@ async function resolveMyTV(url) {
 }
 async function resolveYounetu(url) {
   try {
-    const origin = originOf3(url) || "https://younetu.org";
+    const origin = originOf4(url) || "https://younetu.org";
     const page = await getPage(url, { Referer: origin + "/" });
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
@@ -49066,7 +49557,7 @@ async function resolveMoon(url) {
 }
 async function resolvePackedPlayer(url) {
   try {
-    const origin = originOf3(url) || url;
+    const origin = originOf4(url) || url;
     const page = await getPage(url, { Referer: origin + "/" });
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
@@ -49082,7 +49573,7 @@ async function resolvePackedPlayer(url) {
 }
 async function resolveLecteurVideo(url) {
   try {
-    const origin = originOf3(url) || "https://lecteurvideo.com";
+    const origin = originOf4(url) || "https://lecteurvideo.com";
     const refParam = url.match(/[?&]url=([^&]+)/)?.[1] || "";
     const referrerMap = {
       "wookafr.tel": "https://wookafr.center",
@@ -49325,7 +49816,7 @@ function findBestVideoIframe(html3, pageUrl) {
     let iframeUrl = match2[1];
     if (iframeUrl.startsWith("//")) iframeUrl = "https:" + iframeUrl;
     if (iframeUrl.startsWith("/")) {
-      const origin = originOf3(pageUrl);
+      const origin = originOf4(pageUrl);
       if (origin) iframeUrl = origin + iframeUrl;
     }
     if (!iframeUrl.startsWith("http")) continue;
@@ -49656,407 +50147,6 @@ var animelok = {
   }
 };
 var animelok_default = animelok;
-
-// src/utils/common/browser-runtime-bootstrap.ts
-var import_node_child_process = require("node:child_process");
-var import_node_fs = require("node:fs");
-var import_node_path = __toESM(require("node:path"), 1);
-var isLinux = process.platform === "linux";
-var isWindows = process.platform === "win32";
-var isMac = process.platform === "darwin";
-var AUTO_INSTALL_ENABLED = String(process.env.CF_BYPASS_AUTO_INSTALL || "true").toLowerCase() !== "false";
-var LOCAL_BROWSER_CACHE_DIR = process.env.CF_BYPASS_BROWSER_CACHE_DIR || import_node_path.default.join(process.cwd(), ".cache", "browser-runtime");
-var CHROME_CANDIDATES = [
-  "google-chrome-stable",
-  "google-chrome",
-  "chromium-browser",
-  "chromium",
-  "chrome",
-  "chrome.exe",
-  "msedge.exe"
-];
-var WINDOWS_CHROME_PATHS = [
-  "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files/Chromium/Application/chrome.exe",
-  "C:/Program Files (x86)/Chromium/Application/chrome.exe",
-  "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-];
-var PORTABLE_BROWSER_EXECUTABLE_NAMES = isWindows ? ["chrome.exe", "msedge.exe"] : isMac ? ["Google Chrome for Testing", "Google Chrome"] : ["chrome", "chromium", "google-chrome", "google-chrome-stable"];
-var commandExists = (command) => {
-  const isPathLike = command.includes("/") || command.includes("\\") || import_node_path.default.isAbsolute(command);
-  if (isPathLike) {
-    try {
-      (0, import_node_fs.accessSync)(command, isWindows ? import_node_fs.constants.F_OK : import_node_fs.constants.X_OK);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  const locator = isWindows ? "where" : "which";
-  const probe = (0, import_node_child_process.spawnSync)(locator, [command], { encoding: "utf8" });
-  return probe.status === 0 && probe.stdout.trim().length > 0;
-};
-var resolveCommandPath = (command) => {
-  const locator = isWindows ? "where" : "which";
-  const probe = (0, import_node_child_process.spawnSync)(locator, [command], { encoding: "utf8" });
-  if (probe.status !== 0) return null;
-  const lines = probe.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  return lines.length > 0 ? lines[0] : null;
-};
-var resolveKnownWindowsChrome = () => {
-  if (!isWindows) return null;
-  for (const candidate of WINDOWS_CHROME_PATHS) {
-    if (commandExists(candidate)) return candidate;
-  }
-  return null;
-};
-var findExecutableRecursively = (root2, executableNames, maxDepth = 8) => {
-  if (!(0, import_node_fs.existsSync)(root2)) return null;
-  const visited = /* @__PURE__ */ new Set();
-  const queue = [{ dir: root2, depth: 0 }];
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current) break;
-    if (visited.has(current.dir)) continue;
-    visited.add(current.dir);
-    let entries = [];
-    try {
-      entries = (0, import_node_fs.readdirSync)(current.dir);
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const fullPath = import_node_path.default.join(current.dir, entry);
-      let stats;
-      try {
-        stats = (0, import_node_fs.statSync)(fullPath);
-      } catch {
-        continue;
-      }
-      if (stats.isFile()) {
-        if (!executableNames.some((name) => entry.toLowerCase() === name.toLowerCase())) {
-          continue;
-        }
-        if (commandExists(fullPath)) {
-          return fullPath;
-        }
-      }
-      if (stats.isDirectory() && current.depth < maxDepth) {
-        queue.push({ dir: fullPath, depth: current.depth + 1 });
-      }
-    }
-  }
-  return null;
-};
-var resolvePortableInstalledChrome = () => {
-  return findExecutableRecursively(LOCAL_BROWSER_CACHE_DIR, PORTABLE_BROWSER_EXECUTABLE_NAMES, 10);
-};
-var runPortableBrowserInstall = () => {
-  if (!AUTO_INSTALL_ENABLED) return false;
-  const npxCommand = isWindows ? "npx.cmd" : "npx";
-  const install = (0, import_node_child_process.spawnSync)(
-    npxCommand,
-    [
-      "-y",
-      "@puppeteer/browsers",
-      "install",
-      "chrome@stable",
-      "--path",
-      LOCAL_BROWSER_CACHE_DIR
-    ],
-    { stdio: "ignore" }
-  );
-  return install.status === 0;
-};
-var bootstrapped = null;
-var ensureBrowserRuntime = () => {
-  if (bootstrapped) return bootstrapped;
-  let hasXvfb = commandExists("Xvfb");
-  let chromePath = (process.env.CHROME_PATH || "").trim();
-  if (chromePath.length === 0 || !commandExists(chromePath)) {
-    chromePath = "";
-    for (const candidate of CHROME_CANDIDATES) {
-      const resolved = resolveCommandPath(candidate);
-      if (resolved) {
-        chromePath = resolved;
-        break;
-      }
-    }
-    if (!chromePath) chromePath = resolveKnownWindowsChrome() || "";
-    if (!chromePath) chromePath = resolvePortableInstalledChrome() || "";
-  }
-  if (!chromePath && AUTO_INSTALL_ENABLED) {
-    if (runPortableBrowserInstall()) {
-      chromePath = resolvePortableInstalledChrome() || "";
-    }
-  }
-  if (chromePath) {
-    process.env.CHROME_PATH = chromePath;
-  }
-  bootstrapped = {
-    hasXvfb,
-    chromePath: chromePath || null
-  };
-  return bootstrapped;
-};
-
-// src/utils/common/cf-bypass.ts
-var SESSION_TTL_MS = 20 * 60 * 1e3;
-var DEFAULT_SOLVE_TIMEOUT_MS = 45e3;
-var BYPASS_ENABLED = String(process.env.CF_BYPASS_ENABLED || "true").toLowerCase() !== "false";
-var HEADLESS = String(process.env.CF_BYPASS_HEADLESS || "true").toLowerCase() !== "false";
-var CHALLENGE_MARKERS = [
-  "cf-browser-verification",
-  "cf_chl_opt",
-  "__cf_chl_",
-  "challenge-platform",
-  "cf-challenge-running",
-  "turnstile",
-  "just a moment",
-  "checking your browser",
-  "enable javascript and cookies to continue",
-  "attention required! | cloudflare",
-  "ddos-guard"
-];
-function isChallengeResponse(status, body) {
-  const haystack = (body || "").slice(0, 6e3).toLowerCase();
-  if (!haystack) return status === 403 || status === 503;
-  const hasMarker = CHALLENGE_MARKERS.some((m) => haystack.includes(m));
-  if (hasMarker) return true;
-  if ((status === 403 || status === 503 || status === 429) && haystack.length < 2e3) {
-    return haystack.includes("cloudflare") || haystack.includes("cf-ray");
-  }
-  return false;
-}
-function originOf4(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return url;
-  }
-}
-var sessions = /* @__PURE__ */ new Map();
-var inflight = /* @__PURE__ */ new Map();
-var failures = /* @__PURE__ */ new Map();
-var FAILURE_COOLDOWN_MS = 10 * 60 * 1e3;
-function getCachedSession(url) {
-  const origin = originOf4(url);
-  const hit = sessions.get(origin);
-  if (!hit) return null;
-  if (Date.now() >= hit.expiresAt) {
-    sessions.delete(origin);
-    return null;
-  }
-  return hit;
-}
-function storeSession(session) {
-  sessions.set(session.origin, session);
-}
-function clearSession(url) {
-  sessions.delete(originOf4(url));
-}
-function isCoolingDown(origin) {
-  const until = failures.get(origin);
-  if (until === void 0) return false;
-  if (Date.now() >= until) {
-    failures.delete(origin);
-    return false;
-  }
-  return true;
-}
-var connectFn;
-async function loadConnect() {
-  if (connectFn !== void 0) return connectFn;
-  connectFn = null;
-  const moduleName = "puppeteer-real-browser";
-  try {
-    const req = globalThis.require;
-    if (typeof req === "function") {
-      const mod = req(moduleName);
-      if (typeof mod?.connect === "function") connectFn = mod.connect;
-    }
-  } catch {
-  }
-  if (!connectFn) {
-    try {
-      const mod = await import(
-        /* @vite-ignore */
-        moduleName + ""
-      );
-      const candidate = mod?.connect ?? mod?.default?.connect;
-      if (typeof candidate === "function") connectFn = candidate;
-    } catch {
-      connectFn = null;
-    }
-  }
-  return connectFn ?? null;
-}
-async function solveChallenge(options) {
-  const connect = await loadConnect();
-  if (!connect) return null;
-  const { chromePath, hasXvfb } = ensureBrowserRuntime();
-  if (!chromePath) return null;
-  const timeout = options.timeout ?? DEFAULT_SOLVE_TIMEOUT_MS;
-  const origin = originOf4(options.url);
-  let browser = null;
-  let page = null;
-  try {
-    const connection = await connect({
-      headless: HEADLESS,
-      customConfig: { chromePath },
-      turnstile: true,
-      connectOption: { defaultViewport: null },
-      disableXvfb: !hasXvfb,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-blink-features=AutomationControlled"
-      ]
-    });
-    browser = connection.browser;
-    page = connection.page;
-    if (options.headers && Object.keys(options.headers).length > 0) {
-      const safe = {};
-      for (const [k, v] of Object.entries(options.headers)) {
-        const key = k.toLowerCase();
-        if (key === "user-agent" || key === "cookie" || key === "host") continue;
-        safe[k] = v;
-      }
-      if (Object.keys(safe).length > 0) {
-        try {
-          await page.setExtraHTTPHeaders(safe);
-        } catch {
-        }
-      }
-    }
-    await page.goto(options.url, { waitUntil: "domcontentloaded", timeout });
-    const deadline = Date.now() + timeout;
-    let html3 = "";
-    while (Date.now() < deadline) {
-      html3 = await page.content().catch(() => "");
-      if (html3 && !isChallengeResponse(200, html3)) break;
-      await new Promise((r) => setTimeout(r, 1e3));
-    }
-    if (!html3) return null;
-    if (isChallengeResponse(200, html3)) return null;
-    const rawCookies = await page.cookies().catch(() => []) || [];
-    const cookie = rawCookies.filter((c) => c && c.name).map((c) => `${c.name}=${c.value}`).join("; ");
-    const userAgent = await page.evaluate(() => navigator.userAgent).catch(() => "");
-    const finalUrl = await page.url?.().catch?.(() => options.url) || options.url;
-    const session = {
-      origin,
-      cookie,
-      userAgent: userAgent || "",
-      expiresAt: Date.now() + SESSION_TTL_MS
-    };
-    if (cookie.includes("cf_clearance") || cookie.length > 0) {
-      storeSession(session);
-    }
-    return { html: html3, session, finalUrl };
-  } catch {
-    return null;
-  } finally {
-    try {
-      await page?.close?.();
-    } catch {
-    }
-    try {
-      await browser?.close?.();
-    } catch {
-    }
-  }
-}
-async function bypassCloudflare(options) {
-  if (!BYPASS_ENABLED) return null;
-  const origin = originOf4(options.url);
-  if (!options.forceRefresh && isCoolingDown(origin)) return null;
-  const existing = inflight.get(origin);
-  if (existing && !options.forceRefresh) return existing;
-  const task = (async () => {
-    const result = await solveChallenge(options);
-    if (!result) failures.set(origin, Date.now() + FAILURE_COOLDOWN_MS);
-    else failures.delete(origin);
-    return result;
-  })().finally(() => {
-    inflight.delete(origin);
-  });
-  inflight.set(origin, task);
-  return task;
-}
-
-// src/utils/common/fetch-bypass.ts
-function applySession(url, headers) {
-  const session = getCachedSession(url);
-  if (!session) return headers;
-  const merged = { ...headers };
-  const hasCookie = Object.keys(merged).some((k) => k.toLowerCase() === "cookie");
-  if (!hasCookie && session.cookie) merged.Cookie = session.cookie;
-  if (session.userAgent) merged["User-Agent"] = session.userAgent;
-  return merged;
-}
-async function attempt(url, options) {
-  try {
-    const response = await fetchResponse(url, {
-      headers: applySession(url, options.headers || {}),
-      timeoutMs: options.timeoutMs,
-      method: options.method,
-      body: options.body
-    });
-    const body = await response.text().catch(() => "");
-    return { status: response.status, body, ok: response.ok };
-  } catch {
-    return null;
-  }
-}
-async function fetchTextWithBypass(url, options = {}) {
-  const first2 = await attempt(url, options);
-  if (first2?.ok && !isChallengeResponse(first2.status, first2.body)) {
-    return first2.body;
-  }
-  const looksWalled = first2 === null || isChallengeResponse(first2.status, first2.body);
-  if (!looksWalled) {
-    return null;
-  }
-  if (options.noBypass) return null;
-  if (getCachedSession(url)) clearSession(url);
-  const solved = await bypassCloudflare({
-    url,
-    timeout: options.bypassTimeoutMs,
-    headers: options.headers
-  });
-  if (!solved) return null;
-  if (solved.html && !isChallengeResponse(200, solved.html)) {
-    return solved.html;
-  }
-  const retry = await attempt(url, options);
-  if (retry?.ok && !isChallengeResponse(retry.status, retry.body)) {
-    return retry.body;
-  }
-  return null;
-}
-async function fetchJsonWithBypass(url, options = {}) {
-  const text3 = await fetchTextWithBypass(url, {
-    ...options,
-    headers: { Accept: "application/json, text/plain, */*", ...options.headers || {} }
-  });
-  if (!text3) return null;
-  const trimmed = text3.trim();
-  try {
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-      return JSON.parse(trimmed);
-    }
-    const first2 = trimmed.indexOf("{");
-    const last2 = trimmed.lastIndexOf("}");
-    if (first2 !== -1 && last2 > first2) {
-      return JSON.parse(trimmed.substring(first2, last2 + 1));
-    }
-  } catch {
-  }
-  return null;
-}
 
 // src/providers/stream/watchanimeworld.ts
 var BASES = ["https://watchanimeworld.one"];
@@ -50582,8 +50672,8 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE31) => {
-        const html3 = await fetchHtml3(`${BASE31}/?s=${encodeURIComponent(query)}`, BASE31);
+      BASES2.map(async (BASE32) => {
+        const html3 = await fetchHtml3(`${BASE32}/?s=${encodeURIComponent(query)}`, BASE32);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
@@ -50594,9 +50684,9 @@ async function searchAnime2(titles) {
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE31}${href}`,
+            url: href.startsWith("http") ? href : `${BASE32}${href}`,
             title,
-            base: BASE31,
+            base: BASE32,
             slug: m[1],
             score: scoreMatch(query, title)
           });
@@ -53997,19 +54087,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider51 = {
+  const provider52 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider51.movie = (opts) => run(opts, "movie");
+    provider52.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider51.getLanguages = async () => languages;
+    provider52.getLanguages = async () => languages;
   }
-  return provider51;
+  return provider52;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -56021,7 +56111,7 @@ var SEARCH_SELECTORS = [
   'article a[href*="/anime/"]'
 ];
 var ALT_SCOPE = ".TPost, .TPostMv, article, li, .card, .result-item, .search-item";
-function fetchPage(url, ctx, timeoutMs = 12e3, noBypass = false) {
+function fetchPage2(url, ctx, timeoutMs = 12e3, noBypass = false) {
   return siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs,
@@ -56125,12 +56215,12 @@ async function searchAnime9(title, ctx) {
   const slug2 = toSlug(title);
   if (slug2.length > 3) {
     const url = `${SITE8}/anime/${slug2}/`;
-    const html4 = await fetchPage(url, ctx, 8e3, true);
+    const html4 = await fetchPage2(url, ctx, 8e3, true);
     if (html4 && html4.length > 1e3) {
       return [{ title: slug2.replace(/-/g, " "), title2: title, slug: slug2, url }];
     }
   }
-  const html3 = await fetchPage(`${SITE8}/?s=${encodeURIComponent(title)}`, ctx);
+  const html3 = await fetchPage2(`${SITE8}/?s=${encodeURIComponent(title)}`, ctx);
   return html3 ? parseSearchHtml(html3) : [];
 }
 function parseSeasonNumber(seasonSlug) {
@@ -56331,7 +56421,7 @@ async function seriesStreams(seasons, ctx, startTime) {
   let offset = 0;
   for (const part of parts) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const html3 = await fetchPage(absoluteUrl2(part.href, SITE8), ctx);
+    const html3 = await fetchPage2(absoluteUrl2(part.href, SITE8), ctx);
     if (!html3) continue;
     const $2 = loadHtml(html3);
     let highest = 0;
@@ -56346,7 +56436,7 @@ async function seriesStreams(seasons, ctx, startTime) {
         if (!link) continue;
         if (visited.has(link.href)) break;
         visited.add(link.href);
-        const page = await fetchPage(link.href, ctx, 15e3);
+        const page = await fetchPage2(link.href, ctx, 15e3);
         if (page) {
           streams.push(...await streamsFromPage(page, link.href, language, ctx, startTime));
         }
@@ -56378,7 +56468,7 @@ async function movieStreams(slug2, seasonHref, ctx, startTime) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return streams;
       if (seen.has(url)) continue;
       seen.add(url);
-      const html3 = await fetchPage(url, ctx, 12e3, true);
+      const html3 = await fetchPage2(url, ctx, 12e3, true);
       const hasPlayer = html3 !== null && (html3.includes("epLecteurSelect") || html3.includes('"embedUrl"') || html3.includes("<iframe"));
       if (!hasPlayer) continue;
       const found = await streamsFromPage(html3, url, language, ctx, startTime);
@@ -56412,7 +56502,7 @@ async function findSeries(ctx, startTime) {
   const queries = ctx.titles.slice(0, 5).map((t) => afNormalize(t)).filter(Boolean);
   for (const candidate of ranked) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const html3 = await fetchPage(`${SITE8}/anime/${candidate.slug}/`, ctx, 8e3);
+    const html3 = await fetchPage2(`${SITE8}/anime/${candidate.slug}/`, ctx, 8e3);
     if (!html3) continue;
     const pageTitle = loadHtml(html3)("h1.hero-title").first().text().trim();
     if (!pageTitle) continue;
@@ -56427,7 +56517,7 @@ async function extract9(ctx) {
   const match2 = await findSeries(ctx, startTime);
   if (!match2) return [];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesHtml = await fetchPage(`${SITE8}/anime/${match2.slug}/`, ctx);
+  const seriesHtml = await fetchPage2(`${SITE8}/anime/${match2.slug}/`, ctx);
   if (!seriesHtml) return [];
   const { seasons, filmHref } = parseSeasons(seriesHtml, match2.slug);
   if (ctx.type === "movie") {
@@ -57033,7 +57123,7 @@ function parseSeasonEpisodes(html3) {
   });
   return episodes;
 }
-async function fetchPage2(url, signal) {
+async function fetchPage3(url, signal) {
   return siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: PAGE_TIMEOUT_MS2,
@@ -57063,7 +57153,7 @@ async function trySearch(titles, wantSeries, signal, startTime) {
 async function browseCategory(type, titles, signal) {
   const baseType = type === "movie" ? "films" : "series";
   const linkPattern = type === "movie" ? "/film/" : "/serie/";
-  const html3 = await fetchPage2(`${SITE11}/${baseType}`, signal);
+  const html3 = await fetchPage3(`${SITE11}/${baseType}`, signal);
   if (!html3) return null;
   const $2 = loadHtml(html3);
   const items = [];
@@ -57108,7 +57198,7 @@ async function streamsFromTabs(servers, signal) {
 async function extractMovie(titles, signal, startTime) {
   const match2 = await trySearch(titles, false, signal, startTime) || await browseCategory("movie", titles, signal);
   if (!match2 || isAborted(signal) || isBudgetExhausted(startTime)) return [];
-  const html3 = await fetchPage2(match2.url, signal);
+  const html3 = await fetchPage3(match2.url, signal);
   if (!html3) return [];
   const servers = parseServerTabs2(
     loadHtml(html3),
@@ -57127,13 +57217,13 @@ async function extractSeries(ctx, titles, startTime) {
   const targetEpisodeNums = [...new Set(targets.length > 0 ? targets : [1])];
   const match2 = await trySearch(titles, true, ctx.signal, startTime) || await browseCategory("tv", titles, ctx.signal);
   if (!match2 || isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesHtml = await fetchPage2(match2.url, ctx.signal);
+  const seriesHtml = await fetchPage3(match2.url, ctx.signal);
   if (!seriesHtml) return [];
   const seasons = parseSeasons2(seriesHtml);
   if (seasons.length === 0) return [];
   const targetSeason = seasons.find((s) => s.num === targetSeasonNum) || seasons[0];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seasonHtml = await fetchPage2(targetSeason.link, ctx.signal);
+  const seasonHtml = await fetchPage3(targetSeason.link, ctx.signal);
   if (!seasonHtml) return [];
   const episodes = parseSeasonEpisodes(seasonHtml);
   if (episodes.length === 0) return [];
@@ -57144,7 +57234,7 @@ async function extractSeries(ctx, titles, startTime) {
   }
   if (!ep) ep = episodes[targetEpisodeNums[0] - 1];
   if (!ep || isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const epHtml = await fetchPage2(ep.link, ctx.signal);
+  const epHtml = await fetchPage3(ep.link, ctx.signal);
   if (!epHtml) return [];
   const servers = parseServerTabs2(
     loadHtml(epHtml),
@@ -57702,7 +57792,7 @@ function scoreMovieCategory(cardTitle, queryTitles) {
   }
   return bestScore;
 }
-async function fetchPage3(url, ctx, timeoutMs) {
+async function fetchPage4(url, ctx, timeoutMs) {
   return siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     signal: ctx.signal,
@@ -57874,7 +57964,7 @@ async function findSeriesLead(ctx, season, startTime) {
     const ranked = await searchByTitle(title, "tv", season, ctx);
     if (ranked.length === 0 || ranked[0].score < MIN_MATCH_SCORE) continue;
     const card = ranked[0];
-    const pageHtml = await fetchPage3(
+    const pageHtml = await fetchPage4(
       card.href || `${card.baseUrl}/index.php?newsid=${card.newsId}`,
       ctx,
       1e4
@@ -57916,7 +58006,7 @@ async function extractSeries2(ctx, startTime) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
     const ranked = await searchByTitle(title, "tv", season, ctx);
     if (ranked.length === 0 || ranked[0].score < MIN_MATCH_SCORE) continue;
-    const html3 = await fetchPage3(ranked[0].href, ctx, 1e4);
+    const html3 = await fetchPage4(ranked[0].href, ctx, 1e4);
     if (!html3) continue;
     const newsId = html3.match(/data-news-id="(\d+)"/)?.[1] || html3.match(/openModal\('(\d+)'\)/)?.[1];
     if (!newsId) continue;
@@ -58007,13 +58097,13 @@ var HOST_PRIORITY = ["vidmoly", "oneupload", "sendvid"];
 function normalizeTitle3(value) {
   return normalize(value).replace(/\b(the|season|part|cour|saison)\b/gi, "").replace(/\s+/g, " ").trim();
 }
-async function fetchPage4(url, signal) {
+async function fetchPage5(url, signal) {
   const html3 = await siteFetchText(url, { signal, acceptLanguage: FR_ACCEPT_LANGUAGE });
   return html3 ?? "";
 }
 async function searchAnime10(query, signal) {
   const searchUrl = `${SITE14}/search?s=${encodeURIComponent(query)}&_t=${Date.now()}`;
-  const html3 = await fetchPage4(searchUrl, signal);
+  const html3 = await fetchPage5(searchUrl, signal);
   if (html3.length < 500) return [];
   const results = [];
   const seen = /* @__PURE__ */ new Set();
@@ -58077,7 +58167,7 @@ async function findByDirectUrl(titles, season, signal, startTime) {
     const attempts = season > 1 ? [`${SITE14}/voir-anime/${slug2}-saison-${season}-vostfr`, `${SITE14}/voir-anime/${slug2}-vostfr`] : [`${SITE14}/voir-anime/${slug2}-vostfr`];
     for (const url of attempts) {
       if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-      const html3 = await fetchPage4(url, signal);
+      const html3 = await fetchPage5(url, signal);
       if (html3.length <= 1e3) continue;
       const episodes = extractEpisodes(html3);
       if (episodes.length > 0) return { animeUrl: url, episodes };
@@ -58104,7 +58194,7 @@ async function findBySearch(titles, season, signal, startTime) {
     }).sort((a, b) => b.score - a.score);
     for (const { hit } of scored.slice(0, MAX_SCORED_CANDIDATES)) {
       if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-      const html3 = await fetchPage4(hit.url, signal);
+      const html3 = await fetchPage5(hit.url, signal);
       if (html3.length <= 1e3) continue;
       const episodes = extractEpisodes(html3);
       if (episodes.length > 0) return { animeUrl: hit.url, episodes };
@@ -58136,7 +58226,7 @@ async function extract15(ctx) {
     if (targetEp) break;
   }
   if (!targetEp) return [];
-  const html3 = await fetchPage4(targetEp.url, ctx.signal);
+  const html3 = await fetchPage5(targetEp.url, ctx.signal);
   if (html3.length < 500) return [];
   const embedUrls = extractEmbedUrls(html3);
   if (embedUrls.length === 0) return [];
@@ -58227,7 +58317,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider51, server, lang, item) {
+function pushCandidate(out, provider52, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58235,22 +58325,22 @@ function pushCandidate(out, provider51, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider51} \xB7 ${server || "Player"}`
+    server: `${provider52} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider51, isMovie, episodeNum) {
+function parseCandidates(data2, provider52, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider51, item.player || item.name, lang, item);
+        pushCandidate(out, provider52, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider51, item.name || item.player, lang, item);
+        pushCandidate(out, provider52, item.name || item.player, lang, item);
       }
     }
   }
@@ -58263,20 +58353,20 @@ function parseCandidates(data2, provider51, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider51, item.player, lang, item);
+            pushCandidate(out, provider52, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider51, item.name || item.player, lang, item);
+          pushCandidate(out, provider52, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider51, item.player || item.name, lang, item);
+      pushCandidate(out, provider52, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -59049,7 +59139,7 @@ var SERIES_ID_PATTERN = /\/series\/((?:tt|mx)\d+)/g;
 var FILM_ID_PATTERN = /\/(?:films?|movies?)\/(tt\d+)/g;
 var SERIAL_HLS_PATTERN = /\/hls\/s\d+\/serial\/(?:tt|mx)\d+\/(\d+)\/(\d+)\/playlist\.m3u8/g;
 var FILM_HLS_PATTERN = /\/hls\/[^"'\s<>]*playlist\.m3u8/g;
-async function fetchPage5(url, signal) {
+async function fetchPage6(url, signal) {
   return siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     signal,
@@ -59075,7 +59165,7 @@ async function findId(ctx, pattern, startTime) {
   }
   for (const query of queries) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const html3 = await fetchPage5(
+    const html3 = await fetchPage6(
       `${SITE18}/search?q=${encodeURIComponent(query)}`,
       ctx.signal
     );
@@ -59116,7 +59206,7 @@ async function extractMovie3(ctx, startTime) {
   const imdbId = await findId(ctx, FILM_ID_PATTERN, startTime);
   if (!imdbId) return [];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const html3 = await fetchPage5(`${SITE18}/films/${imdbId}`, ctx.signal);
+  const html3 = await fetchPage6(`${SITE18}/films/${imdbId}`, ctx.signal);
   if (!html3) return [];
   const out = [];
   const seen = /* @__PURE__ */ new Set();
@@ -59136,11 +59226,11 @@ async function extractSeries3(ctx, startTime) {
   if (!imdbId) return [];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
   const seriesUrl = `${SITE18}/series/${imdbId}`;
-  let html3 = await fetchPage5(seriesUrl, ctx.signal);
+  let html3 = await fetchPage6(seriesUrl, ctx.signal);
   if (!html3) return [];
   if (!html3.includes("/hls/") || !html3.includes("playlist.m3u8")) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-    const retry = await fetchPage5(seriesUrl, ctx.signal);
+    const retry = await fetchPage6(seriesUrl, ctx.signal);
     if (!retry || !retry.includes("playlist.m3u8")) return [];
     html3 = retry;
   }
@@ -59728,7 +59818,7 @@ function isRedirectedPage(html3, url) {
   const pathOf = (value) => value.replace(/^https?:\/\/[^/]+/, "").replace(/\/+$/, "").toLowerCase();
   return pathOf(canonical[1]) !== pathOf(url);
 }
-async function fetchPage6(url, ctx, cache3) {
+async function fetchPage7(url, ctx, cache3) {
   const cached2 = cache3.get(url);
   if (cached2 !== void 0) return cached2;
   const html3 = await siteFetchText(url, {
@@ -59744,7 +59834,7 @@ async function fetchPage6(url, ctx, cache3) {
 async function probeFirst(urls, ctx, cache3, probeStart) {
   for (const url of urls.slice(0, MAX_PROBE_URLS)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) return null;
-    if (await fetchPage6(url, ctx, cache3)) return url;
+    if (await fetchPage7(url, ctx, cache3)) return url;
   }
   return null;
 }
@@ -59803,8 +59893,8 @@ async function searchAnime12(title, season, ctx, cache3, probeStart) {
   if (baseSlug.length > 3 && !isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) {
     const exactUrl = `${SITE21}/anime/${baseSlug}/`;
     const exactVfUrl = `${SITE21}/anime/${baseSlug}-vf/`;
-    if (await fetchPage6(exactUrl, ctx, cache3)) results.push({ title, url: exactUrl });
-    if (!isAborted(ctx.signal) && await fetchPage6(exactVfUrl, ctx, cache3)) {
+    if (await fetchPage7(exactUrl, ctx, cache3)) results.push({ title, url: exactUrl });
+    if (!isAborted(ctx.signal) && await fetchPage7(exactVfUrl, ctx, cache3)) {
       results.push({ title: `${title} VF`, url: exactVfUrl });
     }
     if (results.length > 0) return results;
@@ -59948,7 +60038,7 @@ async function generateEpisodeUrl(html3, targetEp, ctx, cache3, probeStart) {
   for (const pad of ["0", ""]) {
     if (isAborted(ctx.signal) || isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) return null;
     const url = `${SITE21}/anime/${slugName}/${prefix}${pad}${targetEp}${suffix}/`;
-    if (await fetchPage6(url, ctx, cache3)) return url;
+    if (await fetchPage7(url, ctx, cache3)) return url;
   }
   return null;
 }
@@ -60085,7 +60175,7 @@ async function extract22(ctx) {
   }
   for (const url of probeUrls.slice(0, MAX_PROBE_URLS)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime, PROBE_BUDGET_MS)) break;
-    if (!await fetchPage6(url, ctx, cache3)) continue;
+    if (!await fetchPage7(url, ctx, cache3)) continue;
     const urlSlug = url.match(/\/anime\/([^/]+)\/$/)?.[1]?.replace(/-vf$/, "");
     const matchingTitle = orderedTitles.find((t) => toSlug(t) === urlSlug);
     const isVf = url.includes("-vf");
@@ -60110,7 +60200,7 @@ async function extract22(ctx) {
     if (checkedUrls.has(match2.url)) continue;
     checkedUrls.add(match2.url);
     const language = match2.title.toUpperCase().includes("VF") || match2.url.includes("-vf") ? "VF" : "VOSTFR";
-    const html3 = await fetchPage6(match2.url, ctx, cache3);
+    const html3 = await fetchPage7(match2.url, ctx, cache3);
     if (!html3) continue;
     let episodeUrl = findEpisodeUrl5(html3, episodes, ctx.type === "tv" ? season : void 0);
     if (!episodeUrl) {
@@ -60178,7 +60268,7 @@ async function cached(key, load2) {
   cache2.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS2 });
   return value;
 }
-function fetchPage7(url, ctx, timeoutMs = 15e3) {
+function fetchPage8(url, ctx, timeoutMs = 15e3) {
   return siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs,
@@ -60345,7 +60435,7 @@ function fetchEpisodeApi2(newsId, ctx) {
   });
 }
 async function searchListing(title, targetSeason, ctx) {
-  const html3 = await cached("listing", () => fetchPage7(LISTING_URL, ctx));
+  const html3 = await cached("listing", () => fetchPage8(LISTING_URL, ctx));
   const results = parseSearchResults3(html3);
   if (results.length === 0) return null;
   return bestMatch4(results, title, targetSeason);
@@ -60362,7 +60452,7 @@ async function verifyCandidates(hits, titles, ctx, startTime) {
   }
   for (const hit of unique.slice(0, MAX_DEEP_CANDIDATES)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const html3 = await fetchPage7(hit.url, ctx, 8e3);
+    const html3 = await fetchPage8(hit.url, ctx, 8e3);
     const config = parseSerieConfig2(html3);
     if (!config?.title || !config.newsId) continue;
     const found = normalize(config.title);
@@ -60421,7 +60511,7 @@ async function retryForSeason(match2, titles, targetSeason, ctx) {
 }
 async function resolveNewsId2(match2, ctx) {
   if (match2.newsId) return match2.newsId;
-  const html3 = await fetchPage7(match2.url, ctx);
+  const html3 = await fetchPage8(match2.url, ctx);
   const config = parseSerieConfig2(html3);
   return config?.newsId || null;
 }
@@ -66072,14 +66162,14 @@ var provider31 = {
       const html3 = await fetchText(`${BASE12}${path}`, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2("img[data-src]").each((_, el) => {
         const src = $2(el).attr("data-src") || "";
         if (src.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: src, headers: IMAGE_HEADERS2 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: src, headers: IMAGE_HEADERS2 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66288,14 +66378,14 @@ var provider33 = {
       );
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2("img").each((_, el) => {
         const src = $2(el).attr("src") || $2(el).attr("data-src") || "";
         if (src.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: src, headers: IMAGE_HEADERS4 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: src, headers: IMAGE_HEADERS4 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66394,14 +66484,14 @@ var provider34 = {
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 2e4 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2(".container-chapter-reader img, .container-chapter-reader-inner img").each((_, el) => {
         const src = $2(el).attr("src") || $2(el).attr("data-src") || "";
         if (src.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: src, headers: IMAGE_HEADERS5 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: src, headers: IMAGE_HEADERS5 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66494,12 +66584,12 @@ var provider35 = {
       );
       const raw = res?.readChapter?.pages ?? [];
       if (raw.length === 0) return [];
-      const pages = raw.filter((p) => Boolean(p.image)).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((p, idx) => ({
+      const pages2 = raw.filter((p) => Boolean(p.image)).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((p, idx) => ({
         pageNumber: idx + 1,
         imageUrl: p.image.startsWith("http") ? p.image : `${CDN2}${p.image}`,
         headers: { Referer: `${BASE16}/`, Origin: BASE16 }
       }));
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66607,14 +66697,14 @@ var provider36 = {
       const html3 = await fetchText(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2("img._images").each((_, el) => {
         const src = ($2(el).attr("data-url") || $2(el).attr("data-src") || "").trim();
         if (src.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: src, headers: IMAGE_HEADERS6 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: src, headers: IMAGE_HEADERS6 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66695,13 +66785,13 @@ var provider37 = {
       const html3 = await fetchText(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2("img.imgholder").each((_, el) => {
         const raw = ($2(el).attr("src") || $2(el).attr("data-src") || "").trim();
         if (!raw.startsWith("http")) return;
-        pages.push({ pageNumber: pages.length + 1, imageUrl: encodeURI(raw) });
+        pages2.push({ pageNumber: pages2.length + 1, imageUrl: encodeURI(raw) });
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66830,14 +66920,14 @@ var provider38 = {
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 2e4 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2(".reading-content img").each((_, el) => {
         const raw = ($2(el).attr("data-src") || $2(el).attr("data-lazy-src") || $2(el).attr("src") || "").trim();
         if (raw.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: raw, headers: IMAGE_HEADERS7 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: raw, headers: IMAGE_HEADERS7 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -66966,14 +67056,14 @@ var provider39 = {
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 2e4 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2(".reading-content img").each((_, el) => {
         const raw = ($2(el).attr("data-src") || $2(el).attr("data-lazy-src") || $2(el).attr("src") || "").trim();
         if (raw.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: raw, headers: IMAGE_HEADERS8 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: raw, headers: IMAGE_HEADERS8 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -67102,14 +67192,14 @@ var provider40 = {
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 2e4 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2(".reading-content img").each((_, el) => {
         const raw = ($2(el).attr("data-src") || $2(el).attr("data-lazy-src") || $2(el).attr("src") || "").trim();
         if (raw.startsWith("http")) {
-          pages.push({ pageNumber: pages.length + 1, imageUrl: raw, headers: IMAGE_HEADERS9 });
+          pages2.push({ pageNumber: pages2.length + 1, imageUrl: raw, headers: IMAGE_HEADERS9 });
         }
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -67201,7 +67291,7 @@ var provider41 = {
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       const seen = /* @__PURE__ */ new Set();
       $2("img").each((_, el) => {
         const src = ($2(el).attr("data-src") || $2(el).attr("src") || $2(el).attr("data-original") || "").trim();
@@ -67209,9 +67299,9 @@ var provider41 = {
         const isPage = /imgsrv/i.test(src) || /\/comic\//i.test(src) && /chapter-/i.test(src);
         if (!isPage || /credits|logo|banner/i.test(src) || seen.has(src)) return;
         seen.add(src);
-        pages.push({ pageNumber: pages.length + 1, imageUrl: src, headers: IMAGE_HEADERS10 });
+        pages2.push({ pageNumber: pages2.length + 1, imageUrl: src, headers: IMAGE_HEADERS10 });
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -67303,14 +67393,14 @@ var provider42 = {
       const chapter = await sgGet(`/chapters?id=${encodeURIComponent(id)}`);
       const raw = chapter?.pages ?? [];
       if (!Array.isArray(raw) || raw.length === 0) return [];
-      const pages = [];
+      const pages2 = [];
       for (const p of raw) {
         const path = (p?.path || "").trim();
         if (!path) continue;
         const imageUrl = /^https?:\/\//i.test(path) ? path : `${IMAGE_BASE2}/${path.replace(/^\/+/, "")}`;
-        pages.push({ pageNumber: pages.length + 1, imageUrl, headers: IMAGE_HEADERS11 });
+        pages2.push({ pageNumber: pages2.length + 1, imageUrl, headers: IMAGE_HEADERS11 });
       }
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -67413,14 +67503,14 @@ var provider43 = {
       const html3 = await fetchText(toUrl(path), { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
-      const pages = [];
+      const pages2 = [];
       $2("#lcPages img[data-src]").each((_, el) => {
         const raw = ($2(el).attr("data-src") || "").trim();
         if (!raw) return;
         const abs = raw.startsWith("http") ? raw : toUrl(raw);
-        pages.push({ pageNumber: pages.length + 1, imageUrl: encodeURI(abs) });
+        pages2.push({ pageNumber: pages2.length + 1, imageUrl: encodeURI(abs) });
       });
-      return pages;
+      return pages2;
     } catch {
       return [];
     }
@@ -67579,18 +67669,6 @@ var provider44 = {
 };
 var novelcool_default = provider44;
 
-// src/providers/novel/novel-http.ts
-async function fetchNovelSearchHtml(url) {
-  const response = await fetchResponse(url, { timeoutMs: 12e3 });
-  if (response.ok) return response.text();
-  const html3 = await fetchTextWithBypass(url, {
-    timeoutMs: 12e3,
-    bypassTimeoutMs: 12e3
-  });
-  if (html3) return html3;
-  throw new Error(`${new URL(url).hostname} search returned HTTP ${response.status}${response.status === 403 ? " (access blocked)" : ""}`);
-}
-
 // src/providers/novel/webnovel.ts
 var BASE25 = "https://www.webnovel.com";
 var PROVIDER_NAME17 = "webnovel";
@@ -67684,7 +67762,7 @@ var provider45 = {
       const bookId = params.seriesId || await resolveBookId(params);
       if (!bookId) return [];
       if (!/^\d+$/.test(bookId)) throw new Error("Invalid Webnovel book id");
-      const html3 = await fetchText(bookUrl(bookId), { timeoutMs: 12e3 });
+      const html3 = await fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       try {
@@ -67757,8 +67835,8 @@ var provider45 = {
         byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
       });
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
   async getContent(chapterKey) {
@@ -67766,7 +67844,7 @@ var provider45 = {
       const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
       const [bookId, chapterId] = rest.split(":");
       if (!bookId || !chapterId) return null;
-      const html3 = await fetchText(`${BASE25}/book/${bookId}/${chapterId}`, { timeoutMs: 15e3 });
+      const html3 = await fetchNovelSearchHtml(`${BASE25}/book/${bookId}/${chapterId}`, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
       const title = $2('h1.chapter-title, .chapter-title h1, [class*="cha-tit"]').first().text().trim() || $2("title").first().text().trim() || null;
@@ -68045,7 +68123,7 @@ var provider47 = {
       const href = params.seriesId || await resolveSeriesHref3(params);
       if (!href) return [];
       if (new URL(toUrl3(href)).origin !== BASE27) throw new Error("Invalid JustLightNovels title URL");
-      const html3 = await fetchText(toUrl3(href), { timeoutMs: 12e3 });
+      const html3 = await fetchNovelSearchHtml(toUrl3(href), { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       const byNumber = /* @__PURE__ */ new Map();
@@ -68072,16 +68150,16 @@ var provider47 = {
         byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
       });
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
   async getContent(chapterKey) {
     try {
       const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
       const url = decodeURIComponent(rest);
-      if (!url) return null;
-      const html3 = await fetchText(url.startsWith("http") ? url : toUrl3(url), { timeoutMs: 15e3 });
+      if (!url || new URL(toUrl3(url)).origin !== BASE27) return null;
+      const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl3(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
       const title = $2("h1.entry-title, h1.post-title, .entry-header h1").first().text().trim() || $2("title").first().text().trim() || null;
@@ -68200,7 +68278,7 @@ var provider48 = {
       const href = params.seriesId || await resolveSeriesHref4(params);
       if (!href) return [];
       if (new URL(toUrl4(href)).origin !== BASE28) throw new Error("Invalid LightNovel.to title URL");
-      const html3 = await fetchText(toUrl4(href), { timeoutMs: 12e3 });
+      const html3 = await fetchNovelSearchHtml(toUrl4(href), { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       const byNumber = /* @__PURE__ */ new Map();
@@ -68236,8 +68314,8 @@ var provider48 = {
         byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
       });
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
   async getContent(chapterKey) {
@@ -68245,7 +68323,7 @@ var provider48 = {
       const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
       const url = decodeURIComponent(rest);
       if (!url || new URL(toUrl4(url)).origin !== BASE28) return null;
-      const html3 = await fetchText(url.startsWith("http") ? url : toUrl4(url), { timeoutMs: 15e3 });
+      const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl4(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
       const title = $2("h1.chapter-title, .chapter-header h1, h1.entry-title").first().text().trim() || $2("title").first().text().trim() || null;
@@ -68332,7 +68410,7 @@ async function getChapters(params) {
     if (new URL(url).origin !== BASE29 || !/^\/story\/[^/]+\/$/.test(new URL(url).pathname)) {
       throw new Error("Invalid DivineDaoLibrary title URL");
     }
-    const html3 = await fetchText(url, { timeoutMs: 15e3 });
+    const html3 = await fetchNovelSearchHtml(url, { timeoutMs: 15e3 });
     if (!html3) return [];
     const $2 = loadHtml(html3);
     const byNumber = /* @__PURE__ */ new Map();
@@ -68378,8 +68456,8 @@ async function getChapters(params) {
       }
     }
     return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
-  } catch {
-    return [];
+  } catch (error) {
+    throw error;
   }
 }
 function extractParagraphs3($2) {
@@ -68407,7 +68485,7 @@ var provider49 = {
       if (!chapterKey.startsWith(prefix)) return null;
       const url = decodeURIComponent(chapterKey.slice(prefix.length));
       if (!url.startsWith(BASE29) || !/\/story\/[^/]+\/[^/]+\//.test(new URL(url).pathname)) return null;
-      const html3 = await fetchText(url, { timeoutMs: 15e3 });
+      const html3 = await fetchNovelSearchHtml(url, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
       const title = $2("h1.chapter__title").first().text().trim() || null;
@@ -68431,29 +68509,30 @@ var BASE30 = "https://novelbuddy.me";
 var PROVIDER_NAME21 = "novelbuddy";
 var KNOWN_ORIGINS = /* @__PURE__ */ new Set([BASE30, "https://www.novelbuddy.me", "https://novelbuddy.com", "https://www.novelbuddy.com"]);
 var cachedBuildId = null;
+async function pageData(path) {
+  for (let attempt2 = 0; attempt2 < 2; attempt2++) {
+    const buildId = await getBuildId();
+    const response = await fetchResponse(`${BASE30}/_next/data/${buildId}/${path}`, { timeoutMs: 12e3, headers: { Accept: "application/json" } });
+    if (response.status === 404 && attempt2 === 0) {
+      cachedBuildId = null;
+      continue;
+    }
+    if (!response.ok) throw new Error(`novelbuddy returned HTTP ${response.status}`);
+    const data2 = await response.json();
+    if (!data2?.pageProps) throw new Error("novelbuddy returned an invalid page payload");
+    return data2;
+  }
+}
 async function getBuildId() {
   if (cachedBuildId) return cachedBuildId;
-  const res = await fetchResponse(`${BASE30}/search`, { timeoutMs: 12e3 });
-  if (!res.ok) {
-    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? " (access blocked)" : ""}`);
-  }
-  const html3 = await res.text().catch(() => "");
+  const html3 = await fetchNovelSearchHtml(`${BASE30}/search`);
   const match2 = html3.match(/\/_next\/static\/([A-Za-z0-9_-]+)\/_buildManifest\.js/);
   if (!match2) throw new Error("novelbuddy search is unavailable (site layout changed)");
   cachedBuildId = match2[1];
   return match2[1];
 }
 async function searchSeries4(query) {
-  const buildId = await getBuildId();
-  const url = `${BASE30}/_next/data/${buildId}/search.json?keyword=${encodeURIComponent(query)}`;
-  const res = await fetchResponse(url, {
-    timeoutMs: 15e3,
-    headers: { Accept: "application/json" }
-  });
-  if (!res.ok) {
-    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? " (access blocked)" : ""}`);
-  }
-  const json = await res.json().catch(() => null);
+  const json = await pageData(`search.json?q=${encodeURIComponent(query)}`);
   const items = json?.pageProps?.ssrItems;
   if (!Array.isArray(items)) return [];
   const out = [];
@@ -68497,7 +68576,8 @@ function seriesSlugFrom(params, resolved) {
     try {
       const u = new URL(params.seriesId.startsWith("http") ? params.seriesId : `${BASE30}${params.seriesId.startsWith("/") ? "" : "/"}${params.seriesId}`);
       if (!KNOWN_ORIGINS.has(u.origin)) throw new Error("Invalid novelbuddy title URL");
-      const slug2 = u.pathname.split("/").filter(Boolean)[0] || "";
+      const segments = u.pathname.split("/").filter(Boolean);
+      const slug2 = segments[0] === "novel" ? segments[1] || "" : segments[0] || "";
       if (/^[A-Za-z0-9-]+$/.test(slug2)) return slug2;
       return null;
     } catch {
@@ -68514,23 +68594,25 @@ var provider50 = {
   },
   async getChapters(params) {
     try {
-      const slug2 = seriesSlugFrom(params, await resolveSeriesSlug(params).catch(() => null));
+      const slug2 = seriesSlugFrom(params, params.seriesId ? null : await resolveSeriesSlug(params));
       if (!slug2) return [];
-      const buildId = await getBuildId();
-      const data2 = await fetchJson(
-        `${BASE30}/_next/data/${buildId}/${encodeURIComponent(slug2)}.json`,
-        { timeoutMs: 15e3 }
-      );
-      const rows = data2?.pageProps?.initialManga?.chapters;
+      const data2 = await pageData(`${encodeURIComponent(slug2)}.json`);
+      const manga = data2?.pageProps?.initialManga;
+      let rows = manga?.chapters;
+      if (/^[A-Za-z0-9]+$/.test(manga?.id || "")) {
+        const archive = await fetchJson(`https://api.novelbuddy.me/titles/${manga.id}/chapters`, { timeoutMs: 12e3 });
+        if (Array.isArray(archive?.data?.chapters)) rows = archive.data.chapters;
+      }
       if (!Array.isArray(rows)) return [];
       const entries = [];
       const seen = /* @__PURE__ */ new Set();
       for (const row of rows) {
         const r = row;
-        const number = Number(r.number);
+        const labelNumber = /\b(?:vol(?:ume)?\.?|part)\s*\d/i.test(String(r.name || "")) ? void 0 : String(r.name || "").match(/chapter\s*(\d+(?:\.\d+)?)/i)?.[1];
+        const number = Number(labelNumber ?? r.number);
         if (!Number.isFinite(number) || number <= 0 || seen.has(number)) continue;
-        const chapterUrl = `${BASE30}${String(r.url || "")}`;
-        if (!chapterUrl.startsWith(`${BASE30}/`)) continue;
+        const chapterUrl = new URL(String(r.url || ""), BASE30).href;
+        if (!r.url || new URL(chapterUrl).origin !== BASE30) continue;
         seen.add(number);
         const source = {
           provider: PROVIDER_NAME21,
@@ -68538,7 +68620,7 @@ var provider50 = {
           providerChapterId: chapterUrl,
           language: "en",
           translator: null,
-          releaseDate: typeof r.updatedAt === "string" ? r.updatedAt : typeof r.date === "string" ? r.date : null
+          releaseDate: typeof r.updatedAt === "string" ? r.updatedAt : typeof r.updated_at === "string" ? r.updated_at : typeof r.date === "string" ? r.date : null
         };
         entries.push({
           number,
@@ -68548,8 +68630,8 @@ var provider50 = {
         });
       }
       return entries.sort((a, b) => a.number - b.number);
-    } catch {
-      return [];
+    } catch (error) {
+      throw error;
     }
   },
   async getContent(chapterKey) {
@@ -68560,11 +68642,7 @@ var provider50 = {
       if (!KNOWN_ORIGINS.has(u.origin)) return null;
       const segs = u.pathname.split("/").filter(Boolean);
       if (segs.length < 2 || !/^[A-Za-z0-9-]+$/.test(segs[0]) || !/^[A-Za-z0-9-]+$/.test(segs[1])) return null;
-      const buildId = await getBuildId();
-      const data2 = await fetchJson(
-        `${BASE30}/_next/data/${buildId}/${segs[0]}/${segs[1]}.json`,
-        { timeoutMs: 15e3 }
-      );
+      const data2 = await pageData(`${segs[0]}/${segs[1]}.json`);
       const ch = data2?.pageProps?.initialChapter;
       if (!ch || typeof ch.content !== "string" || !ch.content) return null;
       const $2 = loadHtml(`<div>${ch.content}</div>`);
@@ -68574,7 +68652,7 @@ var provider50 = {
         if (text3) texts.push(text3);
       });
       if (texts.length === 0) return null;
-      const number = Number(ch.number);
+      const number = Number((/\b(?:vol(?:ume)?\.?|part)\s*\d/i.test(String(ch.name || "")) ? void 0 : String(ch.name || "").match(/chapter\s*(\d+(?:\.\d+)?)/i)?.[1]) ?? ch.number);
       return {
         title: typeof ch.name === "string" && ch.name.trim() ? ch.name.trim() : null,
         number: Number.isFinite(number) ? number : null,
@@ -68590,6 +68668,41 @@ var novelbuddy_default = provider50;
 
 // src/providers/novel/scraper-sites.ts
 var clean = (text3) => text3.replace(/\s+/g, " ").trim();
+function flightChapterCatalog($2) {
+  let flight = "";
+  $2("script").each((_, el) => {
+    const match2 = $2(el).text().match(/self\.__next_f\.push\((\[.*\])\)/s);
+    if (!match2) return;
+    try {
+      const value = JSON.parse(match2[1])[1];
+      if (typeof value === "string") flight += value;
+    } catch {
+    }
+  });
+  const start = flight.indexOf('"chapters":[');
+  if (start < 0) return null;
+  const arrayStart = start + '"chapters":'.length;
+  let depth = 0, quoted = false, escaped = false;
+  for (let i = arrayStart; i < flight.length; i++) {
+    const char = flight[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === "[") depth++;
+    else if (char === "]" && --depth === 0) {
+      try {
+        return JSON.parse(flight.slice(arrayStart, i + 1));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
 function createHtmlNovelProvider(site) {
   function safeUrl(value, relative = site.base) {
     const url = new URL(value, relative);
@@ -68598,20 +68711,11 @@ function createHtmlNovelProvider(site) {
   }
   async function html3(url, referer, method = "GET") {
     const target = safeUrl(url);
-    const response = await fetchResponse(target, {
+    return fetchNovelSearchHtml(target, {
       method,
       timeoutMs: 12e3,
       headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} }
     });
-    if (response.ok) return response.text();
-    const result = await fetchTextWithBypass(target, {
-      method,
-      timeoutMs: 12e3,
-      bypassTimeoutMs: 12e3,
-      headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} }
-    });
-    if (!result) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? " (access blocked)" : response.status === 410 ? " (site unavailable)" : ""}`);
-    return result;
   }
   return {
     name: site.name,
@@ -68619,7 +68723,7 @@ function createHtmlNovelProvider(site) {
     async search(query) {
       const $2 = loadHtml(await html3(site.search(query)));
       const found = /* @__PURE__ */ new Map();
-      $2("a[href]").each((_, node) => {
+      $2(site.kind === "wordpress" ? ".entry-content a[href]" : "a[href]").each((_, node) => {
         const a = $2(node);
         let url;
         try {
@@ -68627,9 +68731,10 @@ function createHtmlNovelProvider(site) {
         } catch {
           return;
         }
-        if (!site.series.test(new URL(url).pathname)) return;
-        const title = clean(a.attr("title") || a.find("h3,h4,.novel-title,.title").first().text() || a.find("img").attr("alt") || a.text());
+        if (!site.series.test(new URL(url).pathname) || new URL(url).search || new URL(url).hash) return;
+        const title = clean(a.closest(".book-item").find(".book-name").first().text() || a.find("h2,h3,h4,.novel-title,.book-name,.title").first().text() || a.attr("title") || a.find("img").attr("alt") || a.text()).replace(/^Cover image for\s+/i, "");
         if (!title || title.length > 250) return;
+        if (site.kind === "wordpress" && !title.toLowerCase().includes(query.toLowerCase())) return;
         if (!found.has(url)) found.set(url, { id: url, title, url });
       });
       return [...found.values()].slice(0, 30);
@@ -68639,6 +68744,13 @@ function createHtmlNovelProvider(site) {
       const series = safeUrl(params.seriesId);
       const initial = await html3(series);
       const $2 = loadHtml(initial);
+      if (site.name === "woopread") {
+        const catalog = flightChapterCatalog($2);
+        if (catalog?.length) return catalog.filter((row) => typeof row.slug === "string" && /^[\w-]+$/.test(row.slug) && Number(row.number) > 0).map((row) => {
+          const url = safeUrl(`${series.replace(/\/$/, "")}/${row.slug}`);
+          return { number: Number(row.number), title: clean(String(row.title || "")), volume: null, sources: [{ provider: site.name, chapterKey: `${site.name}:${encodeURIComponent(url)}`, providerChapterId: url, language: "en", translator: null, releaseDate: row.publishDate || null }] };
+        }).sort((a, b) => a.number - b.number);
+      }
       let listUrl = series, listHtml = initial;
       if (site.kind === "bin") {
         const slug2 = new URL(series).pathname.split("/").filter(Boolean).pop();
@@ -68654,14 +68766,19 @@ function createHtmlNovelProvider(site) {
       const links = /* @__PURE__ */ new Map();
       const visited = /* @__PURE__ */ new Set();
       const queue = [listUrl];
-      const pages = /* @__PURE__ */ new Map([[listUrl, listHtml]]);
+      const pages2 = /* @__PURE__ */ new Map([[listUrl, listHtml]]);
+      if (site.kind === "novgo") {
+        const count = Number($2("#list-chapter").attr("data-total-page")) || 1;
+        if (count > 100) throw new Error("novgo catalog exceeds the 100-page limit.");
+        for (let page = 2; page <= count; page++) queue.push(`${series}?page=${page}`);
+      }
       const deadline = Date.now() + 26e3;
       while (queue.length) {
         if (Date.now() > deadline) throw new Error(`${site.name} chapter catalog timed out; retry later.`);
         const batch = queue.splice(0, 5).filter((url) => !visited.has(url));
         await Promise.all(batch.map(async (pageUrl) => {
           visited.add(pageUrl);
-          const page = loadHtml(pages.get(pageUrl) ?? await html3(pageUrl, series));
+          const page = loadHtml(pages2.get(pageUrl) ?? await html3(pageUrl, series));
           page(site.chapters).each((_, node) => {
             const a = page(node);
             let url;
@@ -68671,8 +68788,10 @@ function createHtmlNovelProvider(site) {
               return;
             }
             if (url === series || links.has(url)) return;
-            const label = clean(a.attr("title") || a.text());
+            if (new URL(url).search || new URL(url).hash) return;
+            const label = clean(a.find(".chapter-title,.chapter-item-title").first().text() || a.attr("title") || a.text());
             if (!label) return;
+            if (site.kind === "wordpress" && !new URL(url).pathname.startsWith(new URL(series).pathname)) return;
             const raw = label.match(/(?:chapter|ch\.?|episode)\s*[:#.-]?\s*(\d+(?:\.\d+)?)/i)?.[1] || new URL(url).pathname.match(/chapter[-_](\d+(?:\.\d+)?)/i)?.[1] || a.find(".chapter-no").text().trim();
             links.set(url, { url, label, number: raw && Number.isFinite(Number(raw)) ? Number(raw) : null });
           });
@@ -68693,7 +68812,12 @@ function createHtmlNovelProvider(site) {
       }
       const values = [...links.values()];
       if (site.kind === "madara") values.reverse();
-      return values.map((row, index2) => ({ number: row.number ?? index2 + 1, title: row.label, volume: null, sources: [{ provider: site.name, chapterKey: `${site.name}:${encodeURIComponent(row.url)}`, providerChapterId: row.url, language: "en", translator: null, releaseDate: null }] })).filter((row) => row.number > 0).sort((a, b) => a.number - b.number);
+      const entries = values.map((row, index2) => ({ number: site.kind === "wordpress" ? index2 + 1 : row.number ?? index2 + 1, title: row.label, volume: null, sources: [{ provider: site.name, chapterKey: `${site.name}:${encodeURIComponent(row.url)}`, providerChapterId: row.url, language: "en", translator: null, releaseDate: null }] })).filter((row) => row.number > 0).sort((a, b) => a.number - b.number);
+      if (site.mixed && entries.length) {
+        const sample = await this.getContent(entries[0].sources[0].chapterKey);
+        if (!sample?.paragraphs.length) return [];
+      }
+      return entries;
     },
     async getContent(chapterKey) {
       const prefix = `${site.name}:`;
@@ -68702,7 +68826,8 @@ function createHtmlNovelProvider(site) {
       const $2 = loadHtml(await html3(url));
       const body = $2(site.content).first();
       if (!body.length) return null;
-      body.find("script,style,iframe,.ads,.advertisement,.adsbygoogle,.chapter-nav,.nav-buttons").remove();
+      if ($2("img.mangaread-manga-pic,.reading-content .page-break img,.reading-content img.wp-manga-chapter-img").length) return null;
+      body.find("script,style,iframe,.ads,.advertisement,.adsbygoogle,.chapter-nav,.nav-buttons,.sharedaddy,.jp-relatedposts").remove();
       const paragraphs = [];
       body.find("p").each((_, node) => {
         const text3 = clean($2(node).text());
@@ -68723,12 +68848,74 @@ var scraperNovelProviders = [
   { name: "novelbin", base: "https://novelbin.com", search: (q) => `https://novelbin.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/b\/[^/]+\/?$/, chapters: 'ul.list-chapter li a,#tab-chapters a[href*="chapter-"]', content: "#chr-content", kind: "bin" },
   { name: "royalroad", base: "https://www.royalroad.com", search: (q) => `https://www.royalroad.com/fictions/search?title=${encodeURIComponent(q)}`, series: /^\/fiction\/\d+\/[^/]+\/?$/, chapters: "tr.chapter-row td:first-child a[href]", content: ".chapter-inner.chapter-content" },
   { name: "wuxiaworldsite", base: "https://wuxiaworld.site", search: (q) => `https://wuxiaworld.site/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a", content: ".reading-content .text-left", kind: "madara" },
-  { name: "readnovelfull", base: "https://readnovelfull.com", search: (q) => `https://readnovelfull.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?!search|chapter|index)[^/]+\.html\/?$/, chapters: "ul.list-chapter li a,.list-chapter a", content: "#chapter-content,.chapter-content" },
-  { name: "novelcool", base: "https://www.novelcool.com", search: (q) => `https://www.novelcool.com/search/?wd=${encodeURIComponent(q)}`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.chapter-content", kind: "madara" },
-  { name: "novgo", base: "https://novgo.net", search: (q) => `https://novgo.net/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.chapter-content", kind: "madara" },
-  { name: "relibrary", base: "https://www.re-library.com", search: (q) => `https://www.re-library.com/?s=${encodeURIComponent(q)}`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.entry-content", kind: "madara" },
-  { name: "woopread", base: "https://woopread.com", search: (q) => `https://woopread.com/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.entry-content", kind: "madara" }
+  { name: "readnovelfull", base: "https://readnovelfull.com", search: (q) => `https://readnovelfull.com/novel-list/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?!search|chapter|index)[^/]+\.html\/?$/, chapters: "ul.list-chapter li a,.list-chapter a", content: "#chapter-content,.chapter-content" },
+  { name: "novelcool", base: "https://www.novelcool.com", search: (q) => `https://www.novelcool.com/search/?name=${encodeURIComponent(q)}`, series: /^\/novel\/[^/]+\/?$/, chapters: '.chapter-item-list .chp-item a[href*="/chapter/"],.wp-manga-chapter a,.chapter-list a', content: ".site-content > .overflow-hidden,.chapter-content,.reading-content,.chapter-reading-section,.chapter-text", kind: "madara", mixed: true },
+  { name: "novgo", base: "https://novgo.net", search: (q) => `https://novgo.net/search?keyword=${encodeURIComponent(q)}`, series: /^\/[^/]+\.html\/?$/, chapters: "#list-chapter a[href]", content: "#chapter-content", kind: "novgo" },
+  { name: "relibrary", base: "https://re-library.com", search: () => `https://re-library.com/translations/`, series: /^\/translations\/[^/]+\/?$/, chapters: ".entry-content a[href]", content: ".entry-content", kind: "wordpress" },
+  { name: "woopread", base: "https://woopread.com", search: (q) => `https://woopread.com/search?q=${encodeURIComponent(q)}`, series: /^\/series\/[^/]+\/?$/, chapters: "#chapter-list-container a[href]", content: 'div[id^="chapter-"]' },
+  ...[
+    { name: "toonily", base: "https://toonily.com" },
+    { name: "onisaga", base: "https://onisaga.com" },
+    { name: "toongod", base: "https://toongod.org" }
+  ].map(({ name, base }) => ({ name, base, search: (q) => `${base}/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/(?:novel|manga|serie|series|webtoon)\/[^/]+\/?$/, chapters: ".wp-manga-chapter a", content: ".reading-content", kind: "madara", mixed: true }))
 ].map((site) => createHtmlNovelProvider(site));
+
+// src/providers/novel/syosetu.ts
+var BASE31 = "https://ncode.syosetu.com";
+var SERIES = "n4830bu";
+var START = 461;
+var END = 677;
+var partFive = (query) => /(?:part\s*5\b|dai\s*5\s*[- ]?bu\b|第五部|avatar of a goddess)/i.test(query);
+var bookworm = (query) => /ascendance of a bookworm|honzuki no gekokujou|本好きの下剋上/i.test(query) && !/fanfic|hannelore|mother and daughter|side stor/i.test(query);
+var provider51 = {
+  name: "syosetu",
+  sites: [BASE31],
+  async search(query) {
+    return bookworm(query) && partFive(query) ? [{ id: `${SERIES}:5`, title: query, url: `${BASE31}/${SERIES}/461/` }] : [];
+  },
+  async getChapters(params) {
+    if (params.seriesId !== `${SERIES}:5`) return [];
+    const catalogs = await Promise.all([5, 6, 7].map((page) => fetchNovelSearchHtml(`${BASE31}/${SERIES}/?p=${page}`)));
+    const chapters = /* @__PURE__ */ new Map();
+    for (const html3 of catalogs) {
+      const $2 = loadHtml(html3);
+      $2(".p-eplist__subtitle").each((_, el) => {
+        const href = $2(el).attr("href") || "";
+        const match2 = href.match(new RegExp(`^/${SERIES}/(\\d+)/$`));
+        if (!match2) return;
+        const originalNumber = Number(match2[1]);
+        if (originalNumber < START || originalNumber > END) return;
+        const number = originalNumber - START + 1;
+        chapters.set(number, { number, title: $2(el).text().trim(), volume: null, sources: [{
+          provider: "syosetu",
+          chapterKey: `syosetu:${SERIES}:5:${originalNumber}`,
+          providerChapterId: `${SERIES}:5:${originalNumber}`,
+          language: "ja",
+          translator: "Author original (Japanese)",
+          releaseDate: null
+        }] });
+      });
+    }
+    if (chapters.size !== END - START + 1) throw new Error("Syosetu Part 5 catalog is incomplete; retry later.");
+    return [...chapters.values()].sort((a, b) => a.number - b.number);
+  },
+  async getContent(key) {
+    const match2 = key.match(/^syosetu:n4830bu:5:(\d+)$/);
+    if (!match2) return null;
+    const originalNumber = Number(match2[1]);
+    if (originalNumber < START || originalNumber > END) return null;
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE31}/${SERIES}/${originalNumber}/`));
+    const body = $2(".p-novel__text").not(".p-novel__text--preface,.p-novel__text--afterword").first();
+    body.find("script,style,rt,rp").remove();
+    const texts = [];
+    body.find("p").each((_, el) => {
+      const text3 = $2(el).text().trim();
+      if (text3) texts.push(text3);
+    });
+    return texts.length ? { provider: "syosetu", title: $2(".p-novel__title--rensai").text().trim() || null, number: originalNumber - START + 1, paragraphs: texts.map((text3, index2) => ({ text: text3, index: index2 })) } : null;
+  }
+};
+var syosetu_default = provider51;
 
 // src/providers/registry.ts
 var STREAM_PROVIDERS = [
@@ -68794,6 +68981,7 @@ var MANGA_PROVIDERS = [
   novelcool_default
 ];
 var NOVEL_PROVIDERS = [
+  syosetu_default,
   wuxiaworld_default,
   webnovel_default,
   justlightnovels_default,
@@ -68837,6 +69025,11 @@ function stampPriority(results, providerName) {
   }));
 }
 var TokoBundleClass = class {
+  novelRuns = /* @__PURE__ */ new Map();
+  blockedNovelProviders = /* @__PURE__ */ new Map();
+  configureBrowserRuntime(runtime) {
+    setCloudflareBrowserRuntime(runtime);
+  }
   /**
    * Validates bundle initialization
    * Ensures at least one provider is available
@@ -69107,11 +69300,11 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider51 = MANGA_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider51) throw new ChapterNotFoundError(chapterKey);
-    const pages = await provider51.getPages(chapterKey);
-    if (pages.length === 0) throw new ChapterNotFoundError(chapterKey);
-    return pages;
+    const provider52 = MANGA_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider52) throw new ChapterNotFoundError(chapterKey);
+    const pages2 = await provider52.getPages(chapterKey);
+    if (pages2.length === 0) throw new ChapterNotFoundError(chapterKey);
+    return pages2;
   }
   // ── Novel Support ───────────────────────────────────────────────────────
   async enrichNovelParams(params) {
@@ -69124,53 +69317,105 @@ var TokoBundleClass = class {
       return params;
     }
   }
-  async searchThenScrapeNovel(provider51, params) {
-    if (params.seriesId || !provider51.search) return provider51.getChapters(params);
+  async searchThenScrapeNovel(provider52, params, deadline) {
+    const blocked = this.blockedNovelProviders.get(provider52.name);
+    if (!params.provider && !params.fullScan && blocked && Date.now() - blocked.at < 6e4) throw blocked.error;
+    if (params.seriesId || !provider52.search) return provider52.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
-    const queries = buildSearchQueries(titles).slice(0, 4);
+    const queries = buildNovelSearchQueries(titles).slice(0, params.fullScan ? 4 : 2);
     const candidates = [];
+    let lastError;
+    let answered = false;
     for (const query of queries) {
-      candidates.push(...await provider51.search(query));
+      if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
+      try {
+        candidates.push(...await provider52.search(query));
+        answered = true;
+      } catch (error) {
+        lastError = error;
+        if (/HTTP (?:403|429|502|503)|access blocked/i.test(String(error?.message))) {
+          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider52.name, { at: Date.now(), error });
+          throw error;
+        }
+        continue;
+      }
       const match3 = pickBestNovelCandidate(titles, candidates);
-      if (match3?.score === 1) return provider51.getChapters({ ...params, provider: provider51.name, seriesId: match3.candidate.id });
+      if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
+      if (match3?.score === 1) return provider52.getChapters({ ...params, provider: provider52.name, seriesId: match3.candidate.id });
     }
     const match2 = pickBestNovelCandidate(titles, candidates);
-    return match2 ? provider51.getChapters({ ...params, provider: provider51.name, seriesId: match2.candidate.id }) : [];
+    if (!answered && lastError) throw lastError;
+    return match2 ? provider52.getChapters({ ...params, provider: provider52.name, seriesId: match2.candidate.id }) : [];
   }
   /**
    * Returns novel chapters merged by chapter number.
    * Multiple providers returning the same chapter number are merged.
    */
   async getNovelChapters(params) {
-    const enriched = await this.enrichNovelParams(params);
-    const all = await runProviders(
-      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
-      (p) => this.searchThenScrapeNovel(p, enriched),
-      void 0,
-      { timeoutMs: 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
-    );
-    return mergeMangaChapters(all);
+    return (await this.debugNovelChapters(params)).results;
   }
   /**
    * Debug variant of getNovelChapters() with diagnostics.
    */
   async debugNovelChapters(params) {
+    if (params.fullScan) clearNovelHttpCache();
     const enriched = await this.enrichNovelParams(params);
+    if (!params.fullScan && !params.provider) {
+      const key = JSON.stringify([enriched.anilistId || 0, enriched.malId || 0, enriched.titles?.[0] || enriched.title || ""]);
+      const hit = this.novelRuns.get(key);
+      if (hit && Date.now() - hit.at < (hit.results.length ? 5 * 6e4 : 3e4)) {
+        return hit.results.length ? { results: [...hit.results], diagnostics: [...hit.diagnostics], complete: hit.complete } : hit.ready;
+      }
+      let finish;
+      const record = { at: Date.now(), complete: false, results: [], diagnostics: [], ready: new Promise((resolve2) => {
+        finish = resolve2;
+      }) };
+      this.novelRuns.set(key, record);
+      if (this.novelRuns.size > 30) this.novelRuns.delete(this.novelRuns.keys().next().value);
+      const publicNames = ["syosetu", "wuxiaworld", "lightnovelto", "novelbuddy", "novgo", "novelcool", "novelfire", "readnovelfull", "relibrary", "woopread", "divinedaolibrary"];
+      const providers = NOVEL_PROVIDERS.filter((p) => !process.browser || publicNames.includes(p.name)).sort((a, b) => {
+        const rank = (name) => {
+          const index2 = publicNames.indexOf(name);
+          return index2 < 0 ? publicNames.length : index2;
+        };
+        return rank(a.name) - rank(b.name);
+      });
+      const deadline = Date.now() + 8e3;
+      const options = resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 4 });
+      void runProvidersProgressive(providers, (p) => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return Promise.reject(new Error("Novel discovery budget exhausted"));
+        return withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), remaining);
+      }, (chunk) => {
+        record.diagnostics.push(chunk.diagnostic);
+        if (chunk.results.length) {
+          record.results = mergeMangaChapters([...record.results, ...chunk.results]);
+          finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: false });
+        }
+      }, options).then(() => {
+        record.complete = true;
+        finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: true });
+      }).catch(() => {
+        record.complete = true;
+        finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: true });
+      });
+      return record.ready;
+    }
     const diagnostics = [];
     const all = await runProviders(
       NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
       (p) => this.searchThenScrapeNovel(p, enriched),
       diagnostics,
-      { timeoutMs: 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+      { timeoutMs: process.browser ? 6e4 : 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
     );
-    return { results: mergeMangaChapters(all), diagnostics };
+    return { results: mergeMangaChapters(all), diagnostics, complete: true };
   }
   async getNovelSearch(params) {
     const query = String(params.query || "").trim().slice(0, 200);
     if (!query) return { results: [], providerStatus: [] };
     const rows = await Promise.all(NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider).map(async (p) => {
       try {
-        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), 25e3);
+        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), process.browser ? 6e4 : 25e3);
         return { results: matches.slice(0, 20).map((match2) => ({ ...match2, provider: p.name })), status: { provider: p.name, status: matches.length ? "ok" : "empty", resultCount: matches.length } };
       } catch (error) {
         return { results: [], status: { provider: p.name, status: "error", resultCount: 0, error: error.message } };
@@ -69189,9 +69434,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider51 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider51) throw new ChapterNotFoundError(chapterKey);
-    const content = await provider51.getContent(chapterKey);
+    const provider52 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider52) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider52.getContent(chapterKey);
     if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
     return content;
   }

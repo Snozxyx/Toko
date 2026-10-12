@@ -111,6 +111,8 @@ export interface ProviderChunk<T> {
 
 /** Result structure for debug mode */
 export interface DebugProviderResult<T> {
+  /** False while background provider checks are still running. */
+  complete?: boolean;
   results: T[];
   diagnostics: ProviderDiagnostic[];
 }

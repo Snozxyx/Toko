@@ -9,7 +9,9 @@ import { detectSourceType } from '../utils/scraping/quality.js';
 import { withProviderTimeout } from '../utils/common/timeout.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../utils/manga/manga-title-resolver.js';
 import { buildSearchQueries } from '../utils/scraping/title-normalizer.js';
-import { pickBestNovelCandidate } from '../utils/novel-title-match.js';
+import { pickBestNovelCandidate, buildNovelSearchQueries } from '../utils/novel-title-match.js';
+import { setCloudflareBrowserRuntime } from '../utils/common/cf-bypass.js';
+import { clearNovelHttpCache } from '../providers/novel/novel-http.js';
 import {
   runProviders,
   runProvidersProgressive,
@@ -86,6 +88,11 @@ function stampPriority(results: SourceResult[], providerName: string): SourceRes
  * Orchestrates provider execution and result aggregation
  */
 export class TokoBundleClass {
+  private novelRuns = new Map<string, { at: number; complete: boolean; results: NovelChapterEntry[]; diagnostics: ProviderDiagnostic[]; ready: Promise<DebugProviderResult<NovelChapterEntry>> }>();
+  private blockedNovelProviders = new Map<string, {at:number;error:Error}>();
+  configureBrowserRuntime(runtime: Parameters<typeof setCloudflareBrowserRuntime>[0]): void {
+    setCloudflareBrowserRuntime(runtime);
+  }
   /**
    * Validates bundle initialization
    * Ensures at least one provider is available
@@ -430,17 +437,36 @@ export class TokoBundleClass {
     }
   }
 
-  private async searchThenScrapeNovel(provider: typeof NOVEL_PROVIDERS[number], params: NovelChapterParams): Promise<NovelChapterEntry[]> {
+  private async searchThenScrapeNovel(provider: typeof NOVEL_PROVIDERS[number], params: NovelChapterParams, deadline?: number): Promise<NovelChapterEntry[]> {
+    const blocked = this.blockedNovelProviders.get(provider.name);
+    if (!params.provider && !params.fullScan && blocked && Date.now()-blocked.at < 60000) throw blocked.error;
     if (params.seriesId || !provider.search) return provider.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
-    const queries = buildSearchQueries(titles).slice(0, 4);
+    // English + romaji cover these English catalogs. Diagnostics can inspect
+    // all aliases; ordinary loading need not query German/Vietnamese synonyms.
+    const queries = buildNovelSearchQueries(titles).slice(0, params.fullScan ? 4 : 2);
     const candidates: Array<{ id: string; title: string }> = [];
+    let lastError: unknown;
+    let answered = false;
     for (const query of queries) {
-      candidates.push(...await provider.search(query));
+      if (deadline && Date.now() >= deadline) throw new Error('Novel discovery budget exhausted');
+      try {
+        candidates.push(...await provider.search(query));
+        answered = true;
+      } catch (error) {
+        lastError = error;
+        if (/HTTP (?:403|429|502|503)|access blocked/i.test(String((error as Error)?.message))) {
+          if (/HTTP 403|access blocked/i.test(String((error as Error)?.message))) this.blockedNovelProviders.set(provider.name,{at:Date.now(),error:error as Error});
+          throw error;
+        }
+        continue;
+      }
       const match = pickBestNovelCandidate(titles, candidates);
+      if (deadline && Date.now() >= deadline) throw new Error('Novel discovery budget exhausted');
       if (match?.score === 1) return provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id });
     }
     const match = pickBestNovelCandidate(titles, candidates);
+    if (!answered && lastError) throw lastError;
     return match ? provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id }) : [];
   }
 
@@ -449,14 +475,7 @@ export class TokoBundleClass {
    * Multiple providers returning the same chapter number are merged.
    */
   async getNovelChapters(params: NovelChapterParams): Promise<NovelChapterEntry[]> {
-    const enriched = await this.enrichNovelParams(params);
-    const all = await runProviders(
-      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
-      p => this.searchThenScrapeNovel(p, enriched),
-      undefined,
-      { timeoutMs: 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
-    ) as NovelChapterEntry[];
-    return mergeMangaChapters(all as any) as any;
+    return (await this.debugNovelChapters(params)).results;
   }
 
   /**
@@ -465,15 +484,49 @@ export class TokoBundleClass {
   async debugNovelChapters(
     params: NovelChapterParams
   ): Promise<DebugProviderResult<NovelChapterEntry>> {
+    if (params.fullScan) clearNovelHttpCache();
     const enriched = await this.enrichNovelParams(params);
+    if (!params.fullScan && !params.provider) {
+      const key = JSON.stringify([enriched.anilistId || 0,enriched.malId || 0,enriched.titles?.[0] || enriched.title || '']);
+      const hit = this.novelRuns.get(key);
+      if (hit && Date.now() - hit.at < (hit.results.length ? 5 * 60000 : 30000)) {
+        return hit.results.length ? { results: [...hit.results], diagnostics: [...hit.diagnostics], complete: hit.complete } : hit.ready;
+      }
+      let finish!: (result: DebugProviderResult<NovelChapterEntry>) => void;
+      const record = { at: Date.now(), complete: false, results: [] as NovelChapterEntry[], diagnostics: [] as ProviderDiagnostic[], ready: new Promise<DebugProviderResult<NovelChapterEntry>>(resolve => { finish = resolve; }) };
+      this.novelRuns.set(key, record);
+      if (this.novelRuns.size > 30) this.novelRuns.delete(this.novelRuns.keys().next().value!);
+      // Start public catalogs before bot-walled sites. On mobile, a solver
+      // otherwise occupied all native request slots ahead of readable sources.
+      const publicNames = ['syosetu','wuxiaworld','lightnovelto','novelbuddy','novgo','novelcool','novelfire','readnovelfull','relibrary','woopread','divinedaolibrary'];
+      const providers = NOVEL_PROVIDERS.filter(p => !(process as any).browser || publicNames.includes(p.name)).sort((a,b) => {
+        const rank=(name:string)=>{const index=publicNames.indexOf(name);return index<0?publicNames.length:index};
+        return rank(a.name)-rank(b.name);
+      });
+      const deadline = Date.now() + 8000;
+      const options = resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 4 });
+      void runProvidersProgressive(providers, p => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return Promise.reject(new Error('Novel discovery budget exhausted'));
+        return withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), remaining);
+      }, chunk => {
+        record.diagnostics.push(chunk.diagnostic);
+        if (chunk.results.length) {
+          record.results = mergeMangaChapters([...record.results, ...chunk.results] as any) as any;
+          finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: false });
+        }
+      }, options).then(() => { record.complete = true; finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: true }); })
+        .catch(() => { record.complete = true; finish({ results: [...record.results], diagnostics: [...record.diagnostics], complete: true }); });
+      return record.ready;
+    }
     const diagnostics: ProviderDiagnostic[] = [];
     const all = await runProviders(
       NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
       p => this.searchThenScrapeNovel(p, enriched),
       diagnostics,
-      { timeoutMs: 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+      { timeoutMs: (process as any).browser ? 60000 : 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
     ) as NovelChapterEntry[];
-    return { results: mergeMangaChapters(all as any) as any, diagnostics };
+    return { results: mergeMangaChapters(all as any) as any, diagnostics, complete: true };
   }
 
   async getNovelSearch(params: { query: string; provider?: string }) {
@@ -481,7 +534,7 @@ export class TokoBundleClass {
     if (!query) return { results: [], providerStatus: [] };
     const rows = await Promise.all(NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider).map(async p => {
       try {
-        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), 25000);
+        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), (process as any).browser ? 60000 : 25000);
         return { results: matches.slice(0, 20).map(match => ({ ...match, provider: p.name })), status: { provider: p.name, status: matches.length ? 'ok' : 'empty', resultCount: matches.length } };
       } catch (error) { return { results: [], status: { provider: p.name, status: 'error', resultCount: 0, error: (error as Error).message } }; }
     }));

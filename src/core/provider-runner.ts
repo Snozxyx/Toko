@@ -60,7 +60,7 @@ export function resolveProviderRunOptions(
       raw.timeoutMs,
       DEFAULT_PROVIDER_RUN_OPTIONS.timeoutMs,
       1_000,
-      30_000
+      (process as any).browser ? 60_000 : 30_000
     ),
   };
 }
