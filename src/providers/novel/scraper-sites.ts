@@ -2,6 +2,7 @@
  * See THIRD_PARTY_NOTICES.md. No Python/native dependency is required.
  */
 import type { NovelProvider, NovelChapterEntry, NovelContentEntry } from '../../types/index.js';
+import { fetchTextWithBypass } from '../../utils/common/fetch-bypass.js';
 import { fetchResponse, loadHtml } from '../../utils/http/fetch.js';
 interface Site { name: string; base: string; search: (q: string) => string; series: RegExp; chapters: string; content: string; kind?: 'bin' | 'fire' | 'madara'; }
 const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
@@ -12,9 +13,21 @@ function createHtmlNovelProvider(site: Site): NovelProvider {
     return url.href;
   }
   async function html(url: string, referer?: string, method = 'GET') {
-    const response = await fetchResponse(safeUrl(url), { method, timeoutMs: 12000, headers: { ...(referer ? { Referer: referer, 'X-Requested-With': 'XMLHttpRequest' } : {}) } });
-    if (!response.ok) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? ' (access blocked)' : response.status === 410 ? ' (site unavailable)' : ''}`);
-    return response.text();
+    const target = safeUrl(url);
+    const response = await fetchResponse(target, {
+      method,
+      timeoutMs: 12000,
+      headers: { ...(referer ? { Referer: referer, 'X-Requested-With': 'XMLHttpRequest' } : {}) },
+    });
+    if (response.ok) return response.text();
+    const result = await fetchTextWithBypass(target, {
+      method,
+      timeoutMs: 12000,
+      bypassTimeoutMs: 12000,
+      headers: { ...(referer ? { Referer: referer, 'X-Requested-With': 'XMLHttpRequest' } : {}) },
+    });
+    if (!result) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? ' (access blocked)' : response.status === 410 ? ' (site unavailable)' : ''}`);
+    return result;
   }
   return {
     name: site.name, sites: [site.base],

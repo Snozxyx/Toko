@@ -67582,8 +67582,13 @@ var novelcool_default = provider44;
 // src/providers/novel/novel-http.ts
 async function fetchNovelSearchHtml(url) {
   const response = await fetchResponse(url, { timeoutMs: 12e3 });
-  if (!response.ok) throw new Error(`${new URL(url).hostname} search returned HTTP ${response.status}${response.status === 403 ? " (access blocked)" : ""}`);
-  return response.text();
+  if (response.ok) return response.text();
+  const html3 = await fetchTextWithBypass(url, {
+    timeoutMs: 12e3,
+    bypassTimeoutMs: 12e3
+  });
+  if (html3) return html3;
+  throw new Error(`${new URL(url).hostname} search returned HTTP ${response.status}${response.status === 403 ? " (access blocked)" : ""}`);
 }
 
 // src/providers/novel/webnovel.ts
@@ -68592,9 +68597,21 @@ function createHtmlNovelProvider(site) {
     return url.href;
   }
   async function html3(url, referer, method = "GET") {
-    const response = await fetchResponse(safeUrl(url), { method, timeoutMs: 12e3, headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} } });
-    if (!response.ok) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? " (access blocked)" : response.status === 410 ? " (site unavailable)" : ""}`);
-    return response.text();
+    const target = safeUrl(url);
+    const response = await fetchResponse(target, {
+      method,
+      timeoutMs: 12e3,
+      headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} }
+    });
+    if (response.ok) return response.text();
+    const result = await fetchTextWithBypass(target, {
+      method,
+      timeoutMs: 12e3,
+      bypassTimeoutMs: 12e3,
+      headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} }
+    });
+    if (!result) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? " (access blocked)" : response.status === 410 ? " (site unavailable)" : ""}`);
+    return result;
   }
   return {
     name: site.name,
