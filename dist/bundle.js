@@ -45743,19 +45743,19 @@ function resolveProviderRunOptions(opts) {
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider49, fn, options) {
+async function runProviderWithRetry(provider51, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider49)),
+        Promise.resolve().then(() => fn(provider51)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider49.name,
+          provider: provider51.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -45768,7 +45768,7 @@ async function runProviderWithRetry(provider49, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider49.name,
+            provider: provider51.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -45786,7 +45786,7 @@ async function runProviderWithRetry(provider49, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider49.name,
+      provider: provider51.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -45862,15 +45862,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider49 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider49, fn, options);
+      const provider51 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider51, fn, options);
       emit(
         {
-          provider: provider49.name,
+          provider: provider51.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider49.name.toLowerCase())
+        leadNames.has(provider51.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -45978,8 +45978,8 @@ function parseEpisodeFromTitle(title) {
   if (keyword) {
     return { episodeNumber: parseInt(keyword[1], 10), episodeEnd: null, season: null, isBatch: false };
   }
-  const cleanTitle = name.replace(/\[[^\]]*\]/g, " ").replace(/\([^)]*p?\)/gi, " ").replace(/[_]/g, " ").trim();
-  const standalone = cleanTitle.match(/(?:^|\s)-?\s*(\d{1,4})\s*$/);
+  const cleanTitle2 = name.replace(/\[[^\]]*\]/g, " ").replace(/\([^)]*p?\)/gi, " ").replace(/[_]/g, " ").trim();
+  const standalone = cleanTitle2.match(/(?:^|\s)-?\s*(\d{1,4})\s*$/);
   if (standalone) {
     return { episodeNumber: parseInt(standalone[1], 10), episodeEnd: null, season: null, isBatch: false };
   }
@@ -50582,8 +50582,8 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE29) => {
-        const html3 = await fetchHtml3(`${BASE29}/?s=${encodeURIComponent(query)}`, BASE29);
+      BASES2.map(async (BASE31) => {
+        const html3 = await fetchHtml3(`${BASE31}/?s=${encodeURIComponent(query)}`, BASE31);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
@@ -50594,9 +50594,9 @@ async function searchAnime2(titles) {
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE29}${href}`,
+            url: href.startsWith("http") ? href : `${BASE31}${href}`,
             title,
-            base: BASE29,
+            base: BASE31,
             slug: m[1],
             score: scoreMatch(query, title)
           });
@@ -53997,19 +53997,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider49 = {
+  const provider51 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider49.movie = (opts) => run(opts, "movie");
+    provider51.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider49.getLanguages = async () => languages;
+    provider51.getLanguages = async () => languages;
   }
-  return provider49;
+  return provider51;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -58227,7 +58227,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider49, server, lang, item) {
+function pushCandidate(out, provider51, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58235,22 +58235,22 @@ function pushCandidate(out, provider49, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider49} \xB7 ${server || "Player"}`
+    server: `${provider51} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider49, isMovie, episodeNum) {
+function parseCandidates(data2, provider51, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider49, item.player || item.name, lang, item);
+        pushCandidate(out, provider51, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider49, item.name || item.player, lang, item);
+        pushCandidate(out, provider51, item.name || item.player, lang, item);
       }
     }
   }
@@ -58263,20 +58263,20 @@ function parseCandidates(data2, provider49, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider49, item.player, lang, item);
+            pushCandidate(out, provider51, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider49, item.name || item.player, lang, item);
+          pushCandidate(out, provider51, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider49, item.player || item.name, lang, item);
+      pushCandidate(out, provider51, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -67615,13 +67615,22 @@ async function resolveBookId(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
+  let lastSearchError = null;
   for (const title of titles.slice(0, 2)) {
-    for (const cand of await searchBooks(title)) {
+    let cands = [];
+    try {
+      cands = await searchBooks(title);
+    } catch (err) {
+      lastSearchError = err;
+      continue;
+    }
+    for (const cand of cands) {
       if (seen.has(cand.bookId)) continue;
       seen.add(cand.bookId);
       pool.push(cand);
     }
   }
+  if (pool.length === 0 && lastSearchError) throw lastSearchError;
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.bookId : null;
 }
@@ -67943,8 +67952,15 @@ async function searchSeries(query) {
     `${BASE27}/search/${encodeURIComponent(query)}`
   ];
   const byHref = /* @__PURE__ */ new Map();
+  let lastSearchError = null;
   for (const url of urls) {
-    const html3 = await fetchNovelSearchHtml(url);
+    let html3;
+    try {
+      html3 = await fetchNovelSearchHtml(url);
+    } catch (err) {
+      lastSearchError = err;
+      continue;
+    }
     if (!html3) continue;
     const $2 = loadHtml(html3);
     $2("article a[href], .post a[href], .search-results a[href], a.post-title[href]").each((_, el) => {
@@ -67958,6 +67974,7 @@ async function searchSeries(query) {
     });
     if (byHref.size > 0) break;
   }
+  if (byHref.size === 0 && lastSearchError) throw lastSearchError;
   return Array.from(byHref.values()).slice(0, 20);
 }
 async function resolveSeriesHref3(params) {
@@ -67966,7 +67983,13 @@ async function resolveSeriesHref3(params) {
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
   for (const title of titles.slice(0, 2)) {
-    for (const cand of await searchSeries(title)) {
+    let cands = [];
+    try {
+      cands = await searchSeries(title);
+    } catch {
+      continue;
+    }
+    for (const cand of cands) {
       if (seen.has(cand.href)) continue;
       seen.add(cand.href);
       pool.push(cand);
@@ -68084,8 +68107,15 @@ async function searchSeries2(query) {
     `${BASE28}/search/${encodeURIComponent(query)}`
   ];
   const byHref = /* @__PURE__ */ new Map();
+  let lastSearchError = null;
   for (const url of urls) {
-    const html3 = await fetchNovelSearchHtml(url);
+    let html3;
+    try {
+      html3 = await fetchNovelSearchHtml(url);
+    } catch (err) {
+      lastSearchError = err;
+      continue;
+    }
     if (!html3) continue;
     const $2 = loadHtml(html3);
     $2('a[href*="/novel/"], a[href*="/series/"], .novel-item a[href], .search-item a[href]').each((_, el) => {
@@ -68098,6 +68128,7 @@ async function searchSeries2(query) {
     });
     if (byHref.size > 0) break;
   }
+  if (byHref.size === 0 && lastSearchError) throw lastSearchError;
   return Array.from(byHref.values()).slice(0, 20);
 }
 async function resolveSeriesHref4(params) {
@@ -68106,7 +68137,13 @@ async function resolveSeriesHref4(params) {
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
   for (const title of titles.slice(0, 2)) {
-    for (const cand of await searchSeries2(title)) {
+    let cands = [];
+    try {
+      cands = await searchSeries2(title);
+    } catch {
+      continue;
+    }
+    for (const cand of cands) {
       if (seen.has(cand.href)) continue;
       seen.add(cand.href);
       pool.push(cand);
@@ -68222,6 +68259,330 @@ var provider48 = {
 };
 var lightnovelto_default = provider48;
 
+// src/providers/novel/divinedaolibrary.ts
+var BASE29 = "https://www.divinedaolibrary.com";
+var PROVIDER_NAME20 = "divinedaolibrary";
+function toUrl5(href) {
+  return href.startsWith("http") ? href : `${BASE29}${href.startsWith("/") ? "" : "/"}${href}`;
+}
+async function searchSeries3(query) {
+  const html3 = await fetchNovelSearchHtml(`${BASE29}/?s=${encodeURIComponent(query)}`);
+  if (!html3) return [];
+  const $2 = loadHtml(html3);
+  const byHref = /* @__PURE__ */ new Map();
+  $2("a.card__link-list-link[href]").each((_, el) => {
+    const a = $2(el);
+    const href = (a.attr("href") || "").trim();
+    let path = "";
+    try {
+      path = new URL(toUrl5(href)).pathname;
+    } catch {
+      return;
+    }
+    if (!/^\/story\/[^/]+\/$/.test(path)) return;
+    const name = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+    if (!name || name.length < 2 || byHref.has(path)) return;
+    byHref.set(path, { href: path, name });
+  });
+  return Array.from(byHref.values()).slice(0, 20);
+}
+async function resolveSeriesHref5(params) {
+  const titles = await resolveMangaTitles(params);
+  if (titles.length === 0) return null;
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const title of titles.slice(0, 2)) {
+    let cands = [];
+    try {
+      cands = await searchSeries3(title);
+    } catch {
+      continue;
+    }
+    for (const cand of cands) {
+      if (seen.has(cand.href)) continue;
+      seen.add(cand.href);
+      pool.push(cand);
+    }
+  }
+  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  return best ? best.candidate.href : null;
+}
+function parseChapterNumber5(label, href) {
+  let m = label.match(/chapter\s+(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = href.match(/-chapter-(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : NaN;
+}
+function cleanTitle(label) {
+  const m = label.match(/^chapter\s+[\d.]+\s*,\s*(.+)$/i);
+  return (m ? m[1] : label).trim() || label;
+}
+async function getChapters(params) {
+  try {
+    const href = params.seriesId || await resolveSeriesHref5(params);
+    if (!href) return [];
+    const url = toUrl5(href);
+    if (new URL(url).origin !== BASE29 || !/^\/story\/[^/]+\/$/.test(new URL(url).pathname)) {
+      throw new Error("Invalid DivineDaoLibrary title URL");
+    }
+    const html3 = await fetchText(url, { timeoutMs: 15e3 });
+    if (!html3) return [];
+    const $2 = loadHtml(html3);
+    const byNumber = /* @__PURE__ */ new Map();
+    const push = (full, label, date) => {
+      if (!full.startsWith(`${BASE29}/story/`)) return;
+      const num = parseChapterNumber5(label, full);
+      if (!Number.isFinite(num) || num <= 0 || byNumber.has(num)) return;
+      const source = {
+        provider: PROVIDER_NAME20,
+        chapterKey: `${PROVIDER_NAME20}:${encodeURIComponent(full)}`,
+        providerChapterId: full,
+        language: "en",
+        translator: null,
+        releaseDate: date
+      };
+      byNumber.set(num, { number: num, title: cleanTitle(label), volume: null, sources: [source] });
+    };
+    $2(".chapter-group").each((_, g) => {
+      const group = $2(g);
+      group.find("a.chapter-group__list-item-link[href]").each((__, el) => {
+        const a = $2(el);
+        const chHref = (a.attr("href") || "").trim();
+        if (!chHref) return;
+        const full = toUrl5(chHref);
+        const label = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+        if (!label) return;
+        const time = a.closest("li").find("time").first();
+        const stamp = time.attr("datetime");
+        const date = stamp && Number.isFinite(Number(stamp)) ? new Date(Number(stamp) * 1e3).toISOString() : time.text().trim() || null;
+        push(full, label, date);
+      });
+    });
+    if (byNumber.size === 0) {
+      const slug2 = new URL(url).pathname.split("/").filter(Boolean).pop() || "";
+      const re = /"position":(\d+),"url":"([^"]+)"/g;
+      let m;
+      while ((m = re.exec(html3)) !== null) {
+        const full = m[2].replace(/\\\//g, "/");
+        if (!full.startsWith(`${BASE29}/story/`)) continue;
+        const tail = full.split("/").filter(Boolean).pop() || "";
+        const title = tail.replace(new RegExp(`^${slug2}-chapter-[\\d.]+-?`, "i"), "").replace(/-/g, " ").trim();
+        push(full, `Chapter ${m[1]}${title ? `, ${title}` : ""}`, null);
+      }
+    }
+    return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
+  } catch {
+    return [];
+  }
+}
+function extractParagraphs3($2) {
+  const out = [];
+  const nodes = $2("#chapter-content p");
+  const list = nodes.length > 0 ? nodes : $2(".chapter__content p");
+  list.each((_, el) => {
+    const text3 = $2(el).text().replace(/\s+/g, " ").trim();
+    if (!text3) return;
+    if (/^(translator|translation|editor|proofreader)\s*:/i.test(text3) && text3.length < 120) return;
+    out.push(text3);
+  });
+  return out;
+}
+var provider49 = {
+  name: PROVIDER_NAME20,
+  sites: [BASE29],
+  async search(query) {
+    return (await searchSeries3(query)).map((row) => ({ id: row.href, title: row.name, url: toUrl5(row.href) }));
+  },
+  getChapters,
+  async getContent(chapterKey) {
+    try {
+      const prefix = `${PROVIDER_NAME20}:`;
+      if (!chapterKey.startsWith(prefix)) return null;
+      const url = decodeURIComponent(chapterKey.slice(prefix.length));
+      if (!url.startsWith(BASE29) || !/\/story\/[^/]+\/[^/]+\//.test(new URL(url).pathname)) return null;
+      const html3 = await fetchText(url, { timeoutMs: 15e3 });
+      if (!html3) return null;
+      const $2 = loadHtml(html3);
+      const title = $2("h1.chapter__title").first().text().trim() || null;
+      const texts = extractParagraphs3($2);
+      if (texts.length === 0) return null;
+      return {
+        title,
+        number: null,
+        paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
+        provider: PROVIDER_NAME20
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+var divinedaolibrary_default = provider49;
+
+// src/providers/novel/novelbuddy.ts
+var BASE30 = "https://novelbuddy.me";
+var PROVIDER_NAME21 = "novelbuddy";
+var KNOWN_ORIGINS = /* @__PURE__ */ new Set([BASE30, "https://www.novelbuddy.me", "https://novelbuddy.com", "https://www.novelbuddy.com"]);
+var cachedBuildId = null;
+async function getBuildId() {
+  if (cachedBuildId) return cachedBuildId;
+  const res = await fetchResponse(`${BASE30}/search`, { timeoutMs: 12e3 });
+  if (!res.ok) {
+    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? " (access blocked)" : ""}`);
+  }
+  const html3 = await res.text().catch(() => "");
+  const match2 = html3.match(/\/_next\/static\/([A-Za-z0-9_-]+)\/_buildManifest\.js/);
+  if (!match2) throw new Error("novelbuddy search is unavailable (site layout changed)");
+  cachedBuildId = match2[1];
+  return match2[1];
+}
+async function searchSeries4(query) {
+  const buildId = await getBuildId();
+  const url = `${BASE30}/_next/data/${buildId}/search.json?keyword=${encodeURIComponent(query)}`;
+  const res = await fetchResponse(url, {
+    timeoutMs: 15e3,
+    headers: { Accept: "application/json" }
+  });
+  if (!res.ok) {
+    throw new Error(`novelbuddy search returned HTTP ${res.status}${res.status === 403 ? " (access blocked)" : ""}`);
+  }
+  const json = await res.json().catch(() => null);
+  const items = json?.pageProps?.ssrItems;
+  if (!Array.isArray(items)) return [];
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const row of items) {
+    const slug2 = String(row?.slug || "").trim();
+    const name = String(row?.name || "").trim().replace(/\s+/g, " ");
+    if (!/^[A-Za-z0-9-]+$/.test(slug2) || !name || name.length < 2 || seen.has(slug2)) continue;
+    seen.add(slug2);
+    out.push({ href: `/${slug2}`, name });
+  }
+  return out.slice(0, 20);
+}
+async function resolveSeriesSlug(params) {
+  const titles = await resolveMangaTitles(params);
+  if (titles.length === 0) return null;
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  let lastError = null;
+  for (const title of titles.slice(0, 2)) {
+    let cands = [];
+    try {
+      cands = await searchSeries4(title);
+    } catch (err) {
+      lastError = err;
+      continue;
+    }
+    for (const cand of cands) {
+      if (seen.has(cand.href)) continue;
+      seen.add(cand.href);
+      pool.push(cand);
+    }
+  }
+  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  if (best) return best.candidate.href.replace(/^\/+|\/+$/g, "");
+  if (pool.length === 0 && lastError) throw lastError;
+  return null;
+}
+function seriesSlugFrom(params, resolved) {
+  if (params.seriesId) {
+    try {
+      const u = new URL(params.seriesId.startsWith("http") ? params.seriesId : `${BASE30}${params.seriesId.startsWith("/") ? "" : "/"}${params.seriesId}`);
+      if (!KNOWN_ORIGINS.has(u.origin)) throw new Error("Invalid novelbuddy title URL");
+      const slug2 = u.pathname.split("/").filter(Boolean)[0] || "";
+      if (/^[A-Za-z0-9-]+$/.test(slug2)) return slug2;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  return resolved;
+}
+var provider50 = {
+  name: PROVIDER_NAME21,
+  sites: [BASE30],
+  async search(query) {
+    return (await searchSeries4(query)).map((row) => ({ id: row.href, title: row.name, url: `${BASE30}${row.href}` }));
+  },
+  async getChapters(params) {
+    try {
+      const slug2 = seriesSlugFrom(params, await resolveSeriesSlug(params).catch(() => null));
+      if (!slug2) return [];
+      const buildId = await getBuildId();
+      const data2 = await fetchJson(
+        `${BASE30}/_next/data/${buildId}/${encodeURIComponent(slug2)}.json`,
+        { timeoutMs: 15e3 }
+      );
+      const rows = data2?.pageProps?.initialManga?.chapters;
+      if (!Array.isArray(rows)) return [];
+      const entries = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (const row of rows) {
+        const r = row;
+        const number = Number(r.number);
+        if (!Number.isFinite(number) || number <= 0 || seen.has(number)) continue;
+        const chapterUrl = `${BASE30}${String(r.url || "")}`;
+        if (!chapterUrl.startsWith(`${BASE30}/`)) continue;
+        seen.add(number);
+        const source = {
+          provider: PROVIDER_NAME21,
+          chapterKey: `${PROVIDER_NAME21}:${encodeURIComponent(chapterUrl)}`,
+          providerChapterId: chapterUrl,
+          language: "en",
+          translator: null,
+          releaseDate: typeof r.updatedAt === "string" ? r.updatedAt : typeof r.date === "string" ? r.date : null
+        };
+        entries.push({
+          number,
+          title: typeof r.name === "string" && r.name.trim() ? r.name.trim() : `Chapter ${number}`,
+          volume: null,
+          sources: [source]
+        });
+      }
+      return entries.sort((a, b) => a.number - b.number);
+    } catch {
+      return [];
+    }
+  },
+  async getContent(chapterKey) {
+    try {
+      const prefix = `${PROVIDER_NAME21}:`;
+      if (!chapterKey.startsWith(prefix)) return null;
+      const u = new URL(decodeURIComponent(chapterKey.slice(prefix.length)));
+      if (!KNOWN_ORIGINS.has(u.origin)) return null;
+      const segs = u.pathname.split("/").filter(Boolean);
+      if (segs.length < 2 || !/^[A-Za-z0-9-]+$/.test(segs[0]) || !/^[A-Za-z0-9-]+$/.test(segs[1])) return null;
+      const buildId = await getBuildId();
+      const data2 = await fetchJson(
+        `${BASE30}/_next/data/${buildId}/${segs[0]}/${segs[1]}.json`,
+        { timeoutMs: 15e3 }
+      );
+      const ch = data2?.pageProps?.initialChapter;
+      if (!ch || typeof ch.content !== "string" || !ch.content) return null;
+      const $2 = loadHtml(`<div>${ch.content}</div>`);
+      const texts = [];
+      $2("p").each((_, el) => {
+        const text3 = $2(el).text().replace(/\s+/g, " ").trim();
+        if (text3) texts.push(text3);
+      });
+      if (texts.length === 0) return null;
+      const number = Number(ch.number);
+      return {
+        title: typeof ch.name === "string" && ch.name.trim() ? ch.name.trim() : null,
+        number: Number.isFinite(number) ? number : null,
+        paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
+        provider: PROVIDER_NAME21
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+var novelbuddy_default = provider50;
+
 // src/providers/novel/scraper-sites.ts
 var clean = (text3) => text3.replace(/\s+/g, " ").trim();
 function createHtmlNovelProvider(site) {
@@ -68266,12 +68627,6 @@ function createHtmlNovelProvider(site) {
         const slug2 = new URL(series).pathname.split("/").filter(Boolean).pop();
         listUrl = `${site.base}/ajax/chapter-archive?novelId=${encodeURIComponent(slug2)}`;
         listHtml = await html3(listUrl, series);
-      } else if (site.kind === "buddy") {
-        const id = initial.match(/(?:var\s+)?(?:manga_id|novel_id|book_id)\s*[:=]\s*["']?(\d+)/)?.[1] || $2("[data-manga-id],[data-novel-id]").first().attr("data-manga-id") || $2("[data-novel-id]").first().attr("data-novel-id");
-        if (id) {
-          listUrl = `${site.base}/api/manga/${id}/chapters?source=detail`;
-          listHtml = await html3(listUrl, series);
-        }
       } else if (site.kind === "fire") {
         listUrl = series.replace(/\/$/, "") + "/chapters";
         listHtml = await html3(listUrl, series);
@@ -68349,9 +68704,13 @@ var scraperNovelProviders = [
   { name: "novelfull", base: "https://novelfull.com", search: (q) => `https://novelfull.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?!search|chapter|index)[^/]+\.html\/?$/, chapters: "ul.list-chapter li a", content: "#chapter-content" },
   { name: "novelfire", base: "https://novelfire.net", search: (q) => `https://novelfire.net/search?keyword=${encodeURIComponent(q)}`, series: /^\/book\/[^/]+\/?$/, chapters: "ul.chapter-list li a", content: "#content.clearfix, #content", kind: "fire" },
   { name: "novelbin", base: "https://novelbin.com", search: (q) => `https://novelbin.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/b\/[^/]+\/?$/, chapters: 'ul.list-chapter li a,#tab-chapters a[href*="chapter-"]', content: "#chr-content", kind: "bin" },
-  { name: "novelbuddy", base: "https://novelbuddy.com", search: (q) => `https://novelbuddy.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?:novel|book)\/[^/]+\/?$/, chapters: "ul.chapter-list li a", content: "div.chapter__content div.content-inner", kind: "buddy" },
   { name: "royalroad", base: "https://www.royalroad.com", search: (q) => `https://www.royalroad.com/fictions/search?title=${encodeURIComponent(q)}`, series: /^\/fiction\/\d+\/[^/]+\/?$/, chapters: "tr.chapter-row td:first-child a[href]", content: ".chapter-inner.chapter-content" },
-  { name: "wuxiaworldsite", base: "https://wuxiaworld.site", search: (q) => `https://wuxiaworld.site/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a", content: ".reading-content .text-left", kind: "madara" }
+  { name: "wuxiaworldsite", base: "https://wuxiaworld.site", search: (q) => `https://wuxiaworld.site/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a", content: ".reading-content .text-left", kind: "madara" },
+  { name: "readnovelfull", base: "https://readnovelfull.com", search: (q) => `https://readnovelfull.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?!search|chapter|index)[^/]+\.html\/?$/, chapters: "ul.list-chapter li a,.list-chapter a", content: "#chapter-content,.chapter-content" },
+  { name: "novelcool", base: "https://www.novelcool.com", search: (q) => `https://www.novelcool.com/search/?wd=${encodeURIComponent(q)}`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.chapter-content", kind: "madara" },
+  { name: "novgo", base: "https://novgo.net", search: (q) => `https://novgo.net/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.chapter-content", kind: "madara" },
+  { name: "relibrary", base: "https://www.re-library.com", search: (q) => `https://www.re-library.com/?s=${encodeURIComponent(q)}`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.entry-content", kind: "madara" },
+  { name: "woopread", base: "https://woopread.com", search: (q) => `https://woopread.com/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a,.chapter-list a", content: ".reading-content,.entry-content", kind: "madara" }
 ].map((site) => createHtmlNovelProvider(site));
 
 // src/providers/registry.ts
@@ -68422,6 +68781,8 @@ var NOVEL_PROVIDERS = [
   webnovel_default,
   justlightnovels_default,
   lightnovelto_default,
+  divinedaolibrary_default,
+  novelbuddy_default,
   ...scraperNovelProviders
 ];
 var LEAD_STREAM_PROVIDERS = ["nebula"];
@@ -68729,9 +69090,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider49 = MANGA_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider49) throw new ChapterNotFoundError(chapterKey);
-    const pages = await provider49.getPages(chapterKey);
+    const provider51 = MANGA_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider51) throw new ChapterNotFoundError(chapterKey);
+    const pages = await provider51.getPages(chapterKey);
     if (pages.length === 0) throw new ChapterNotFoundError(chapterKey);
     return pages;
   }
@@ -68746,18 +69107,18 @@ var TokoBundleClass = class {
       return params;
     }
   }
-  async searchThenScrapeNovel(provider49, params) {
-    if (params.seriesId || !provider49.search) return provider49.getChapters(params);
+  async searchThenScrapeNovel(provider51, params) {
+    if (params.seriesId || !provider51.search) return provider51.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
     const queries = buildSearchQueries(titles).slice(0, 4);
     const candidates = [];
     for (const query of queries) {
-      candidates.push(...await provider49.search(query));
+      candidates.push(...await provider51.search(query));
       const match3 = pickBestNovelCandidate(titles, candidates);
-      if (match3?.score === 1) return provider49.getChapters({ ...params, provider: provider49.name, seriesId: match3.candidate.id });
+      if (match3?.score === 1) return provider51.getChapters({ ...params, provider: provider51.name, seriesId: match3.candidate.id });
     }
     const match2 = pickBestNovelCandidate(titles, candidates);
-    return match2 ? provider49.getChapters({ ...params, provider: provider49.name, seriesId: match2.candidate.id }) : [];
+    return match2 ? provider51.getChapters({ ...params, provider: provider51.name, seriesId: match2.candidate.id }) : [];
   }
   /**
    * Returns novel chapters merged by chapter number.
@@ -68811,9 +69172,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider49 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider49) throw new ChapterNotFoundError(chapterKey);
-    const content = await provider49.getContent(chapterKey);
+    const provider51 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider51) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider51.getContent(chapterKey);
     if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
     return content;
   }

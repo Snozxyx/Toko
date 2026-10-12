@@ -3,7 +3,7 @@
  */
 import type { NovelProvider, NovelChapterEntry, NovelContentEntry } from '../../types/index.js';
 import { fetchResponse, loadHtml } from '../../utils/http/fetch.js';
-interface Site { name: string; base: string; search: (q: string) => string; series: RegExp; chapters: string; content: string; kind?: 'bin' | 'buddy' | 'fire' | 'madara'; }
+interface Site { name: string; base: string; search: (q: string) => string; series: RegExp; chapters: string; content: string; kind?: 'bin' | 'fire' | 'madara'; }
 const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
 function createHtmlNovelProvider(site: Site): NovelProvider {
   function safeUrl(value: string, relative = site.base): string {
@@ -39,11 +39,7 @@ function createHtmlNovelProvider(site: Site): NovelProvider {
         const slug = new URL(series).pathname.split('/').filter(Boolean).pop()!;
         listUrl = `${site.base}/ajax/chapter-archive?novelId=${encodeURIComponent(slug)}`;
         listHtml = await html(listUrl, series);
-      } else if (site.kind === 'buddy') {
-        const id = initial.match(/(?:var\s+)?(?:manga_id|novel_id|book_id)\s*[:=]\s*["']?(\d+)/)?.[1]
-          || $('[data-manga-id],[data-novel-id]').first().attr('data-manga-id') || $('[data-novel-id]').first().attr('data-novel-id');
-        if (id) { listUrl = `${site.base}/api/manga/${id}/chapters?source=detail`; listHtml = await html(listUrl, series); }
-      } else if (site.kind === 'fire') {
+            } else if (site.kind === 'fire') {
         listUrl = series.replace(/\/$/, '') + '/chapters'; listHtml = await html(listUrl, series);
       } else if (site.kind === 'madara' && $(site.chapters).length === 0) {
         listUrl = series.replace(/\/$/, '') + '/ajax/chapters/'; listHtml = await html(listUrl, series, 'POST');
@@ -97,7 +93,11 @@ export const scraperNovelProviders:NovelProvider[]=[
   {name:'novelfull',base:'https://novelfull.com',search:(q:string)=>`https://novelfull.com/search?keyword=${encodeURIComponent(q)}`,series:/^\/(?!search|chapter|index)[^/]+\.html\/?$/,chapters:'ul.list-chapter li a',content:'#chapter-content'},
   {name:'novelfire',base:'https://novelfire.net',search:(q:string)=>`https://novelfire.net/search?keyword=${encodeURIComponent(q)}`,series:/^\/book\/[^/]+\/?$/,chapters:'ul.chapter-list li a',content:'#content.clearfix, #content',kind:'fire'},
   {name:'novelbin',base:'https://novelbin.com',search:(q:string)=>`https://novelbin.com/search?keyword=${encodeURIComponent(q)}`,series:/^\/b\/[^/]+\/?$/,chapters:'ul.list-chapter li a,#tab-chapters a[href*="chapter-"]',content:'#chr-content',kind:'bin'},
-  {name:'novelbuddy',base:'https://novelbuddy.com',search:(q:string)=>`https://novelbuddy.com/search?keyword=${encodeURIComponent(q)}`,series:/^\/(?:novel|book)\/[^/]+\/?$/,chapters:'ul.chapter-list li a',content:'div.chapter__content div.content-inner',kind:'buddy'},
   {name:'royalroad',base:'https://www.royalroad.com',search:(q:string)=>`https://www.royalroad.com/fictions/search?title=${encodeURIComponent(q)}`,series:/^\/fiction\/\d+\/[^/]+\/?$/,chapters:'tr.chapter-row td:first-child a[href]',content:'.chapter-inner.chapter-content'},
   {name:'wuxiaworldsite',base:'https://wuxiaworld.site',search:(q:string)=>`https://wuxiaworld.site/?s=${encodeURIComponent(q)}&post_type=wp-manga`,series:/^\/novel\/[^/]+\/?$/,chapters:'.wp-manga-chapter a',content:'.reading-content .text-left',kind:'madara'},
+  {name:'readnovelfull',base:'https://readnovelfull.com',search:(q:string)=>`https://readnovelfull.com/search?keyword=${encodeURIComponent(q)}`,series:/^\/(?!search|chapter|index)[^/]+\.html\/?$/,chapters:'ul.list-chapter li a,.list-chapter a',content:'#chapter-content,.chapter-content'},
+  {name:'novelcool',base:'https://www.novelcool.com',search:(q:string)=>`https://www.novelcool.com/search/?wd=${encodeURIComponent(q)}`,series:/^\/novel\/[^/]+\/?$/,chapters:'.wp-manga-chapter a,.chapter-list a',content:'.reading-content,.chapter-content',kind:'madara'},
+  {name:'novgo',base:'https://novgo.net',search:(q:string)=>`https://novgo.net/?s=${encodeURIComponent(q)}&post_type=wp-manga`,series:/^\/novel\/[^/]+\/?$/,chapters:'.wp-manga-chapter a,.chapter-list a',content:'.reading-content,.chapter-content',kind:'madara'},
+  {name:'relibrary',base:'https://www.re-library.com',search:(q:string)=>`https://www.re-library.com/?s=${encodeURIComponent(q)}`,series:/^\/novel\/[^/]+\/?$/,chapters:'.wp-manga-chapter a,.chapter-list a',content:'.reading-content,.entry-content',kind:'madara'},
+  {name:'woopread',base:'https://woopread.com',search:(q:string)=>`https://woopread.com/?s=${encodeURIComponent(q)}&post_type=wp-manga`,series:/^\/novel\/[^/]+\/?$/,chapters:'.wp-manga-chapter a,.chapter-list a',content:'.reading-content,.entry-content',kind:'madara'},
 ].map(site=>createHtmlNovelProvider(site as Site));

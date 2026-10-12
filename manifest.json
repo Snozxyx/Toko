@@ -2,9 +2,9 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "4.3.2",
+  "version": "4.5.0",
   "author": "Snozxyx",
-  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool), and novel reading (Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, wuxiaworld.site).",
+  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool), and novel reading (Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, wuxiaworld.site, DivineDaoLibrary, ReadNovelFull, NovelCool, Novgo, Re:Library, WoopRead).",
   "categories": [
     "Anime Stream",
     "Torrent",
@@ -322,7 +322,17 @@
     "network:domain:novelfire.net",
     "network:domain:novelbin.com",
     "network:domain:novelbuddy.com",
+    "network:domain:novelbuddy.me",
     "network:domain:www.royalroad.com",
-    "network:domain:wuxiaworld.site"
+    "network:domain:wuxiaworld.site",
+    "network:domain:www.divinedaolibrary.com",
+    "network:domain:divinedaolibrary.com"
+    "network:domain:readnovelfull.com",
+    "network:domain:www.novelcool.com",
+    "network:domain:novelcool.com",
+    "network:domain:novgo.net",
+    "network:domain:www.re-library.com",
+    "network:domain:re-library.com",
+    "network:domain:woopread.com"
   ]
 }

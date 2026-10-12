@@ -77,13 +77,25 @@ async function resolveBookId(params: NovelChapterParams): Promise<string | null>
   if (titles.length === 0) return null;
   const pool: WnCandidate[] = [];
   const seen = new Set<string>();
+  let lastSearchError = null;
   for (const title of titles.slice(0, 2)) {
-    for (const cand of await searchBooks(title)) {
+    let cands = [];
+    try {
+      cands = await searchBooks(title);
+    } catch (err) {
+      // A 403-walled search for one title variant must not skip the other
+      // variant — but if nothing matched anywhere, surface the block so
+      // diagnostics report "access blocked" instead of silent empty.
+      lastSearchError = err;
+      continue;
+    }
+    for (const cand of cands) {
       if (seen.has(cand.bookId)) continue;
       seen.add(cand.bookId);
       pool.push(cand);
     }
   }
+  if (pool.length === 0 && lastSearchError) throw lastSearchError;
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.bookId : null;
 }

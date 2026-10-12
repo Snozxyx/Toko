@@ -43,8 +43,18 @@ async function searchSeries(query: string): Promise<LntCandidate[]> {
     `${BASE}/search/${encodeURIComponent(query)}`,
   ];
   const byHref = new Map<string, LntCandidate>();
+  let lastSearchError = null;
   for (const url of urls) {
-    const html = await fetchNovelSearchHtml(url);
+    let html;
+    try {
+      html = await fetchNovelSearchHtml(url);
+    } catch (err) {
+      // One search endpoint 403/404ing (WAF, drifted route) must not abort
+      // the fallback endpoint — but if every endpoint fails, surface the
+      // last error so diagnostics report "access blocked" instead of empty.
+      lastSearchError = err;
+      continue;
+    }
     if (!html) continue;
     const $ = loadHtml(html);
     $('a[href*="/novel/"], a[href*="/series/"], .novel-item a[href], .search-item a[href]').each((_, el) => {
@@ -57,6 +67,7 @@ async function searchSeries(query: string): Promise<LntCandidate[]> {
     });
     if (byHref.size > 0) break;
   }
+  if (byHref.size === 0 && lastSearchError) throw lastSearchError;
   return Array.from(byHref.values()).slice(0, 20);
 }
 
@@ -66,7 +77,13 @@ async function resolveSeriesHref(params: NovelChapterParams): Promise<string | n
   const pool: LntCandidate[] = [];
   const seen = new Set<string>();
   for (const title of titles.slice(0, 2)) {
-    for (const cand of await searchSeries(title)) {
+    let cands = [];
+    try {
+      cands = await searchSeries(title);
+    } catch {
+      continue;
+    }
+    for (const cand of cands) {
       if (seen.has(cand.href)) continue;
       seen.add(cand.href);
       pool.push(cand);

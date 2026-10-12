@@ -200,15 +200,18 @@ export const MANGA_PROVIDERS: MangaProvider[] = [
 
 // ── Novel providers ───────────────────────────────────────────────────────────
 // Text-chapter sources (not image pages). Order is priority order.
-// `wuxiaworld` leads: it is the only one with a public JSON API, so it maps
-// fastest and most reliably. The other three are plain-HTML catalogues mapped
-// by fuzzy title via the shared AniList (MANGA/NOVEL) resolver, with
-// MangaBaka enrichment applied on the app side. The reader's cross-source
-// fallback skips any source whose content comes back empty.
+// `wuxiaworld` leads: it has a public gRPC API, so it maps fastest and most
+// reliably. `lightnovelto` and `novelbuddy` are JSON-backed catalogues;
+// the rest are plain-HTML catalogues mapped by fuzzy title via the shared
+// AniList (MANGA/NOVEL) resolver, with MangaBaka enrichment applied on the
+// app side. The reader's cross-source fallback skips any source whose content
+// comes back empty.
 import webnovel from './novel/webnovel.js';
 import wuxiaworld from './novel/wuxiaworld.js';
 import justlightnovels from './novel/justlightnovels.js';
 import lightnovelto from './novel/lightnovelto.js';
+import divinedaolibrary from './novel/divinedaolibrary.js';
+import novelbuddy from './novel/novelbuddy.js';
 import { scraperNovelProviders } from './novel/scraper-sites.js';
 
 export const NOVEL_PROVIDERS: NovelProvider[] = [
@@ -216,6 +219,8 @@ export const NOVEL_PROVIDERS: NovelProvider[] = [
   webnovel,
   justlightnovels,
   lightnovelto,
+  divinedaolibrary,
+  novelbuddy,
   ...scraperNovelProviders,
 ];
 
