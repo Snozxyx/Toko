@@ -51,6 +51,8 @@ async function main(): Promise<void> {
     { name: 'bundle.js',     src: path.join(DIST, 'bundle.js') },
     { name: 'README.md',     src: path.join(ROOT, 'README.md') },
     { name: 'icon.png',      src: path.join(ROOT, 'icon.png') },
+    { name: 'THIRD_PARTY_NOTICES.md', src: path.join(ROOT, 'THIRD_PARTY_NOTICES.md') },
+    { name: 'licenses/wn-dl-LICENSE.txt', src: path.join(ROOT, 'src/providers/novel/wn-dl-LICENSE.txt') },
   ];
 
   const zip = new JSZip();

@@ -7,7 +7,9 @@
 import { fetchResponse } from '../utils/http/fetch.js';
 import { detectSourceType } from '../utils/scraping/quality.js';
 import { withProviderTimeout } from '../utils/common/timeout.js';
-import { resolveMangaTitles } from '../utils/manga/manga-title-resolver.js';
+import { resolveMangaTitles, pickBestMangaCandidate } from '../utils/manga/manga-title-resolver.js';
+import { buildSearchQueries } from '../utils/scraping/title-normalizer.js';
+import { pickBestNovelCandidate } from '../utils/novel-title-match.js';
 import {
   runProviders,
   runProvidersProgressive,
@@ -22,6 +24,7 @@ import {
   STREAM_PROVIDERS,
   TORRENT_PROVIDERS,
   MANGA_PROVIDERS,
+  NOVEL_PROVIDERS,
   LEAD_STREAM_PROVIDERS,
   providerPriorityOf,
 } from '../providers/registry.js';
@@ -33,6 +36,9 @@ import type {
   MangaChapterEntry,
   MangaChapterParams,
   MangaPageEntry,
+  NovelChapterEntry,
+  NovelChapterParams,
+  NovelContentEntry,
   PreviewResult,
   WebsiteIndexResult,
   ProviderDiagnostic,
@@ -88,7 +94,8 @@ export class TokoBundleClass {
     const totalProviders =
       STREAM_PROVIDERS.length +
       TORRENT_PROVIDERS.length +
-      MANGA_PROVIDERS.length;
+      MANGA_PROVIDERS.length +
+      NOVEL_PROVIDERS.length;
 
     if (totalProviders === 0) {
       return { valid: false, reason: 'No providers initialised' };
@@ -234,11 +241,12 @@ export class TokoBundleClass {
    * `kind` tells the caller which entry point a provider uses: stream providers
    * resolve one episode (`single`), torrent providers query an indexer (`batch`).
    */
-  listProviders(): Array<{ name: string; kind: 'stream' | 'torrent' | 'manga'; priority: number }> {
+  listProviders(): Array<{ name: string; kind: 'stream' | 'torrent' | 'manga' | 'novel'; priority: number }> {
     return [
       ...STREAM_PROVIDERS.map(p => ({ name: p.name, kind: 'stream' as const, priority: providerPriorityOf(p.name) })),
       ...TORRENT_PROVIDERS.map(p => ({ name: p.name, kind: 'torrent' as const, priority: providerPriorityOf(p.name) })),
       ...MANGA_PROVIDERS.map((p, i) => ({ name: p.name, kind: 'manga' as const, priority: i })),
+      ...NOVEL_PROVIDERS.map((p, i) => ({ name: p.name, kind: 'novel' as const, priority: i })),
     ];
   }
 
@@ -407,6 +415,100 @@ export class TokoBundleClass {
     if (pages.length === 0) throw new ChapterNotFoundError(chapterKey);
 
     return pages;
+  }
+
+  // ── Novel Support ───────────────────────────────────────────────────────
+
+  private async enrichNovelParams(params: NovelChapterParams): Promise<NovelChapterParams> {
+    if (params.seriesId && params.provider) return params;
+    if (params.titles && params.titles.length > 0) return params;
+    try {
+      const titles = await resolveMangaTitles(params);
+      return titles.length > 0 ? { ...params, titles } : params;
+    } catch {
+      return params;
+    }
+  }
+
+  private async searchThenScrapeNovel(provider: typeof NOVEL_PROVIDERS[number], params: NovelChapterParams): Promise<NovelChapterEntry[]> {
+    if (params.seriesId || !provider.search) return provider.getChapters(params);
+    const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
+    const queries = buildSearchQueries(titles).slice(0, 4);
+    const candidates: Array<{ id: string; title: string }> = [];
+    for (const query of queries) {
+      candidates.push(...await provider.search(query));
+      const match = pickBestNovelCandidate(titles, candidates);
+      if (match?.score === 1) return provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id });
+    }
+    const match = pickBestNovelCandidate(titles, candidates);
+    return match ? provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id }) : [];
+  }
+
+  /**
+   * Returns novel chapters merged by chapter number.
+   * Multiple providers returning the same chapter number are merged.
+   */
+  async getNovelChapters(params: NovelChapterParams): Promise<NovelChapterEntry[]> {
+    const enriched = await this.enrichNovelParams(params);
+    const all = await runProviders(
+      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
+      p => this.searchThenScrapeNovel(p, enriched),
+      undefined,
+      { timeoutMs: 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+    ) as NovelChapterEntry[];
+    return mergeMangaChapters(all as any) as any;
+  }
+
+  /**
+   * Debug variant of getNovelChapters() with diagnostics.
+   */
+  async debugNovelChapters(
+    params: NovelChapterParams
+  ): Promise<DebugProviderResult<NovelChapterEntry>> {
+    const enriched = await this.enrichNovelParams(params);
+    const diagnostics: ProviderDiagnostic[] = [];
+    const all = await runProviders(
+      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
+      p => this.searchThenScrapeNovel(p, enriched),
+      diagnostics,
+      { timeoutMs: 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+    ) as NovelChapterEntry[];
+    return { results: mergeMangaChapters(all as any) as any, diagnostics };
+  }
+
+  async getNovelSearch(params: { query: string; provider?: string }) {
+    const query = String(params.query || '').trim().slice(0, 200);
+    if (!query) return { results: [], providerStatus: [] };
+    const rows = await Promise.all(NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider).map(async p => {
+      try {
+        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), 25000);
+        return { results: matches.slice(0, 20).map(match => ({ ...match, provider: p.name })), status: { provider: p.name, status: matches.length ? 'ok' : 'empty', resultCount: matches.length } };
+      } catch (error) { return { results: [], status: { provider: p.name, status: 'error', resultCount: 0, error: (error as Error).message } }; }
+    }));
+    return { results: rows.flatMap(row => row.results), providerStatus: rows.map(row => row.status) };
+  }
+
+  /**
+   * Returns text content for a specific novel chapter from the named provider.
+   * Parses chapterKey as "<provider>:<providerChapterId>".
+   */
+  async getNovelContent(params: {
+    chapterKey: string;
+    provider?: string;
+    providerChapterId?: string;
+    anilistId?: number;
+  }): Promise<NovelContentEntry> {
+    const { chapterKey } = params;
+    let providerName = params.provider;
+    if (!providerName) {
+      const colonIdx = chapterKey.indexOf(':');
+      providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
+    }
+    const provider = NOVEL_PROVIDERS.find(p => p.name === providerName);
+    if (!provider) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider.getContent(chapterKey);
+    if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
+    return content;
   }
 
   // ── Preview & Indexing ──────────────────────────────────────────────────

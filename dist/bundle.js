@@ -142,11 +142,11 @@ var require_parse = __commonJS({
     function parseSelector(subselects2, selector, selectorIndex) {
       var tokens = [];
       function getName2(offset) {
-        var match = selector.slice(selectorIndex + offset).match(reName);
-        if (!match) {
+        var match2 = selector.slice(selectorIndex + offset).match(reName);
+        if (!match2) {
           throw new Error("Expected name, found ".concat(selector.slice(selectorIndex)));
         }
-        var name = match[0];
+        var name = match2[0];
         selectorIndex += offset + name.length;
         return unescapeCSS(name);
       }
@@ -674,8 +674,8 @@ var require_bom_handling = __commonJS({
     "use strict";
     var BOMChar = "\uFEFF";
     exports2.PrependBOM = PrependBOMWrapper;
-    function PrependBOMWrapper(encoder, options) {
-      this.encoder = encoder;
+    function PrependBOMWrapper(encoder2, options) {
+      this.encoder = encoder2;
       this.addBOM = true;
     }
     PrependBOMWrapper.prototype.write = function(str) {
@@ -689,8 +689,8 @@ var require_bom_handling = __commonJS({
       return this.encoder.end();
     };
     exports2.StripBOM = StripBOMWrapper;
-    function StripBOMWrapper(decoder, options) {
-      this.decoder = decoder;
+    function StripBOMWrapper(decoder2, options) {
+      this.decoder = decoder2;
       this.pass = false;
       this.options = options || {};
     }
@@ -4128,9 +4128,9 @@ var require_lib = __commonJS({
     iconv2.defaultCharSingleByte = "?";
     iconv2.encode = function encode(str, encoding, options) {
       str = "" + (str || "");
-      var encoder = iconv2.getEncoder(encoding, options);
-      var res = encoder.write(str);
-      var trail = encoder.end();
+      var encoder2 = iconv2.getEncoder(encoding, options);
+      var res = encoder2.write(str);
+      var trail = encoder2.end();
       return trail && trail.length > 0 ? Buffer2.concat([res, trail]) : res;
     };
     iconv2.decode = function decode(buf, encoding, options) {
@@ -4141,9 +4141,9 @@ var require_lib = __commonJS({
         }
         buf = Buffer2.from("" + (buf || ""), "binary");
       }
-      var decoder = iconv2.getDecoder(encoding, options);
-      var res = decoder.write(buf);
-      var trail = decoder.end();
+      var decoder2 = iconv2.getDecoder(encoding, options);
+      var res = decoder2.write(buf);
+      var trail = decoder2.end();
       return trail ? res + trail : res;
     };
     iconv2.encodingExists = function encodingExists(enc) {
@@ -4193,16 +4193,16 @@ var require_lib = __commonJS({
       return ("" + encoding).toLowerCase().replace(/:\d{4}$|[^0-9a-z]/g, "");
     };
     iconv2.getEncoder = function getEncoder(encoding, options) {
-      var codec = iconv2.getCodec(encoding), encoder = new codec.encoder(options, codec);
+      var codec = iconv2.getCodec(encoding), encoder2 = new codec.encoder(options, codec);
       if (codec.bomAware && options && options.addBOM)
-        encoder = new bomHandling.PrependBOM(encoder, options);
-      return encoder;
+        encoder2 = new bomHandling.PrependBOM(encoder2, options);
+      return encoder2;
     };
     iconv2.getDecoder = function getDecoder2(encoding, options) {
-      var codec = iconv2.getCodec(encoding), decoder = new codec.decoder(options, codec);
+      var codec = iconv2.getCodec(encoding), decoder2 = new codec.decoder(options, codec);
       if (codec.bomAware && !(options && options.stripBOM === false))
-        decoder = new bomHandling.StripBOM(decoder, options);
-      return decoder;
+        decoder2 = new bomHandling.StripBOM(decoder2, options);
+      return decoder2;
     };
     iconv2.enableStreamingAPI = function enableStreamingAPI(stream_module2) {
       if (iconv2.supportsStreams)
@@ -8569,7 +8569,7 @@ var require_data_url = __commonJS({
     "use strict";
     var assert = require("node:assert");
     var { forgivingBase64, collectASequenceOfCodePoints, collectASequenceOfCodePointsFast, isomorphicDecode, removeASCIIWhitespace, removeChars } = require_infra();
-    var encoder = new TextEncoder();
+    var encoder2 = new TextEncoder();
     var HTTP_TOKEN_CODEPOINTS = /^[-!#$%&'*+.^_|~A-Za-z0-9]+$/u;
     var HTTP_WHITESPACE_REGEX = /[\u000A\u000D\u0009\u0020]/u;
     var HTTP_QUOTED_STRING_TOKENS = /^[\u0009\u0020-\u007E\u0080-\u00FF]+$/u;
@@ -8623,7 +8623,7 @@ var require_data_url = __commonJS({
       return serialized;
     }
     function stringPercentDecode(input) {
-      const bytes = encoder.encode(input);
+      const bytes = encoder2.encode(input);
       return percentDecode(bytes);
     }
     function isHexCharByte(byte) {
@@ -10486,7 +10486,7 @@ var require_formdata_parser = __commonJS({
     var assert = require("node:assert");
     var { isomorphicDecode } = require_infra();
     var dd = Buffer.from("--");
-    var decoder = new TextDecoder();
+    var decoder2 = new TextDecoder();
     var decoderIgnoreBOM = new TextDecoder("utf-8", { ignoreBOM: true });
     function isAsciiString(chars) {
       for (let i = 0; i < chars.length; ++i) {
@@ -10618,7 +10618,7 @@ var require_formdata_parser = __commonJS({
         headerValue[4] !== 56) {
           throw parsingError("unknown encoding, expected utf-8''");
         }
-        value = decodeURIComponent(decoder.decode(headerValue.subarray(7)));
+        value = decodeURIComponent(decoder2.decode(headerValue.subarray(7)));
       } else if (input[position.position] === 34) {
         position.position++;
         const quotedValue = collectASequenceOfBytes(
@@ -10631,7 +10631,7 @@ var require_formdata_parser = __commonJS({
           throw parsingError("Closing quote not found");
         }
         position.position++;
-        value = decoder.decode(quotedValue).replace(/%0A/ig, "\n").replace(/%0D/ig, "\r").replace(/%22/g, '"');
+        value = decoder2.decode(quotedValue).replace(/%0A/ig, "\n").replace(/%0D/ig, "\r").replace(/%22/g, '"');
       } else {
         const tokenValue = collectASequenceOfBytes(
           (char) => isToken(char) && char !== 59,
@@ -10639,7 +10639,7 @@ var require_formdata_parser = __commonJS({
           input,
           position
         );
-        value = decoder.decode(tokenValue);
+        value = decoder2.decode(tokenValue);
       }
       return { name: attrNameStr, value, extended: isExtended };
     }
@@ -17265,15 +17265,15 @@ var require_mock_utils = __commonJS({
       }
     } = require("node:util");
     var { InvalidArgumentError } = require_errors();
-    function matchValue(match, value) {
-      if (typeof match === "string") {
-        return match === value;
+    function matchValue(match2, value) {
+      if (typeof match2 === "string") {
+        return match2 === value;
       }
-      if (match instanceof RegExp) {
-        return match.test(value);
+      if (match2 instanceof RegExp) {
+        return match2.test(value);
       }
-      if (typeof match === "function") {
-        return match(value) === true;
+      if (typeof match2 === "function") {
+        return match2(value) === true;
       }
       return false;
     }
@@ -18446,13 +18446,13 @@ var require_snapshot_recorder = __commonJS({
         caseSensitive = false
       } = matchOptions;
       const filtered = {};
-      const { ignore, exclude, match } = headerFilters;
+      const { ignore, exclude, match: match2 } = headerFilters;
       for (const [key, value] of Object.entries(headers)) {
         const headerKey = caseSensitive ? key : key.toLowerCase();
         if (exclude.has(headerKey)) continue;
         if (ignore.has(headerKey)) continue;
-        if (match.size !== 0) {
-          if (!match.has(headerKey)) continue;
+        if (match2.size !== 0) {
+          if (!match2.has(headerKey)) continue;
         }
         filtered[headerKey] = value;
       }
@@ -19284,8 +19284,8 @@ var require_redirect_handler = __commonJS({
           this.handler.onResponseStart?.(controller, statusCode, headers, statusMessage);
           return;
         }
-        const { origin, pathname, search: search12 } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path = search12 ? `${pathname}${search12}` : pathname;
+        const { origin, pathname, search: search13 } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
+        const path = search13 ? `${pathname}${search13}` : pathname;
         const redirectUrlString = `${origin}${path}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
@@ -30985,6 +30985,7 @@ var require_mime_type = __commonJS({
 var index_exports = {};
 __export(index_exports, {
   MANGA_PROVIDERS: () => MANGA_PROVIDERS,
+  NOVEL_PROVIDERS: () => NOVEL_PROVIDERS,
   STREAM_PROVIDERS: () => STREAM_PROVIDERS,
   TORRENT_PROVIDERS: () => TORRENT_PROVIDERS,
   default: () => TokoBundleClass
@@ -31891,20 +31892,20 @@ var EntityDecoder = class {
 };
 function getDecoder(decodeTree) {
   let ret = "";
-  const decoder = new EntityDecoder(decodeTree, (str) => ret += fromCodePoint(str));
+  const decoder2 = new EntityDecoder(decodeTree, (str) => ret += fromCodePoint(str));
   return function decodeWithTrie(str, decodeMode) {
     let lastIndex = 0;
     let offset = 0;
     while ((offset = str.indexOf("&", offset)) >= 0) {
       ret += str.slice(lastIndex, offset);
-      decoder.startEntity(decodeMode);
-      const len = decoder.write(
+      decoder2.startEntity(decodeMode);
+      const len = decoder2.write(
         str,
         // Skip the "&"
         offset + 1
       );
       if (len < 0) {
-        lastIndex = offset + decoder.end();
+        lastIndex = offset + decoder2.end();
         break;
       }
       lastIndex = offset + len;
@@ -31971,9 +31972,9 @@ var getCodePoint = (
 function encodeXML(str) {
   let ret = "";
   let lastIdx = 0;
-  let match;
-  while ((match = xmlReplacer.exec(str)) !== null) {
-    const i = match.index;
+  let match2;
+  while ((match2 = xmlReplacer.exec(str)) !== null) {
+    const i = match2.index;
     const char = str.charCodeAt(i);
     const next2 = xmlCodeMap.get(char);
     if (next2 !== void 0) {
@@ -31988,15 +31989,15 @@ function encodeXML(str) {
 }
 function getEscaper(regex, map2) {
   return function escape3(data2) {
-    let match;
+    let match2;
     let lastIdx = 0;
     let result = "";
-    while (match = regex.exec(data2)) {
-      if (lastIdx !== match.index) {
-        result += data2.substring(lastIdx, match.index);
+    while (match2 = regex.exec(data2)) {
+      if (lastIdx !== match2.index) {
+        result += data2.substring(lastIdx, match2.index);
       }
-      result += map2.get(match[0].charCodeAt(0));
-      lastIdx = match.index + 1;
+      result += map2.get(match2[0].charCodeAt(0));
+      lastIdx = match2.index + 1;
     }
     return result + data2.substring(lastIdx);
   };
@@ -36330,35 +36331,35 @@ function map(fn) {
   }
   return this._make(elems);
 }
-function getFilterFn(match) {
-  if (typeof match === "function") {
-    return (el, i) => match.call(el, i, el);
+function getFilterFn(match2) {
+  if (typeof match2 === "function") {
+    return (el, i) => match2.call(el, i, el);
   }
-  if (isCheerio(match)) {
-    return (el) => Array.prototype.includes.call(match, el);
+  if (isCheerio(match2)) {
+    return (el) => Array.prototype.includes.call(match2, el);
   }
   return function(el) {
-    return match === el;
+    return match2 === el;
   };
 }
-function filter3(match) {
+function filter3(match2) {
   var _a5;
-  return this._make(filterArray(this.toArray(), match, this.options.xmlMode, (_a5 = this._root) === null || _a5 === void 0 ? void 0 : _a5[0]));
+  return this._make(filterArray(this.toArray(), match2, this.options.xmlMode, (_a5 = this._root) === null || _a5 === void 0 ? void 0 : _a5[0]));
 }
-function filterArray(nodes, match, xmlMode, root2) {
-  return typeof match === "string" ? filter2(match, nodes, { xmlMode, root: root2 }) : nodes.filter(getFilterFn(match));
+function filterArray(nodes, match2, xmlMode, root2) {
+  return typeof match2 === "string" ? filter2(match2, nodes, { xmlMode, root: root2 }) : nodes.filter(getFilterFn(match2));
 }
 function is3(selector) {
   const nodes = this.toArray();
   return typeof selector === "string" ? some(nodes.filter(isTag2), selector, this.options) : selector ? nodes.some(getFilterFn(selector)) : false;
 }
-function not(match) {
+function not(match2) {
   let nodes = this.toArray();
-  if (typeof match === "string") {
-    const matches = new Set(filter2(match, nodes, this.options));
+  if (typeof match2 === "string") {
+    const matches = new Set(filter2(match2, nodes, this.options));
     nodes = nodes.filter((el) => !matches.has(el));
   } else {
-    const filterFn = getFilterFn(match);
+    const filterFn = getFilterFn(match2);
     nodes = nodes.filter((el, i) => !filterFn(el, i));
   }
   return this._make(nodes);
@@ -37040,7 +37041,7 @@ function getLoad(parse8, render3) {
       if (typeof selector !== "string") {
         throw new TypeError("Unexpected type of selector");
       }
-      let search12 = selector;
+      let search13 = selector;
       const searchContext = context ? (
         // If we don't have a context, maybe we have a root, from loading
         typeof context === "string" ? isHtml(context) ? (
@@ -37048,7 +37049,7 @@ function getLoad(parse8, render3) {
           new LoadedCheerio([parse8(context, options2, false, null)], rootInstance, options2)
         ) : (
           // $('li', 'ul')
-          (search12 = `${context} ${search12}`, rootInstance)
+          (search13 = `${context} ${search13}`, rootInstance)
         ) : isCheerio(context) ? (
           // $('li', $)
           context
@@ -37059,7 +37060,7 @@ function getLoad(parse8, render3) {
       ) : rootInstance;
       if (!searchContext)
         return instance;
-      return searchContext.find(search12);
+      return searchContext.find(search13);
     }
     Object.assign(initialize, static_exports, {
       load: load2,
@@ -44927,15 +44928,15 @@ var getCodePoint2 = (
 );
 function getEscaper2(regex, map2) {
   return function escape3(data2) {
-    let match;
+    let match2;
     let lastIndex = 0;
     let result = "";
-    while (match = regex.exec(data2)) {
-      if (lastIndex !== match.index) {
-        result += data2.substring(lastIndex, match.index);
+    while (match2 = regex.exec(data2)) {
+      if (lastIndex !== match2.index) {
+        result += data2.substring(lastIndex, match2.index);
       }
-      result += map2.get(match[0].charCodeAt(0));
-      lastIndex = match.index + 1;
+      result += map2.get(match2[0].charCodeAt(0));
+      lastIndex = match2.index + 1;
     }
     return result + data2.substring(lastIndex);
   };
@@ -45683,6 +45684,23 @@ function pickBestMangaCandidate(titles, candidates, getNames, threshold = 0.6) {
   return best && best.score >= threshold ? best : null;
 }
 
+// src/utils/novel-title-match.ts
+var fullTitle = (value) => value.normalize("NFKC").toLowerCase().replace(/\((?:light\s*)?novel\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function pickBestNovelCandidate(titles, candidates) {
+  const targets = titles.map(fullTitle).filter(Boolean);
+  const exact = candidates.find((row) => targets.includes(fullTitle(row.title)));
+  if (exact) return { candidate: exact, score: 1 };
+  const eligible = candidates.filter((row) => {
+    const name = fullTitle(row.title);
+    return targets.some((target) => {
+      const ratio = Math.min(name.length, target.length) / Math.max(name.length, target.length);
+      const numbers = (value) => value.match(/\d+/g)?.join(",") || "";
+      return ratio >= 0.85 && numbers(name) === numbers(target);
+    });
+  });
+  return pickBestMangaCandidate(titles, eligible, (row) => [row.title], 0.85);
+}
+
 // src/core/provider-runner.ts
 var DEFAULT_PROVIDER_RUN_OPTIONS = {
   maxConcurrency: 10,
@@ -45725,19 +45743,19 @@ function resolveProviderRunOptions(opts) {
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider45, fn, options) {
+async function runProviderWithRetry(provider49, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider45)),
+        Promise.resolve().then(() => fn(provider49)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider45.name,
+          provider: provider49.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -45750,7 +45768,7 @@ async function runProviderWithRetry(provider45, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider45.name,
+            provider: provider49.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -45768,7 +45786,7 @@ async function runProviderWithRetry(provider45, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider45.name,
+      provider: provider49.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -45844,15 +45862,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider45 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider45, fn, options);
+      const provider49 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider49, fn, options);
       emit(
         {
-          provider: provider45.name,
+          provider: provider49.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider45.name.toLowerCase())
+        leadNames.has(provider49.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -46511,9 +46529,9 @@ var provider2 = {
         while (!epSession) {
           const epData = await getEpisodes(anime.session, page);
           const eps = epData.data ?? [];
-          const match = eps.find((e) => e.episode === targetEp);
-          if (match) {
-            epSession = match.session;
+          const match2 = eps.find((e) => e.episode === targetEp);
+          if (match2) {
+            epSession = match2.session;
             break;
           }
           if (!epData.last_page || page >= epData.last_page) break;
@@ -46891,8 +46909,8 @@ async function resolveRubystmSource(embedUrl, toonstreamReferer) {
   let fileCode;
   try {
     const parsed = new URL(embedUrl);
-    const match = parsed.pathname.match(/\/(?:d|e)\/([^/]+?)(?:\.html)?\/?$/i);
-    fileCode = match?.[1] ? decodeURIComponent(match[1]) : void 0;
+    const match2 = parsed.pathname.match(/\/(?:d|e)\/([^/]+?)(?:\.html)?\/?$/i);
+    fileCode = match2?.[1] ? decodeURIComponent(match2[1]) : void 0;
   } catch {
     return null;
   }
@@ -47523,11 +47541,11 @@ async function findSeriesSlug(titles) {
       if (!response.ok) continue;
       const payload = await response.json();
       const hits = (Array.isArray(payload.data) ? payload.data : []).filter((item) => item?.type === "series" && typeof item.url === "string").map((item) => {
-        const match = item.url.match(/\/series\/([^/?#]+)/i);
-        return match ? {
-          slug: match[1],
-          title: String(item.title || match[1]),
-          score: scoreMatch(query, String(item.title || match[1]))
+        const match2 = item.url.match(/\/series\/([^/?#]+)/i);
+        return match2 ? {
+          slug: match2[1],
+          title: String(item.title || match2[1]),
+          score: scoreMatch(query, String(item.title || match2[1]))
         } : null;
       }).filter((item) => item !== null);
       if (hits.length > 0) {
@@ -47754,8 +47772,8 @@ function extractDirectUrlFromHtml(html3) {
     /(?:file|source|src|url)\s*[:=]\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i
   ];
   for (const pattern of candidates) {
-    const match = html3.match(pattern);
-    if (match?.[1]) return cleanUrl(match[1]);
+    const match2 = html3.match(pattern);
+    if (match2?.[1]) return cleanUrl(match2[1]);
   }
   return null;
 }
@@ -47763,13 +47781,13 @@ function extractSubtitles(html3) {
   const subtitles = [];
   const seen = /* @__PURE__ */ new Set();
   const pattern = /\{\s*url:"([^"]+)"\s*,\s*language:"([^"]+)"\s*,\s*format:"([^"]+)"\s*,\s*default:(true|false)/g;
-  let match;
-  while ((match = pattern.exec(html3)) !== null) {
-    const url = cleanUrl(match[1]);
+  let match2;
+  while ((match2 = pattern.exec(html3)) !== null) {
+    const url = cleanUrl(match2[1]);
     if (!url || seen.has(url)) continue;
     seen.add(url);
-    const language = match[2].replace(/\\u0028/g, "(").replace(/\\u0029/g, ")").replace(/\s+/g, " ").trim();
-    subtitles.push({ url, language, isDefault: match[4] === "true" });
+    const language = match2[2].replace(/\\u0028/g, "(").replace(/\\u0029/g, ")").replace(/\s+/g, " ").trim();
+    subtitles.push({ url, language, isDefault: match2[4] === "true" });
   }
   if (!subtitles.some((s) => s.isDefault)) {
     const english = subtitles.find((s) => s.language.toLowerCase().includes("english"));
@@ -47779,8 +47797,8 @@ function extractSubtitles(html3) {
 }
 function deepFindVideoUrl(value) {
   if (typeof value === "string") {
-    const clean = cleanUrl(value);
-    return videoType(clean) !== "unknown" ? clean : null;
+    const clean2 = cleanUrl(value);
+    return videoType(clean2) !== "unknown" ? clean2 : null;
   }
   if (Array.isArray(value)) {
     for (const item of value) {
@@ -48377,9 +48395,9 @@ function bytesToHex(value) {
   return out;
 }
 function videoType(url) {
-  const clean = url.split("?")[0].toLowerCase();
-  if (clean.endsWith(".m3u8")) return "m3u8";
-  if (clean.endsWith(".mp4")) return "mp4";
+  const clean2 = url.split("?")[0].toLowerCase();
+  if (clean2.endsWith(".m3u8")) return "m3u8";
+  if (clean2.endsWith(".mp4")) return "mp4";
   return "unknown";
 }
 function cleanUrl(url) {
@@ -48703,15 +48721,15 @@ async function resolveVidmoly2(url) {
         const hasJsRedirect = /window\.location\.replace/.test(html3);
         if (html3.length < 500 && !hasJsRedirect || html3.includes("finisheddaysflamboyant")) continue;
         html3 = maybeUnpack(html3);
-        const match = matchAny(html3, PATTERNS2);
-        if (match) return { url: captured(match), headers: { Referer: ref, Origin: ref } };
+        const match2 = matchAny(html3, PATTERNS2);
+        if (match2) return { url: captured(match2), headers: { Referer: ref, Origin: ref } };
         const jsRedirect = html3.match(/window\.location\.replace\(['"]([^'"]+)['"]\)/) || html3.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]/);
         if (jsRedirect && jsRedirect[1] !== fetchUrl) {
           const hop = await getPage(jsRedirect[1], { Referer: ref, Origin: ref });
           if (hop) {
             const hopHtml = maybeUnpack(hop.html);
-            const match2 = matchAny(hopHtml, PATTERNS2);
-            if (match2) return { url: captured(match2), headers: { Referer: ref, Origin: ref } };
+            const match22 = matchAny(hopHtml, PATTERNS2);
+            if (match22) return { url: captured(match22), headers: { Referer: ref, Origin: ref } };
           }
         }
       } catch {
@@ -48770,12 +48788,12 @@ async function resolveUqload(url) {
           if (!page) return null;
           if (isExpiredPage(page.html)) return "dead";
           const content = maybeUnpack(page.html);
-          const match = matchAny(content, [
+          const match2 = matchAny(content, [
             /sources\s*:\s*\[[^\]]*?\{[^}]*?file\s*:\s*["']([^"']+\.(?:mp4|m3u8))["']/i,
             /sources\s*:\s*\[["']([^"']+\.(?:mp4|m3u8))["']\]/i,
             /file\s*:\s*["']([^"']+\.(?:mp4|m3u8))["']/i
           ]);
-          if (match) return { url: captured(match), headers: { Referer: ref } };
+          if (match2) return { url: captured(match2), headers: { Referer: ref } };
           return null;
         } catch {
           return null;
@@ -48807,15 +48825,15 @@ async function resolveVoe(url) {
       if (hop) html3 = hop.html;
     }
     html3 = maybeUnpack(html3);
-    const match = matchAny(html3, [
+    const match2 = matchAny(html3, [
       /'hls'\s*:\s*'([^']+)'/,
       /"hls"\s*:\s*"([^"]+)"/,
       /file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /sources\s*:\s*\[["']([^"']+\.(?:m3u8|mp4)[^"']*)["']\]/i,
       /https?:\/\/[^"']+\.m3u8[^"']*/
     ]);
-    if (match) {
-      let videoUrl = captured(match);
+    if (match2) {
+      let videoUrl = captured(match2);
       if (videoUrl.includes("base64")) videoUrl = atobOrSelf(videoUrl.split(",")[1] || videoUrl);
       if (isKnownFakeDirectUrl(videoUrl)) return null;
       return { url: videoUrl, headers: { Referer: fetchUrl } };
@@ -48855,10 +48873,10 @@ async function resolveFsvidVidzy(url) {
     }
     if (!videoUrl) {
       const legacyPattern = /(?:var|let|const)\s*k=\[([0-9,\s]+)\],b=atob\(s\)[\s\S]*?return\s+\w+\}\)\(["']([A-Za-z0-9+/=_-]+)["']\)/g;
-      let match;
-      while ((match = legacyPattern.exec(html3)) !== null) {
-        const key = match[1].split(",").map((n) => parseInt(n, 10));
-        const b64 = match[2].replace(/-/g, "+").replace(/_/g, "/");
+      let match2;
+      while ((match2 = legacyPattern.exec(html3)) !== null) {
+        const key = match2[1].split(",").map((n) => parseInt(n, 10));
+        const b64 = match2[2].replace(/-/g, "+").replace(/_/g, "/");
         const bin = decodeBase642(b64);
         if (!bin) continue;
         let decoded = "";
@@ -48883,10 +48901,10 @@ async function resolveStreamtape(url) {
     const page = await getPage(url);
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = html3.match(/robotlink['"]\)\.innerHTML\s*=\s*['"]([^'"]+)['"]\s*\+\s*([^;]+)/);
-    if (match) {
-      let videoUrl = "https:" + match[1];
-      const parts = match[2].split("+");
+    const match2 = html3.match(/robotlink['"]\)\.innerHTML\s*=\s*['"]([^'"]+)['"]\s*\+\s*([^;]+)/);
+    if (match2) {
+      let videoUrl = "https:" + match2[1];
+      const parts = match2[2].split("+");
       for (const p of parts) {
         const innerMatch = p.match(/['"]([^'"]+)['"]/);
         if (innerMatch) {
@@ -48913,14 +48931,14 @@ async function resolveSendvid(url) {
     const page = await getPage(embedUrl, { Referer: "https://sendvid.com/" });
     if (!page) return null;
     if (page.status === 502 || page.status === 503) return null;
-    const match = matchAny(page.html, [
+    const match2 = matchAny(page.html, [
       /video_source\s*:\s*["']([^"']+\.mp4[^"']*)["|']/,
       /source\s+src=["']([^"']+\.mp4[^"']*)["|']/,
       /<source[^>]+src=["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/,
       /file\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["|']/,
       /["'](https?:\/\/[^"']+\.mp4[^"']*)["']/
     ]);
-    if (match) return { url: captured(match), headers: { Referer: "https://sendvid.com/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: "https://sendvid.com/" } };
   } catch {
   }
   return null;
@@ -48930,12 +48948,12 @@ async function resolveLuluvid(url) {
     const page = await getPage(url);
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = matchAny(html3, [
+    const match2 = matchAny(html3, [
       /sources\s*:\s*\[["']([^"']+\.(?:m3u8|mp4)[^"']*)["']\]/,
       /file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/
     ]);
-    if (match) {
-      let videoUrl = captured(match);
+    if (match2) {
+      let videoUrl = captured(match2);
       if (videoUrl.includes("base64")) videoUrl = atobOrSelf(videoUrl.split(",")[1] || videoUrl);
       return { url: videoUrl, headers: { Referer: url } };
     }
@@ -48947,8 +48965,8 @@ async function resolveHGCloud(url) {
   try {
     const page = await getPage(url);
     if (!page) return null;
-    const match = page.html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/);
-    if (match) return { url: match[1], headers: { Referer: url } };
+    const match2 = page.html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/);
+    if (match2) return { url: match2[1], headers: { Referer: url } };
   } catch {
   }
   return null;
@@ -48982,12 +49000,12 @@ async function resolveMyTV(url) {
     const page = await getPage(url, { Referer: "https://www.myvi.ru/" });
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = matchAny(html3, [
+    const match2 = matchAny(html3, [
       /["'](?:file|src|url|stream_url)["']\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/,
       /["'](https?:\/\/[^"']+\.(?:mp4|m3u8)[^"']*)["']/,
       /source\s+src=["']([^"']+\.(?:mp4|m3u8)[^"']*)/
     ]);
-    if (match) return { url: captured(match), headers: { Referer: "https://www.myvi.ru/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: "https://www.myvi.ru/" } };
     const idMatch = url.match(/\/(?:embed\/|watch\/|video\/)([a-zA-Z0-9_-]+)/);
     if (idMatch) {
       const data2 = await fetchText(`https://www.myvi.ru/api/video/${idMatch[1]}`, {
@@ -49010,13 +49028,13 @@ async function resolveYounetu(url) {
     const page = await getPage(url, { Referer: origin + "/" });
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = matchAny(html3, [
+    const match2 = matchAny(html3, [
       /src\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /sources\s*:\s*\[["']([^"']+\.(?:m3u8|mp4)[^"']*)["']\]/i,
       /["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i
     ]);
-    if (match) return { url: captured(match), headers: { Referer: origin + "/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: origin + "/" } };
   } catch {
   }
   return null;
@@ -49025,12 +49043,12 @@ async function resolveVidoza(url) {
   try {
     const page = await getPage(url, { Referer: "https://vidoza.net/" });
     if (!page) return null;
-    const match = matchAny(page.html, [
+    const match2 = matchAny(page.html, [
       /src\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/i,
       /file\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/i,
       /["'](https?:\/\/[^"']+\.(?:mp4|m3u8)[^"']*)["']/i
     ]);
-    if (match) return { url: captured(match), headers: { Referer: "https://vidoza.net/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: "https://vidoza.net/" } };
   } catch {
   }
   return null;
@@ -49040,8 +49058,8 @@ async function resolveMoon(url) {
     const page = await getPage(url);
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = html3.match(/file\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/);
-    if (match) return { url: match[1], headers: { Referer: url } };
+    const match2 = html3.match(/file\s*:\s*["']([^"']+\.(?:mp4|m3u8)[^"']*)["']/);
+    if (match2) return { url: match2[1], headers: { Referer: url } };
   } catch {
   }
   return null;
@@ -49052,12 +49070,12 @@ async function resolvePackedPlayer(url) {
     const page = await getPage(url, { Referer: origin + "/" });
     if (!page) return null;
     const html3 = maybeUnpack(page.html);
-    const match = matchAny(html3, [
+    const match2 = matchAny(html3, [
       /file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /sources\s*:\s*\[[^\]]*?["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i
     ]);
-    if (match) return { url: captured(match), headers: { Referer: origin + "/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: origin + "/" } };
   } catch {
   }
   return null;
@@ -49139,11 +49157,11 @@ async function resolveUp4fun(url) {
   try {
     const page = await getPage(url, { Referer: "https://up4fun.top/" });
     if (!page) return null;
-    const match = matchAny(page.html, [
+    const match2 = matchAny(page.html, [
       /["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i,
       /file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i
     ]);
-    if (match) return { url: captured(match), headers: { Referer: "https://up4fun.top/" } };
+    if (match2) return { url: captured(match2), headers: { Referer: "https://up4fun.top/" } };
   } catch {
   }
   return null;
@@ -49302,9 +49320,9 @@ var VIDEO_IFRAME_SCORE = {
 function findBestVideoIframe(html3, pageUrl) {
   const iframeRegex = /<iframe\s+[^>]*src=["']([^"']+)["']/gi;
   const candidates = [];
-  let match;
-  while ((match = iframeRegex.exec(html3)) !== null) {
-    let iframeUrl = match[1];
+  let match2;
+  while ((match2 = iframeRegex.exec(html3)) !== null) {
+    let iframeUrl = match2[1];
     if (iframeUrl.startsWith("//")) iframeUrl = "https:" + iframeUrl;
     if (iframeUrl.startsWith("/")) {
       const origin = originOf3(pageUrl);
@@ -50564,8 +50582,8 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE25) => {
-        const html3 = await fetchHtml3(`${BASE25}/?s=${encodeURIComponent(query)}`, BASE25);
+      BASES2.map(async (BASE29) => {
+        const html3 = await fetchHtml3(`${BASE29}/?s=${encodeURIComponent(query)}`, BASE29);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
@@ -50576,9 +50594,9 @@ async function searchAnime2(titles) {
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE25}${href}`,
+            url: href.startsWith("http") ? href : `${BASE29}${href}`,
             title,
-            base: BASE25,
+            base: BASE29,
             slug: m[1],
             score: scoreMatch(query, title)
           });
@@ -51287,10 +51305,10 @@ function parseSearchItems(html3) {
     /items:\s*JSON\.parse\("((?:\\"|[^"])*)"\)/
   ];
   for (const re of patterns) {
-    const match = html3.match(re);
-    if (!match) continue;
+    const match2 = html3.match(re);
+    if (!match2) continue;
     try {
-      const json = decodeEmbeddedJson(match[1]);
+      const json = decodeEmbeddedJson(match2[1]);
       const items = JSON.parse(json);
       if (Array.isArray(items)) return items;
     } catch {
@@ -52043,8 +52061,8 @@ function extractAjaxEpisodeUrl(html3, base, query, epNumber) {
     $2(article).find("a[href]").each((_, anchor) => {
       if (episodeSlug) return;
       const href = String($2(anchor).attr("href") ?? "").trim();
-      const match = href.match(/\/watch\/([^/]+)-episode-(\d+)\/?$/i);
-      if (match?.[1]) episodeSlug = match[1];
+      const match2 = href.match(/\/watch\/([^/]+)-episode-(\d+)\/?$/i);
+      if (match2?.[1]) episodeSlug = match2[1];
     });
     if (episodeSlug) {
       candidates.push({
@@ -52539,14 +52557,14 @@ async function findEpisodeUrl3(candidateUrl, ep) {
   const html3 = await fetchHtml6(candidateUrl);
   if (!html3) return null;
   let eps = linksMatching(html3, EP_RE);
-  let match = eps.find((u) => episodeNumOf(u) === ep);
-  if (match) return match;
+  let match2 = eps.find((u) => episodeNumOf(u) === ep);
+  if (match2) return match2;
   for (const season of linksMatching(html3, SEASON_RE).slice(0, 4)) {
     const sh = await fetchHtml6(season, candidateUrl);
     if (!sh) continue;
     eps = linksMatching(sh, EP_RE);
-    match = eps.find((u) => episodeNumOf(u) === ep);
-    if (match) return match;
+    match2 = eps.find((u) => episodeNumOf(u) === ep);
+    if (match2) return match2;
   }
   return null;
 }
@@ -52873,15 +52891,15 @@ async function findEpisodeViaSearch(titles, ep) {
     const animeHtml = await fetchHtml7(hits[0].url);
     if (!animeHtml) continue;
     const $$ = loadHtml(animeHtml);
-    let match = null;
+    let match2 = null;
     $$.find('.eplister a[href], a[href*="-episode-"]').each((_, el) => {
-      if (match) return;
+      if (match2) return;
       let href = el.attr?.("href") ?? "";
       if (!href) return;
       if (href.startsWith("/")) href = `${BASE5}${href}`;
-      if (re.test(href)) match = href;
+      if (re.test(href)) match2 = href;
     });
-    if (match) return match;
+    if (match2) return match2;
   }
   return null;
 }
@@ -53777,8 +53795,8 @@ function parseQuality(raw) {
   return "720p";
 }
 function qualityRank(quality) {
-  const match = quality.match(/(\d{3,4})p/);
-  return match ? Number(match[1]) : 0;
+  const match2 = quality.match(/(\d{3,4})p/);
+  return match2 ? Number(match2[1]) : 0;
 }
 var LANGUAGE_TABLE = {
   // French
@@ -53979,19 +53997,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider45 = {
+  const provider49 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider45.movie = (opts) => run(opts, "movie");
+    provider49.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider45.getLanguages = async () => languages;
+    provider49.getLanguages = async () => languages;
   }
-  return provider45;
+  return provider49;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -54279,9 +54297,9 @@ function parseAvailableSeasons(html3, pattern) {
   if (!html3) return [];
   const seasons = /* @__PURE__ */ new Set();
   const regex = new RegExp(pattern.source, "g");
-  let match;
-  while ((match = regex.exec(html3)) !== null) {
-    const value = Number.parseInt(match[1], 10);
+  let match2;
+  while ((match2 = regex.exec(html3)) !== null) {
+    const value = Number.parseInt(match2[1], 10);
     if (Number.isFinite(value)) seasons.add(value);
   }
   return [...seasons].sort((a, b) => a - b);
@@ -54438,10 +54456,10 @@ var LANGUAGES = [
 function parseUrls(jsContent) {
   const varRegex = /var\s+([a-z0-9]+)\s*=\s*\[([\s\S]*?)\s*\];/gm;
   const results = [];
-  let match;
-  while ((match = varRegex.exec(jsContent)) !== null) {
-    const urls = match[2].match(/['"]([^'"]+)['"]/g)?.map((u) => u.slice(1, -1)) || [];
-    results.push({ varName: match[1], urls });
+  let match2;
+  while ((match2 = varRegex.exec(jsContent)) !== null) {
+    const urls = match2[2].match(/['"]([^'"]+)['"]/g)?.map((u) => u.slice(1, -1)) || [];
+    results.push({ varName: match2[1], urls });
   }
   return results;
 }
@@ -54483,9 +54501,9 @@ async function searchSlugsScored(query, ctx) {
   const results = [];
   $2('a[href*="/catalogue/"]').each((_, el) => {
     const href = $2(el).attr("href") || "";
-    const match = href.match(/\/catalogue\/([^/]+)\/?/);
-    if (!match) return;
-    const slug2 = match[1];
+    const match2 = href.match(/\/catalogue\/([^/]+)\/?/);
+    if (!match2) return;
+    const slug2 = match2[1];
     if (results.some((r) => r.slug === slug2)) return;
     const title = $2(el).find(".asn-search-result-title").text().trim();
     const subtitle = $2(el).find(".asn-search-result-subtitle").text().trim();
@@ -55020,8 +55038,8 @@ function detectLanguages(html3) {
   if (langs.length === 0) langs.push("VF");
   return langs;
 }
-async function extractEpisodeStreams(match, season, episode, ctx) {
-  const base = `${SITE4}/anime/${match.animeId}-${match.slug}`;
+async function extractEpisodeStreams(match2, season, episode, ctx) {
+  const base = `${SITE4}/anime/${match2.animeId}-${match2.slug}`;
   const options = {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 15e3,
@@ -55056,56 +55074,56 @@ async function extractEpisodeStreams(match, season, episode, ctx) {
   }
   return streams;
 }
-async function findParentSeries(match, ctx) {
-  const html3 = await siteFetchText(match.url, {
+async function findParentSeries(match2, ctx) {
+  const html3 = await siteFetchText(match2.url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 15e3,
     signal: ctx.signal
   });
   if (!html3) return null;
   const $2 = loadHtml(html3);
-  const significantWords = match.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+  const significantWords = match2.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
   let parentHref = "";
   $2('a[href*="/anime/"][href$=".html"]').each((_, el) => {
     if (parentHref) return;
     const href = $2(el).attr("href") || "";
-    if (href === match.url || href.includes(match.animeId)) return;
+    if (href === match2.url || href.includes(match2.animeId)) return;
     const slug2 = (href.split("/").pop() || "").replace(".html", "").replace(/\d+-/, "");
     if (significantWords.some((w) => slug2.includes(w))) parentHref = href;
   });
   if (!parentHref) return null;
   const parentUrl = absoluteUrl2(parentHref, SITE4);
   const idMatch = parentUrl.match(/\/anime\/(\d+)-/);
-  if (!idMatch || idMatch[1] === match.animeId) return null;
+  if (!idMatch || idMatch[1] === match2.animeId) return null;
   const slugMatch = parentUrl.match(/\/anime\/\d+-([^/]+)\.html/);
   return {
     url: parentUrl,
     animeId: idMatch[1],
-    slug: slugMatch ? slugMatch[1] : match.slug,
-    title: match.title
+    slug: slugMatch ? slugMatch[1] : match2.slug,
+    title: match2.title
   };
 }
 async function extract5(ctx) {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   const startTime = Date.now();
-  const match = await searchAnime5(ctx, startTime);
-  if (!match) return [];
+  const match2 = await searchAnime5(ctx, startTime);
+  if (!match2) return [];
   if (ctx.type === "movie") {
-    return extractEpisodeStreams(match, 1, 1, ctx);
+    return extractEpisodeStreams(match2, 1, 1, ctx);
   }
   const season = ctx.season ?? 1;
   const episode = ctx.episode ?? 1;
-  const direct = await extractEpisodeStreams(match, season, episode, ctx);
+  const direct = await extractEpisodeStreams(match2, season, episode, ctx);
   if (direct.length > 0) return direct;
-  if (spinoffPenalty(match.title) > 0 && !isBudgetExhausted(startTime)) {
-    const parent2 = await findParentSeries(match, ctx);
+  if (spinoffPenalty(match2.title) > 0 && !isBudgetExhausted(startTime)) {
+    const parent2 = await findParentSeries(match2, ctx);
     if (parent2) {
       const parentStreams = await extractEpisodeStreams(parent2, season, episode, ctx);
       if (parentStreams.length > 0) return parentStreams;
     }
   }
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesHtml = await siteFetchText(`${SITE4}/anime/${match.animeId}-${match.slug}.html`, {
+  const seriesHtml = await siteFetchText(`${SITE4}/anime/${match2.animeId}-${match2.slug}.html`, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 15e3,
     signal: ctx.signal
@@ -55123,7 +55141,7 @@ async function extract5(ctx) {
   if (lastSeason !== season) attempts.push({ season: lastSeason, episode });
   for (const attempt2 of attempts) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const streams = await extractEpisodeStreams(match, attempt2.season, attempt2.episode, ctx);
+    const streams = await extractEpisodeStreams(match2, attempt2.season, attempt2.episode, ctx);
     if (streams.length > 0) return streams;
   }
   return [];
@@ -55270,10 +55288,10 @@ function parseEpItems(html3) {
 function parseSibnetPlayers(html3) {
   const cpRegex = /<div id="content_player_(\d+)([a-z]*)"[^>]*>([^<]+)<\/div>/gi;
   const out = [];
-  let match;
-  while ((match = cpRegex.exec(html3)) !== null) {
-    const value = match[3].trim();
-    if (!match[2] && /^[0-9]+$/.test(value)) out.push(value);
+  let match2;
+  while ((match2 = cpRegex.exec(html3)) !== null) {
+    const value = match2[3].trim();
+    if (!match2[2] && /^[0-9]+$/.test(value)) out.push(value);
   }
   return out;
 }
@@ -55334,9 +55352,9 @@ function buildSearchQueries2(titles) {
     return sa - sb || a.length - b.length;
   }).slice(0, MAX_SEARCH_QUERIES);
 }
-function seasonDisqualifies(match, season) {
+function seasonDisqualifies(match2, season) {
   if (!season) return false;
-  const detected = detectSeason(match.title, match.url);
+  const detected = detectSeason(match2.title, match2.url);
   if (detected == null) return false;
   if (detected === "final") return season < 6;
   return detected !== season;
@@ -55354,11 +55372,11 @@ async function extract6(ctx) {
   const searched = /* @__PURE__ */ new Set();
   const trySearchTitle = async (title) => {
     if (!title || title.length > 50) return;
-    const clean = stripSeasonSuffix(title);
-    if (!clean || clean.length < 3 || !SEARCHABLE_TITLE.test(clean)) return;
-    if (searched.has(clean)) return;
-    searched.add(clean);
-    for (const r of await searchAnime6(clean, ctx.signal)) {
+    const clean2 = stripSeasonSuffix(title);
+    if (!clean2 || clean2.length < 3 || !SEARCHABLE_TITLE.test(clean2)) return;
+    if (searched.has(clean2)) return;
+    searched.add(clean2);
+    for (const r of await searchAnime6(clean2, ctx.signal)) {
       const id = newsIdOf(r.url);
       if (id && !seenIds.has(id)) {
         seenIds.add(id);
@@ -55412,16 +55430,16 @@ async function extract6(ctx) {
   };
   const spinoffCandidates = [];
   let processed = 0;
-  for (const match of matches) {
+  for (const match2 of matches) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    if (!match.url || processed >= MAX_PROCESSED_MATCHES) break;
-    if (isSpinoff2(match)) {
-      spinoffCandidates.push(match);
+    if (!match2.url || processed >= MAX_PROCESSED_MATCHES) break;
+    if (isSpinoff2(match2)) {
+      spinoffCandidates.push(match2);
       continue;
     }
-    if (seasonDisqualifies(match, season)) continue;
-    const language = detectLang(match.title, match.url) === "vf" ? "VF" : "VOSTFR";
-    const newsId = newsIdOf(match.url);
+    if (seasonDisqualifies(match2, season)) continue;
+    const language = detectLang(match2.title, match2.url) === "vf" ? "VF" : "VOSTFR";
+    const newsId = newsIdOf(match2.url);
     if (!newsId) continue;
     const html3 = await fetchFullStory(newsId, fullStoryCache, ctx.signal);
     if (!html3) continue;
@@ -55448,12 +55466,12 @@ async function extract6(ctx) {
     if (found) processed++;
   }
   if (embeds.length === 0 && spinoffCandidates.length > 0) {
-    for (const match of spinoffCandidates) {
+    for (const match2 of spinoffCandidates) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
       if (processed >= MAX_PROCESSED_SPINOFFS) break;
-      if (seasonDisqualifies(match, season)) continue;
-      const language = detectLang(match.title, match.url) === "vf" ? "VF" : "VOSTFR";
-      const newsId = newsIdOf(match.url);
+      if (seasonDisqualifies(match2, season)) continue;
+      const language = detectLang(match2.title, match2.url) === "vf" ? "VF" : "VOSTFR";
+      const newsId = newsIdOf(match2.url);
       if (!newsId) continue;
       const html3 = await fetchFullStory(newsId, fullStoryCache, ctx.signal);
       if (!html3) continue;
@@ -55933,18 +55951,18 @@ async function extract8(ctx) {
   const matchesToProcess = ctx.type === "movie" ? uniqueMatches.slice(0, 1) : uniqueMatches;
   const streams = [];
   const checkedEpisodeUrls = /* @__PURE__ */ new Set();
-  for (const match of matchesToProcess) {
+  for (const match2 of matchesToProcess) {
     if (streams.length >= TARGET_STREAMS) break;
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const language = detectLang2(match.url, match.title);
-    const matchLower = `${match.title} ${match.url}`.toLowerCase();
+    const language = detectLang2(match2.url, match2.title);
+    const matchLower = `${match2.title} ${match2.url}`.toLowerCase();
     const isSpinoff2 = SPINOFF_KEYWORDS2.some((k) => matchLower.includes(k)) && !mainWords.some((w) => matchLower.includes(w));
     if (isSpinoff2 && uniqueMatches.length > 1) continue;
     const seasonMatchText = matchLower.match(/saison\s*(\d+)/);
     if (seasonMatchText && Number.parseInt(seasonMatchText[1], 10) !== season && targetEpisodes3.length === 1) {
       continue;
     }
-    const seriesHtml = await siteFetchText(match.url, {
+    const seriesHtml = await siteFetchText(match2.url, {
       signal: ctx.signal,
       timeoutMs: SEARCH_TIMEOUT_MS,
       acceptLanguage: FR_ACCEPT_LANGUAGE
@@ -56169,9 +56187,9 @@ function parseEpisodeLinks($2, lang, offset) {
   for (const el of $2(`a[href*="/${lang}/episode-"]`).toArray()) {
     const href = $2(el).attr("href");
     if (!href) continue;
-    const match = href.match(EPISODE_NUM);
-    if (!match) continue;
-    const num = parseInt(match[1]);
+    const match2 = href.match(EPISODE_NUM);
+    if (!match2) continue;
+    const num = parseInt(match2[1]);
     if (!Number.isFinite(num)) continue;
     out.push({ num, cumulative: num + offset, href: absoluteUrl2(href, SITE8) });
   }
@@ -56406,18 +56424,18 @@ async function findSeries(ctx, startTime) {
 async function extract9(ctx) {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   const startTime = Date.now();
-  const match = await findSeries(ctx, startTime);
-  if (!match) return [];
+  const match2 = await findSeries(ctx, startTime);
+  if (!match2) return [];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesHtml = await fetchPage(`${SITE8}/anime/${match.slug}/`, ctx);
+  const seriesHtml = await fetchPage(`${SITE8}/anime/${match2.slug}/`, ctx);
   if (!seriesHtml) return [];
-  const { seasons, filmHref } = parseSeasons(seriesHtml, match.slug);
+  const { seasons, filmHref } = parseSeasons(seriesHtml, match2.slug);
   if (ctx.type === "movie") {
     const href = filmHref || seasons.find((s) => s.seasonNum === 1)?.href || null;
-    return movieStreams(match.slug, href, ctx, startTime);
+    return movieStreams(match2.slug, href, ctx, startTime);
   }
   if (seasons.length === 0) {
-    return filmHref ? movieStreams(match.slug, filmHref, ctx, startTime) : [];
+    return filmHref ? movieStreams(match2.slug, filmHref, ctx, startTime) : [];
   }
   return seriesStreams(seasons, ctx, startTime);
 }
@@ -56844,8 +56862,8 @@ async function findContent(titles, type, signal, startTime) {
     allResults.push(...await searchDle(query, signal));
   }
   if (allResults.length > 0) {
-    const match = bestMatch(allResults, titles);
-    if (match?.url) return match;
+    const match2 = bestMatch(allResults, titles);
+    if (match2?.url) return match2;
   }
   return findSlugFallback(titles, type, signal, startTime);
 }
@@ -57037,8 +57055,8 @@ async function trySearch(titles, wantSeries, signal, startTime) {
     const results = parseSearchResults(json);
     if (results.length === 0) continue;
     const filtered = results.filter((r) => r.isSeries === wantSeries);
-    const match = bestMatch2(filtered.length > 0 ? filtered : results, title);
-    if (match) return match;
+    const match2 = bestMatch2(filtered.length > 0 ? filtered : results, title);
+    if (match2) return match2;
   }
   return null;
 }
@@ -57063,8 +57081,8 @@ async function browseCategory(type, titles, signal) {
   if (items.length === 0) return null;
   for (const title of titles.slice(0, MAX_SEARCH_TITLES3)) {
     if (isAborted(signal)) break;
-    const match = bestMatch2(items, title);
-    if (match) return match;
+    const match2 = bestMatch2(items, title);
+    if (match2) return match2;
   }
   return null;
 }
@@ -57088,9 +57106,9 @@ async function streamsFromTabs(servers, signal) {
   return out;
 }
 async function extractMovie(titles, signal, startTime) {
-  const match = await trySearch(titles, false, signal, startTime) || await browseCategory("movie", titles, signal);
-  if (!match || isAborted(signal) || isBudgetExhausted(startTime)) return [];
-  const html3 = await fetchPage2(match.url, signal);
+  const match2 = await trySearch(titles, false, signal, startTime) || await browseCategory("movie", titles, signal);
+  if (!match2 || isAborted(signal) || isBudgetExhausted(startTime)) return [];
+  const html3 = await fetchPage2(match2.url, signal);
   if (!html3) return [];
   const servers = parseServerTabs2(
     loadHtml(html3),
@@ -57107,9 +57125,9 @@ async function extractSeries(ctx, titles, startTime) {
     (n) => typeof n === "number" && n > 0
   );
   const targetEpisodeNums = [...new Set(targets.length > 0 ? targets : [1])];
-  const match = await trySearch(titles, true, ctx.signal, startTime) || await browseCategory("tv", titles, ctx.signal);
-  if (!match || isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesHtml = await fetchPage2(match.url, ctx.signal);
+  const match2 = await trySearch(titles, true, ctx.signal, startTime) || await browseCategory("tv", titles, ctx.signal);
+  if (!match2 || isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
+  const seriesHtml = await fetchPage2(match2.url, ctx.signal);
   if (!seriesHtml) return [];
   const seasons = parseSeasons2(seriesHtml);
   if (seasons.length === 0) return [];
@@ -57397,9 +57415,9 @@ async function trySearch2(titles, targetSeason, signal, startTime) {
   }
   return null;
 }
-async function resolveNewsId(match, signal) {
-  if (match.newsid) return match.newsid;
-  const html3 = await siteFetchText(match.url, {
+async function resolveNewsId(match2, signal) {
+  if (match2.newsid) return match2.newsid;
+  const html3 = await siteFetchText(match2.url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 15e3,
     signal
@@ -57438,9 +57456,9 @@ async function extract13(ctx) {
   const startTime = Date.now();
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   if (ctx.type === "movie") {
-    const match2 = await trySearch2(ctx.titles, null, ctx.signal, startTime);
-    if (!match2) return [];
-    const newsid2 = await resolveNewsId(match2, ctx.signal);
+    const match3 = await trySearch2(ctx.titles, null, ctx.signal, startTime);
+    if (!match3) return [];
+    const newsid2 = await resolveNewsId(match3, ctx.signal);
     if (!newsid2) return [];
     const apiData2 = await fetchEpisodeApi(newsid2, ctx.signal);
     if (!apiData2) return [];
@@ -57451,18 +57469,18 @@ async function extract13(ctx) {
     (n) => typeof n === "number" && n > 0
   );
   const targetEpisodes3 = [...new Set(targets.length > 0 ? targets : [1])];
-  let match = await trySearch2(ctx.titles, targetSeason, ctx.signal, startTime);
-  if (!match) return [];
-  const needsSeasonRetry = targetSeason >= 1 && (match.season == null || match.season !== targetSeason);
+  let match2 = await trySearch2(ctx.titles, targetSeason, ctx.signal, startTime);
+  if (!match2) return [];
+  const needsSeasonRetry = targetSeason >= 1 && (match2.season == null || match2.season !== targetSeason);
   if (needsSeasonRetry && !isAborted(ctx.signal) && !isBudgetExhausted(startTime)) {
     const baseTitle = stripSeasonSuffix(ctx.titles[0]);
     const results = await ajaxSearch(`${baseTitle} Saison ${targetSeason}`, ctx.signal);
     if (results.length > 0) {
       const seasonMatch = bestMatch3(results, ctx.titles[0], targetSeason);
-      if (seasonMatch && seasonMatch.season === targetSeason) match = seasonMatch;
+      if (seasonMatch && seasonMatch.season === targetSeason) match2 = seasonMatch;
     }
   }
-  const newsid = await resolveNewsId(match, ctx.signal);
+  const newsid = await resolveNewsId(match2, ctx.signal);
   if (!newsid) return [];
   const apiData = await fetchEpisodeApi(newsid, ctx.signal);
   if (!apiData) return [];
@@ -57886,8 +57904,8 @@ async function extractSeries2(ctx, startTime) {
   if (seasons.length > 0) {
     const sn = Number(season) || 1;
     const target = seasons.find((entry) => {
-      const match = (entry.title || "").match(/saison\s*(\d+)/i);
-      return match !== null && Number.parseInt(match[1], 10) === sn;
+      const match2 = (entry.title || "").match(/saison\s*(\d+)/i);
+      return match2 !== null && Number.parseInt(match2[1], 10) === sn;
     }) || seasons[0];
     if (target?.id !== void 0) {
       const streams = await streamsFromSeasonId(String(target.id), ctx, startTime);
@@ -58000,8 +58018,8 @@ async function searchAnime10(query, signal) {
   const results = [];
   const seen = /* @__PURE__ */ new Set();
   const linkRegex = /href="(\/voir-anime\/[^"]+)"/gi;
-  for (const match of html3.matchAll(linkRegex)) {
-    const path = match[1];
+  for (const match2 of html3.matchAll(linkRegex)) {
+    const path = match2[1];
     if (seen.has(path)) continue;
     seen.add(path);
     const slug2 = path.replace("/voir-anime/", "");
@@ -58014,11 +58032,11 @@ function extractEpisodes(html3) {
   const episodes = [];
   const seen = /* @__PURE__ */ new Set();
   const epRegex = /href="(\/voir-anime\/[^"]*\/episode\/(\d+))"[^>]*title="([^"]*)"/gi;
-  for (const match of html3.matchAll(epRegex)) {
-    const num = Number.parseInt(match[2], 10);
+  for (const match2 of html3.matchAll(epRegex)) {
+    const num = Number.parseInt(match2[2], 10);
     if (!Number.isFinite(num) || seen.has(num)) continue;
     seen.add(num);
-    episodes.push({ num, url: `${SITE14}${match[1]}`, title: match[3] });
+    episodes.push({ num, url: `${SITE14}${match2[1]}`, title: match2[3] });
   }
   return episodes;
 }
@@ -58209,7 +58227,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider45, server, lang, item) {
+function pushCandidate(out, provider49, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58217,22 +58235,22 @@ function pushCandidate(out, provider45, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider45} \xB7 ${server || "Player"}`
+    server: `${provider49} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider45, isMovie, episodeNum) {
+function parseCandidates(data2, provider49, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider45, item.player || item.name, lang, item);
+        pushCandidate(out, provider49, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider45, item.name || item.player, lang, item);
+        pushCandidate(out, provider49, item.name || item.player, lang, item);
       }
     }
   }
@@ -58245,20 +58263,20 @@ function parseCandidates(data2, provider45, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider45, item.player, lang, item);
+            pushCandidate(out, provider49, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider45, item.name || item.player, lang, item);
+          pushCandidate(out, provider49, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider45, item.player || item.name, lang, item);
+      pushCandidate(out, provider49, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -58848,12 +58866,12 @@ function normalizeSlug(value) {
 function extractEpisodes2(html3) {
   const episodes = [];
   const epRegex = /<a[^>]*href="([^"]+)"[^>]*>\s*<div class="epl-num">(\d+)<\/div>\s*<div class="epl-title">([^<]+)<\/div>/gi;
-  let match;
-  while ((match = epRegex.exec(html3)) !== null) {
+  let match2;
+  while ((match2 = epRegex.exec(html3)) !== null) {
     episodes.push({
-      num: Number.parseInt(match[2], 10),
-      title: match[3].trim(),
-      url: match[1]
+      num: Number.parseInt(match2[2], 10),
+      title: match2[3].trim(),
+      url: match2[1]
     });
   }
   return episodes;
@@ -58913,9 +58931,9 @@ async function searchAnime11(query, ctx) {
   const results = [];
   const seen = /* @__PURE__ */ new Set();
   const linkRegex = /href="(https?:\/\/animes-sama\.su\/anime\/[^"]+)"/gi;
-  let match;
-  while ((match = linkRegex.exec(html3)) !== null) {
-    const url = match[1];
+  let match2;
+  while ((match2 = linkRegex.exec(html3)) !== null) {
+    const url = match2[1];
     if (seen.has(url)) continue;
     seen.add(url);
     results.push({ url, slug: url.replace(/\/$/, "").split("/").pop() || "" });
@@ -59041,9 +59059,9 @@ async function fetchPage5(url, signal) {
 function collectIds(html3, pattern) {
   const out = [];
   const regex = new RegExp(pattern.source, "g");
-  let match;
-  while ((match = regex.exec(html3)) !== null) {
-    if (!out.includes(match[1])) out.push(match[1]);
+  let match2;
+  while ((match2 = regex.exec(html3)) !== null) {
+    if (!out.includes(match2[1])) out.push(match2[1]);
   }
   return out;
 }
@@ -59071,12 +59089,12 @@ function extractHlsUrls(html3, season, episode) {
   if (!html3) return [];
   const results = [];
   const regex = new RegExp(SERIAL_HLS_PATTERN.source, "g");
-  let match;
-  while ((match = regex.exec(html3)) !== null) {
-    const epSeason = Number.parseInt(match[1], 10);
-    const epNumber = Number.parseInt(match[2], 10);
+  let match2;
+  while ((match2 = regex.exec(html3)) !== null) {
+    const epSeason = Number.parseInt(match2[1], 10);
+    const epNumber = Number.parseInt(match2[2], 10);
     if (epSeason === season && epNumber === episode) {
-      results.push(`${SITE18}${match[0]}`);
+      results.push(`${SITE18}${match2[0]}`);
     }
   }
   return results;
@@ -59103,10 +59121,10 @@ async function extractMovie3(ctx, startTime) {
   const out = [];
   const seen = /* @__PURE__ */ new Set();
   const regex = new RegExp(FILM_HLS_PATTERN.source, "g");
-  let match;
-  while ((match = regex.exec(html3)) !== null) {
-    if (match[0].includes("/serial/")) continue;
-    const url = `${SITE18}${match[0]}`;
+  let match2;
+  while ((match2 = regex.exec(html3)) !== null) {
+    if (match2[0].includes("/serial/")) continue;
+    const url = `${SITE18}${match2[0]}`;
     if (seen.has(url)) continue;
     seen.add(url);
     out.push(hlsStream(url, `${LABEL17} HLS`));
@@ -59204,9 +59222,9 @@ function parseEpisodeMapFromHtml(html3) {
   const epMap = {};
   const b64Regex = /var\s+([a-zA-Z0-9_]+)\s*=\s*atob\("([^"]+)"\)/g;
   const constants2 = {};
-  for (const match of html3.matchAll(b64Regex)) {
-    const decoded = decodeBase643(match[2]);
-    if (decoded) constants2[match[1]] = decoded;
+  for (const match2 of html3.matchAll(b64Regex)) {
+    const decoded = decodeBase643(match2[2]);
+    if (decoded) constants2[match2[1]] = decoded;
   }
   const tiers = [
     {
@@ -59223,12 +59241,12 @@ function parseEpisodeMapFromHtml(html3) {
     }
   ];
   for (const tier of tiers) {
-    for (const match of html3.matchAll(tier.regex)) {
-      const num = Number.parseInt(match[1], 10);
+    for (const match2 of html3.matchAll(tier.regex)) {
+      const num = Number.parseInt(match2[1], 10);
       if (!Number.isFinite(num)) continue;
-      const domain = constants2[match[2]] || "";
+      const domain = constants2[match2[2]] || "";
       if (!epMap[num]) epMap[num] = {};
-      epMap[num][tier.key] = domain + match[3];
+      epMap[num][tier.key] = domain + match2[3];
     }
   }
   return epMap;
@@ -59236,12 +59254,12 @@ function parseEpisodeMapFromHtml(html3) {
 function extractSagaUrls(html3, slug2) {
   const sagas = /* @__PURE__ */ new Set();
   const hrefRegex = new RegExp(`href=["']${slug2}/saga-(\\d+)["']`, "gi");
-  for (const match of html3.matchAll(hrefRegex)) {
-    sagas.add(`${SITE19}/${slug2}/saga-${match[1]}`);
+  for (const match2 of html3.matchAll(hrefRegex)) {
+    sagas.add(`${SITE19}/${slug2}/saga-${match2[1]}`);
   }
   const attrRegex = /(?:href|onclick)=["'][^"']*saga-(\d+)/gi;
-  for (const match of html3.matchAll(attrRegex)) {
-    sagas.add(`${SITE19}/${slug2}/saga-${match[1]}`);
+  for (const match2 of html3.matchAll(attrRegex)) {
+    sagas.add(`${SITE19}/${slug2}/saga-${match2[1]}`);
   }
   return [...sagas].sort((a, b) => {
     const na = Number.parseInt(a.match(/saga-(\d+)/)?.[1] || "0", 10);
@@ -59257,8 +59275,8 @@ async function getSeriesSlugs(signal) {
   if (!js) return [];
   const slugKeys = [];
   const slugRegex = /^\s*([a-zA-Z0-9_]+)\s*:\s*\{/gm;
-  for (const match of js.matchAll(slugRegex)) {
-    const key = match[1] === "op" ? "piece" : match[1];
+  for (const match2 of js.matchAll(slugRegex)) {
+    const key = match2[1] === "op" ? "piece" : match2[1];
     if (!slugKeys.includes(key)) slugKeys.push(key);
   }
   return slugKeys;
@@ -59394,9 +59412,9 @@ function parseEpisodeButtons(html3) {
   if (!html3) return [];
   const buttonRegex = /<button[^>]*class="sd-ep"[^>]*>/gi;
   const candidates = [];
-  let match;
-  while ((match = buttonRegex.exec(html3)) !== null) {
-    const element = match[0];
+  let match2;
+  while ((match2 = buttonRegex.exec(html3)) !== null) {
+    const element = match2[0];
     const season = element.match(/data-season="(\d+)"/);
     const episode = element.match(/data-ep="(\d+)"/);
     const lang = element.match(/data-lang="([^"]+)"/);
@@ -59438,8 +59456,8 @@ function extractDirectUrl(embedHtml) {
 }
 function extractQuality(html3) {
   if (!html3) return "HD";
-  const match = html3.match(/q\s*--(?:good|bad)\s*["']?\s*>\s*(\d+p)/i);
-  return match ? match[1] : "HD";
+  const match2 = html3.match(/q\s*--(?:good|bad)\s*["']?\s*>\s*(\d+p)/i);
+  return match2 ? match2[1] : "HD";
 }
 function detectLanguage(url, html3) {
   const value = (url || "").toLowerCase();
@@ -59694,8 +59712,8 @@ function scoreSearchResult3(resultTitle, resultUrl, searchTitle, searchSeason) {
 }
 function extractSeasonFromEpisodeLink(text3, url) {
   const combined = `${text3 || ""} ${url || ""}`;
-  const match = combined.match(/S(?:aison|eason)\s*[:\\(\\s-]*\s*(\d+)/i) || combined.match(/saison[_-](\d+)/i) || combined.match(/S(\d+)\s*(?:E|V|VF|VOSTFR|\b)/i);
-  if (match) return Number.parseInt(match[1], 10);
+  const match2 = combined.match(/S(?:aison|eason)\s*[:\\(\\s-]*\s*(\d+)/i) || combined.match(/saison[_-](\d+)/i) || combined.match(/S(\d+)\s*(?:E|V|VF|VOSTFR|\b)/i);
+  if (match2) return Number.parseInt(match2[1], 10);
   return null;
 }
 function generateFallbackSlugs(baseSlug, season) {
@@ -59922,11 +59940,11 @@ async function generateEpisodeUrl(html3, targetEp, ctx, cache3, probeStart) {
   const firstLink = $2(".wp-manga-chapter a").first();
   if (firstLink.length === 0) return null;
   const href = firstLink.attr("href") || "";
-  const match = href.match(/\/anime\/([^/]+)\/(.+?-)(\d+)(-v(?:ostfr|f))?\//);
-  if (!match) return null;
-  const slugName = match[1];
-  const prefix = match[2];
-  const suffix = match[4] || "";
+  const match2 = href.match(/\/anime\/([^/]+)\/(.+?-)(\d+)(-v(?:ostfr|f))?\//);
+  if (!match2) return null;
+  const slugName = match2[1];
+  const prefix = match2[2];
+  const suffix = match2[4] || "";
   for (const pad of ["0", ""]) {
     if (isAborted(ctx.signal) || isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) return null;
     const url = `${SITE21}/anime/${slugName}/${prefix}${pad}${targetEp}${suffix}/`;
@@ -60087,12 +60105,12 @@ async function extract22(ctx) {
   if (matches.length === 0) return [];
   const streams = [];
   const checkedUrls = /* @__PURE__ */ new Set();
-  for (const match of matches) {
+  for (const match2 of matches) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    if (checkedUrls.has(match.url)) continue;
-    checkedUrls.add(match.url);
-    const language = match.title.toUpperCase().includes("VF") || match.url.includes("-vf") ? "VF" : "VOSTFR";
-    const html3 = await fetchPage6(match.url, ctx, cache3);
+    if (checkedUrls.has(match2.url)) continue;
+    checkedUrls.add(match2.url);
+    const language = match2.title.toUpperCase().includes("VF") || match2.url.includes("-vf") ? "VF" : "VOSTFR";
+    const html3 = await fetchPage6(match2.url, ctx, cache3);
     if (!html3) continue;
     let episodeUrl = findEpisodeUrl5(html3, episodes, ctx.type === "tv" ? season : void 0);
     if (!episodeUrl) {
@@ -60105,7 +60123,7 @@ async function extract22(ctx) {
         }
       }
     }
-    if (!episodeUrl && ctx.type === "movie") episodeUrl = match.url;
+    if (!episodeUrl && ctx.type === "movie") episodeUrl = match2.url;
     if (!episodeUrl) continue;
     streams.push(...await resolveEpisodeStreams(episodeUrl, language, ctx, startTime));
   }
@@ -60187,9 +60205,9 @@ async function ajaxSearch2(query, ctx) {
   });
 }
 function parseSeason(title) {
-  const match = String(title || "").match(SEASON_IN_TITLE2);
-  if (!match) return null;
-  const value = Number(match[1]);
+  const match2 = String(title || "").match(SEASON_IN_TITLE2);
+  if (!match2) return null;
+  const value = Number(match2[1]);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 function scoreMatch6(resultTitle, searchTitle) {
@@ -60379,8 +60397,8 @@ async function findSeries2(titles, targetSeason, ctx, startTime) {
           seen.add(key);
           collected.push(hit);
         }
-        const match = bestMatch4(results, query, targetSeason);
-        if (match) return match;
+        const match2 = bestMatch4(results, query, targetSeason);
+        if (match2) return match2;
       }
     }
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return null;
@@ -60392,18 +60410,18 @@ async function findSeries2(titles, targetSeason, ctx, startTime) {
   }
   return null;
 }
-async function retryForSeason(match, titles, targetSeason, ctx) {
+async function retryForSeason(match2, titles, targetSeason, ctx) {
   const query = `${stripSeasonSuffix(titles[0] || "")} Saison ${targetSeason}`;
   const html3 = await ajaxSearch2(query, ctx);
-  if (!html3 || html3.length <= 50) return match;
+  if (!html3 || html3.length <= 50) return match2;
   const results = parseSearchResults3(html3);
-  if (results.length === 0) return match;
+  if (results.length === 0) return match2;
   const seasonMatch = bestMatch4(results, titles[0] || "", targetSeason);
-  return seasonMatch?.season === targetSeason ? seasonMatch : match;
+  return seasonMatch?.season === targetSeason ? seasonMatch : match2;
 }
-async function resolveNewsId2(match, ctx) {
-  if (match.newsId) return match.newsId;
-  const html3 = await fetchPage7(match.url, ctx);
+async function resolveNewsId2(match2, ctx) {
+  if (match2.newsId) return match2.newsId;
+  const html3 = await fetchPage7(match2.url, ctx);
   const config = parseSerieConfig2(html3);
   return config?.newsId || null;
 }
@@ -60445,9 +60463,9 @@ async function streamsFor(episode, language, ctx, startTime) {
   );
 }
 async function extractMovie4(ctx, startTime) {
-  const match = await findSeries2(ctx.titles, null, ctx, startTime);
-  if (!match) return [];
-  const newsId = await resolveNewsId2(match, ctx);
+  const match2 = await findSeries2(ctx.titles, null, ctx, startTime);
+  if (!match2) return [];
+  const newsId = await resolveNewsId2(match2, ctx);
   if (!newsId) return [];
   const api = await fetchEpisodeApi2(newsId, ctx);
   if (!api) return [];
@@ -60464,12 +60482,12 @@ async function extractSeries4(ctx, startTime) {
   const targetSeason = ctx.season ?? 1;
   const targets = targetEpisodes2(ctx);
   if (targets.length === 0) return [];
-  let match = await findSeries2(ctx.titles, targetSeason, ctx, startTime);
-  if (!match) return [];
-  if (targetSeason >= 1 && match.season !== targetSeason && !isAborted(ctx.signal) && !isBudgetExhausted(startTime)) {
-    match = await retryForSeason(match, ctx.titles, targetSeason, ctx);
+  let match2 = await findSeries2(ctx.titles, targetSeason, ctx, startTime);
+  if (!match2) return [];
+  if (targetSeason >= 1 && match2.season !== targetSeason && !isAborted(ctx.signal) && !isBudgetExhausted(startTime)) {
+    match2 = await retryForSeason(match2, ctx.titles, targetSeason, ctx);
   }
-  const newsId = await resolveNewsId2(match, ctx);
+  const newsId = await resolveNewsId2(match2, ctx);
   if (!newsId) return [];
   const api = await fetchEpisodeApi2(newsId, ctx);
   if (!api) return [];
@@ -60764,9 +60782,9 @@ async function extract24(ctx) {
   const matches = await searchAnime13(ctx, startTime);
   if (matches.length === 0) return [];
   if (ctx.type === "movie") {
-    for (const match of matches) {
+    for (const match2 of matches) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-      const html3 = await siteFetchText(match.url, {
+      const html3 = await siteFetchText(match2.url, {
         acceptLanguage: FR_ACCEPT_LANGUAGE,
         timeoutMs: 12e3,
         signal: ctx.signal
@@ -60779,14 +60797,14 @@ async function extract24(ctx) {
   }
   const season = ctx.season ?? 1;
   const episode = ctx.episode ?? 1;
-  for (const match of matches) {
+  for (const match2 of matches) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const streams = await extractEpisodeStreams2(match.slug, season, episode, ctx);
+    const streams = await extractEpisodeStreams2(match2.slug, season, episode, ctx);
     if (streams.length > 0) return streams;
   }
-  for (const match of matches) {
+  for (const match2 of matches) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const seriesHtml = await siteFetchText(match.url, {
+    const seriesHtml = await siteFetchText(match2.url, {
       acceptLanguage: FR_ACCEPT_LANGUAGE,
       timeoutMs: 12e3,
       signal: ctx.signal
@@ -60806,7 +60824,7 @@ async function extract24(ctx) {
     for (const attempt2 of attempts) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
       const streams = await extractEpisodeStreams2(
-        match.slug,
+        match2.slug,
         attempt2.season,
         attempt2.episode,
         ctx
@@ -61018,21 +61036,21 @@ async function extract25(ctx) {
   const streams = [];
   const checkedUrls = /* @__PURE__ */ new Set();
   let processed = 0;
-  for (const match of allMatches) {
+  for (const match2 of allMatches) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    if (checkedUrls.has(match.url)) continue;
-    checkedUrls.add(match.url);
+    if (checkedUrls.has(match2.url)) continue;
+    checkedUrls.add(match2.url);
     if (processed >= MAX_MATCHES_TO_PROCESS) break;
     if (ctx.type === "tv") {
       const skipKeywords = /\b(oav|ova|film|movie)\b/;
-      if (match.genre === "FILM" || match.genre === "OAV" || skipKeywords.test(match.title.toLowerCase()) || skipKeywords.test(match.url.toLowerCase())) {
+      if (match2.genre === "FILM" || match2.genre === "OAV" || skipKeywords.test(match2.title.toLowerCase()) || skipKeywords.test(match2.url.toLowerCase())) {
         continue;
       }
-      const matchSeason = getSeasonNumber(`${match.title} ${match.url}`);
+      const matchSeason = getSeasonNumber(`${match2.title} ${match2.url}`);
       if (matchSeason !== null && matchSeason !== effectiveSeason && hasCorrectSeason) continue;
     }
     processed++;
-    const html3 = await siteFetchText(match.url, {
+    const html3 = await siteFetchText(match2.url, {
       acceptLanguage: FR_ACCEPT_LANGUAGE,
       timeoutMs: 15e3,
       signal: ctx.signal
@@ -61040,7 +61058,7 @@ async function extract25(ctx) {
     if (!html3) continue;
     const players = collectPlayers(html3, episodes, ctx.type === "movie");
     if (players.length === 0) continue;
-    const language = match.title.toUpperCase().includes(" VF") || match.url.includes("/vf/") ? "VF" : "VOSTFR";
+    const language = match2.title.toUpperCase().includes(" VF") || match2.url.includes("/vf/") ? "VF" : "VOSTFR";
     streams.push(
       ...await resolveEmbedsUntil(
         players.map((p) => ({ url: p.url, server: p.server })),
@@ -61419,11 +61437,11 @@ function parseEpisodes(html3) {
     const $link = $2(element).find(SELECTORS.EPISODE_LINK).first();
     const href = $link.attr("href") || "";
     const title = $link.find(SELECTORS.EPISODE_TITLE).first().text().trim() || $link.text().trim();
-    const match = href.match(PATTERNS.EPISODE_URL);
-    if (!match) return;
+    const match2 = href.match(PATTERNS.EPISODE_URL);
+    if (!match2) return;
     episodes.push({
-      season: Number.parseInt(match[1], 10),
-      episode: Number.parseInt(match[2], 10),
+      season: Number.parseInt(match2[1], 10),
+      episode: Number.parseInt(match2[2], 10),
       link: href,
       title
     });
@@ -61431,8 +61449,8 @@ function parseEpisodes(html3) {
   return episodes;
 }
 function extractNonce(html3) {
-  const match = html3.match(PATTERNS.SM_PUBLIC);
-  return match ? match[2] : null;
+  const match2 = html3.match(PATTERNS.SM_PUBLIC);
+  return match2 ? match2[2] : null;
 }
 function extractIframeUrl2(html3) {
   const $2 = loadHtml(html3);
@@ -61507,8 +61525,8 @@ async function searchCatalogue(ctx, wantSeries, startTime) {
       const results = parseSearchResults5(html3, domain);
       if (results.length === 0) continue;
       const preferred = results.filter((r) => r.isSeries === wantSeries);
-      const match = bestMatch5(preferred.length > 0 ? preferred : results, title) || bestMatch5(results, title);
-      if (match) return match;
+      const match2 = bestMatch5(preferred.length > 0 ? preferred : results, title) || bestMatch5(results, title);
+      if (match2) return match2;
     }
   }
   return null;
@@ -61595,11 +61613,11 @@ async function streamsFromPage3(pageUrl, html3, title) {
   });
 }
 async function extractMovie5(ctx, startTime) {
-  const match = await findCandidate(ctx, false, startTime);
-  if (!match || isBudgetExhausted(startTime)) return [];
-  const page = await fetchFromPool(match.url, ctx, 12e3);
+  const match2 = await findCandidate(ctx, false, startTime);
+  if (!match2 || isBudgetExhausted(startTime)) return [];
+  const page = await fetchFromPool(match2.url, ctx, 12e3);
   if (!page) return [];
-  return streamsFromPage3(match.url, page.html, match.title);
+  return streamsFromPage3(match2.url, page.html, match2.title);
 }
 function episodeCandidates5(ctx) {
   const out = [];
@@ -61630,13 +61648,13 @@ async function fetchSeasonEpisodes(seriesHtml, season, domain, ctx) {
 async function extractSeries5(ctx, startTime) {
   const targetSeason = ctx.season ?? 1;
   const targetEpisodes3 = episodeCandidates5(ctx);
-  const match = await findCandidate(ctx, true, startTime);
-  if (!match || isBudgetExhausted(startTime)) return [];
-  const page = await fetchFromPool(match.url, ctx, 12e3);
+  const match2 = await findCandidate(ctx, true, startTime);
+  if (!match2 || isBudgetExhausted(startTime)) return [];
+  const page = await fetchFromPool(match2.url, ctx, 12e3);
   if (!page) return [];
   const seasons = parseSeasons3(page.html);
   if (seasons.length === 0) {
-    return streamsFromPage3(match.url, page.html, match.title);
+    return streamsFromPage3(match2.url, page.html, match2.title);
   }
   const season = seasons.find((tab) => {
     const number = tab.title.match(PATTERNS.SEASON_TITLE);
@@ -61960,11 +61978,11 @@ async function extract30(ctx) {
     signal: ctx.signal
   });
   if (!html3) return [];
-  const match = html3.match(/let\s+dataLink\s*=\s*(\[[\s\S]*?\])\s*;/);
-  if (!match) return [];
+  const match2 = html3.match(/let\s+dataLink\s*=\s*(\[[\s\S]*?\])\s*;/);
+  if (!match2) return [];
   let dataLink;
   try {
-    dataLink = JSON.parse(match[1]);
+    dataLink = JSON.parse(match2[1]);
   } catch {
     return [];
   }
@@ -62037,11 +62055,11 @@ function langTag(lang) {
 }
 function extractSvLinks(html3) {
   const links = [];
-  const match = html3.match(/const\s+_SV_LINKS\s*=\s*\[([\s\S]*?)\]\s*;/);
-  if (!match) return links;
+  const match2 = html3.match(/const\s+_SV_LINKS\s*=\s*\[([\s\S]*?)\]\s*;/);
+  if (!match2) return links;
   const entryRe = /\{[^{}]+\}/g;
   let m;
-  while ((m = entryRe.exec(match[1])) !== null) {
+  while ((m = entryRe.exec(match2[1])) !== null) {
     try {
       const entry = m[0].replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":').replace(/'/g, '"');
       const obj = JSON.parse(entry);
@@ -62255,11 +62273,11 @@ async function getEpisodeUrl(seriesUrl, season, episode, ctx) {
     });
     if (epData) {
       const epUrls = [...epData.matchAll(/href="([^"]+\/capitulo\/[^"]+)"/g)].map((m) => m[1]);
-      const match = epUrls.find((u) => {
+      const match2 = epUrls.find((u) => {
         const m = u.match(/temporada-(\d+)-capitulo-(\d+)/);
         return m && parseInt(m[1]) === season && parseInt(m[2]) === episode;
       });
-      if (match) return match;
+      if (match2) return match2;
     }
   }
   let found = null;
@@ -62794,8 +62812,8 @@ async function getRedirectUrl(serverEncoded, referer, ctx) {
     noBypass: true
   });
   if (!html3) return null;
-  const match = html3.match(/(?:window\.)?location\.href\s*=\s*['"]([^'"]+)['"]/i);
-  return match ? match[1] : null;
+  const match2 = html3.match(/(?:window\.)?location\.href\s*=\s*['"]([^'"]+)['"]/i);
+  return match2 ? match2[1] : null;
 }
 async function extract39(ctx) {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
@@ -63275,9 +63293,9 @@ async function resolveRedirectLinks(url, signal) {
   const html3 = await siteFetchText(url, { signal, timeoutMs: 1e4 });
   if (!html3) return "";
   let combined = "";
-  let match;
-  while ((match = REDIRECT_REGEX.exec(html3)) !== null) {
-    combined += match[1] || match[2] || "";
+  let match2;
+  while ((match2 = REDIRECT_REGEX.exec(html3)) !== null) {
+    combined += match2[1] || match2[2] || "";
   }
   if (!combined) return "";
   try {
@@ -63720,9 +63738,9 @@ async function generateSignedUrl(urlStr) {
     const url = new URL(urlStr);
     const path = url.pathname;
     const timestamp = Math.floor(Date.now() / 1e3).toString();
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(SIGN_SECRET);
-    const message = encoder.encode(path + timestamp);
+    const encoder2 = new TextEncoder();
+    const keyData = encoder2.encode(SIGN_SECRET);
+    const message = encoder2.encode(path + timestamp);
     const cryptoKey = await crypto.subtle.importKey(
       "raw",
       keyData,
@@ -63930,10 +63948,10 @@ async function extractService(apiBase, service, title, ctx, season, episode) {
     { headers, timeoutMs: 8e3, signal: ctx.signal }
   );
   const results = searchData?.searchResult ?? [];
-  const match = results.find((r) => r.t?.trim().toLowerCase() === title.toLowerCase());
-  if (!match?.id) return [];
+  const match2 = results.find((r) => r.t?.trim().toLowerCase() === title.toLowerCase());
+  if (!match2?.id) return [];
   if (isAborted(ctx.signal)) return [];
-  let playUrl = `${apiBase}/play.php?id=${match.id}&ott=${service.code}`;
+  let playUrl = `${apiBase}/play.php?id=${match2.id}&ott=${service.code}`;
   if (ctx.type === "tv" && season != null && episode != null) {
     playUrl += `&s=${season}&e=${episode}`;
   }
@@ -67561,6 +67579,781 @@ var provider44 = {
 };
 var novelcool_default = provider44;
 
+// src/providers/novel/novel-http.ts
+async function fetchNovelSearchHtml(url) {
+  const response = await fetchResponse(url, { timeoutMs: 12e3 });
+  if (!response.ok) throw new Error(`${new URL(url).hostname} search returned HTTP ${response.status}${response.status === 403 ? " (access blocked)" : ""}`);
+  return response.text();
+}
+
+// src/providers/novel/webnovel.ts
+var BASE25 = "https://www.webnovel.com";
+var PROVIDER_NAME17 = "webnovel";
+function bookUrl(bookId) {
+  return `${BASE25}/book/${bookId}`;
+}
+async function searchBooks(query) {
+  const html3 = await fetchNovelSearchHtml(`${BASE25}/search?keywords=${encodeURIComponent(query)}`);
+  if (!html3) return [];
+  const $2 = loadHtml(html3);
+  const byId = /* @__PURE__ */ new Map();
+  $2('a[href*="/book/"]').each((_, el) => {
+    const a = $2(el);
+    const href = (a.attr("href") || "").trim();
+    const m = href.match(/\/book\/[^/]*?(\d{6,})/);
+    if (!m) return;
+    const bookId = m[1];
+    if (byId.has(bookId)) return;
+    const name = (a.attr("title") || a.find("img").first().attr("alt") || a.text()).trim().replace(/\s+/g, " ");
+    if (!name || name.length < 2) return;
+    byId.set(bookId, { bookId, name });
+  });
+  return Array.from(byId.values()).slice(0, 20);
+}
+async function resolveBookId(params) {
+  const titles = await resolveMangaTitles(params);
+  if (titles.length === 0) return null;
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const title of titles.slice(0, 2)) {
+    for (const cand of await searchBooks(title)) {
+      if (seen.has(cand.bookId)) continue;
+      seen.add(cand.bookId);
+      pool.push(cand);
+    }
+  }
+  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  return best ? best.candidate.bookId : null;
+}
+function parseChapterNumber2(label, href) {
+  let m = label.match(/(?:ch(?:apter)?|episode)\.?\s*(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = href.match(/(\d+)(?:\/)?$/);
+  if (m) {
+    const n = parseFloat(m[1]);
+    if (n < 1e5) return n;
+  }
+  m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : NaN;
+}
+function cleanParagraphs($2) {
+  const out = [];
+  const selectors = [
+    ".chapter-content p",
+    '[class*="cha-words"] p',
+    ".cha-words p",
+    ".chapter_content p",
+    "#chapter-content p",
+    ".content p"
+  ];
+  for (const sel of selectors) {
+    const nodes = $2(sel);
+    if (nodes.length === 0) continue;
+    nodes.each((_, el) => {
+      const text3 = $2(el).text().replace(/\s+/g, " ").trim();
+      if (text3.length < 1) return;
+      if (/^(advertisement|chapter \d+|translator|editor):/i.test(text3) && text3.length < 80) return;
+      out.push(text3);
+    });
+    if (out.length > 0) break;
+  }
+  return out;
+}
+var provider45 = {
+  name: PROVIDER_NAME17,
+  sites: ["https://www.webnovel.com", "https://webnovel.com"],
+  async search(query) {
+    return (await searchBooks(query)).map((row) => ({ id: row.bookId, title: row.name, url: bookUrl(row.bookId) }));
+  },
+  async getChapters(params) {
+    try {
+      const bookId = params.seriesId || await resolveBookId(params);
+      if (!bookId) return [];
+      if (!/^\d+$/.test(bookId)) throw new Error("Invalid Webnovel book id");
+      const html3 = await fetchText(bookUrl(bookId), { timeoutMs: 12e3 });
+      if (!html3) return [];
+      const $2 = loadHtml(html3);
+      try {
+        const nextData = $2("#__NEXT_DATA__").first().text();
+        if (nextData) {
+          const parsed = JSON.parse(nextData);
+          const flat = [];
+          const walk = (node) => {
+            if (!node || typeof node !== "object") return;
+            if (Array.isArray(node)) {
+              for (const v of node) walk(v);
+              return;
+            }
+            if (typeof node.chapterId !== "undefined" && (node.chapterName || node.chapterTitle)) {
+              flat.push(node);
+              return;
+            }
+            for (const v of Object.values(node)) walk(v);
+          };
+          walk(parsed?.props);
+          if (flat.length > 0) {
+            const byNumber2 = /* @__PURE__ */ new Map();
+            let order2 = 0;
+            for (const ch of flat) {
+              order2 += 1;
+              const rawName = String(ch.chapterName ?? ch.chapterTitle ?? "");
+              const num = parseChapterNumber2(rawName, String(ch.chapterId ?? ""));
+              const n = Number.isFinite(num) ? num : order2;
+              if (byNumber2.has(n)) continue;
+              const chapterId = String(ch.chapterId ?? ch.id ?? "");
+              if (!chapterId) continue;
+              const source = {
+                provider: PROVIDER_NAME17,
+                chapterKey: `${PROVIDER_NAME17}:${bookId}:${chapterId}`,
+                providerChapterId: `${bookId}:${chapterId}`,
+                language: "en",
+                translator: typeof ch.translatorName === "string" ? ch.translatorName : null,
+                releaseDate: typeof ch.publishTime === "string" ? ch.publishTime : null
+              };
+              byNumber2.set(n, { number: n, title: rawName || null, volume: null, sources: [source] });
+            }
+            if (byNumber2.size > 0) return Array.from(byNumber2.values()).sort((a, b) => a.number - b.number);
+          }
+        }
+      } catch {
+      }
+      const byNumber = /* @__PURE__ */ new Map();
+      let order = 0;
+      $2('a[href*="/chapter/"], .chapter-list a, .volume-item a, ol.chapter-list a').each((_, el) => {
+        const a = $2(el);
+        const href = (a.attr("href") || "").trim();
+        if (!href) return;
+        const label = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+        if (!label) return;
+        order += 1;
+        const num = parseChapterNumber2(label, href);
+        const n = Number.isFinite(num) ? num : order;
+        if (byNumber.has(n)) return;
+        const full = href.startsWith("http") ? href : `${BASE25}${href.startsWith("/") ? "" : "/"}${href}`;
+        const idMatch = full.match(/(\d{6,})(?:\/)?$/);
+        const chapterId = idMatch ? idMatch[1] : full;
+        const source = {
+          provider: PROVIDER_NAME17,
+          chapterKey: `${PROVIDER_NAME17}:${bookId}:${chapterId}`,
+          providerChapterId: `${bookId}:${chapterId}`,
+          language: "en",
+          translator: null,
+          releaseDate: null
+        };
+        byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
+      });
+      return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
+    } catch {
+      return [];
+    }
+  },
+  async getContent(chapterKey) {
+    try {
+      const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
+      const [bookId, chapterId] = rest.split(":");
+      if (!bookId || !chapterId) return null;
+      const html3 = await fetchText(`${BASE25}/book/${bookId}/${chapterId}`, { timeoutMs: 15e3 });
+      if (!html3) return null;
+      const $2 = loadHtml(html3);
+      const title = $2('h1.chapter-title, .chapter-title h1, [class*="cha-tit"]').first().text().trim() || $2("title").first().text().trim() || null;
+      const texts = cleanParagraphs($2);
+      if (texts.length === 0) return null;
+      return {
+        title,
+        number: null,
+        paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
+        provider: PROVIDER_NAME17
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+var webnovel_default = provider45;
+
+// src/providers/novel/wuxia-rpc.ts
+var encoder = new TextEncoder();
+var decoder = new TextDecoder();
+var varint = (value) => {
+  const bytes = [];
+  do {
+    const b = value % 128;
+    value = Math.floor(value / 128);
+    bytes.push(b | (value ? 128 : 0));
+  } while (value);
+  return bytes;
+};
+function pbInt(field, value) {
+  return new Uint8Array([...varint(field * 8), ...varint(value)]);
+}
+function pbBytes(field, value) {
+  return new Uint8Array([...varint(field * 8 + 2), ...varint(value.length), ...value]);
+}
+function pbString(field, value) {
+  return pbBytes(field, encoder.encode(value));
+}
+function concat(...parts) {
+  const result = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const part of parts) {
+    result.set(part, at);
+    at += part.length;
+  }
+  return result;
+}
+function decodeMessage(bytes) {
+  const fields = /* @__PURE__ */ new Map();
+  let at = 0;
+  const readVar = () => {
+    let value = 0, shift = 0;
+    for (let n = 0; n < 10; n++) {
+      if (at >= bytes.length) throw new Error("Truncated protobuf");
+      const byte = bytes[at++];
+      value += (byte & 127) * 2 ** shift;
+      if (!(byte & 128)) return value;
+      shift += 7;
+    }
+    throw new Error("Invalid protobuf integer");
+  };
+  while (at < bytes.length) {
+    const tag = readVar(), field = Math.floor(tag / 8), wire = tag & 7;
+    let value;
+    if (wire === 0) value = readVar();
+    else if (wire === 2) {
+      const length = readVar();
+      if (length > bytes.length - at) throw new Error("Truncated protobuf field");
+      value = bytes.slice(at, at + length);
+      at += length;
+    } else if (wire === 1 || wire === 5) {
+      const size = wire === 1 ? 8 : 4;
+      if (at + size > bytes.length) throw new Error("Truncated numeric field");
+      const view = new DataView(bytes.buffer, bytes.byteOffset + at, size);
+      value = size === 8 ? view.getFloat64(0, true) : view.getFloat32(0, true);
+      at += size;
+    } else throw new Error("Unsupported protobuf wire type");
+    const list = fields.get(field) || [];
+    list.push(value);
+    fields.set(field, list);
+  }
+  return fields;
+}
+var pbText = (message, field) => {
+  const value = message.get(field)?.[0];
+  return value instanceof Uint8Array ? decoder.decode(value) : "";
+};
+var pbNumber = (message, field) => {
+  const value = message.get(field)?.[0];
+  return typeof value === "number" ? value : value instanceof Uint8Array ? Number(decodeMessage(value).get(1)?.[0] || 0) : 0;
+};
+var pbMessages = (message, field) => (message.get(field) || []).filter((v) => v instanceof Uint8Array).map(decodeMessage);
+async function wuxiaRpc(service, method, payload) {
+  const frame = new Uint8Array(payload.length + 5);
+  new DataView(frame.buffer).setUint32(1, payload.length);
+  frame.set(payload, 5);
+  const response = await fetchResponse(`https://api2.wuxiaworld.com/wuxiaworld.api.v2.${service}/${method}`, { method: "POST", headers: { "Content-Type": "application/grpc-web+proto", "X-Grpc-Web": "1" }, body: frame, timeoutMs: 2e4 });
+  if (!response.ok) throw new Error(`Wuxiaworld HTTP ${response.status}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let at = 0, data2;
+  while (at + 5 <= bytes.length) {
+    const flag = bytes[at], length = new DataView(bytes.buffer, bytes.byteOffset + at + 1, 4).getUint32(0);
+    at += 5;
+    if (length > bytes.length - at) throw new Error("Truncated Wuxiaworld response");
+    const content = bytes.slice(at, at + length);
+    at += length;
+    if (flag & 128) {
+      const trailer = decoder.decode(content);
+      const status = trailer.match(/grpc-status:\s*(\d+)/i)?.[1];
+      if (status && status !== "0") throw new Error(`Wuxiaworld gRPC ${status}: ${trailer.match(/grpc-message:\s*([^\r\n]+)/i)?.[1] || "request rejected"}`);
+    } else data2 = decodeMessage(content);
+  }
+  if (!data2) throw new Error("Wuxiaworld returned no data");
+  return data2;
+}
+
+// src/providers/novel/wuxiaworld.ts
+var BASE26 = "https://www.wuxiaworld.com";
+async function search12(query) {
+  const response = await wuxiaRpc("Novels", "SearchNovels", concat(pbBytes(1, pbString(1, query)), pbInt(7, 20)));
+  return pbMessages(response, 1).map((row) => ({ id: pbText(row, 3), title: pbText(row, 2), url: BASE26 + "/novel/" + pbText(row, 3) })).filter((row) => row.id && row.title);
+}
+async function match(params) {
+  if (params.seriesId) return params.seriesId;
+  const titles = await resolveMangaTitles(params);
+  const candidates = (await Promise.all(titles.slice(0, 2).map(search12))).flat();
+  return pickBestMangaCandidate(titles, candidates, (row) => [row.title], 0.6)?.candidate.id;
+}
+var provider46 = {
+  name: "wuxiaworld",
+  sites: [BASE26, "https://api2.wuxiaworld.com"],
+  search: search12,
+  async getChapters(params) {
+    const slug2 = await match(params);
+    if (!slug2) return [];
+    if (!/^[\w-]+$/.test(slug2)) throw new Error("Invalid Wuxiaworld novel slug");
+    const novel = pbMessages(await wuxiaRpc("Novels", "GetNovel", pbString(2, slug2)), 1)[0];
+    if (!novel) return [];
+    const response = await wuxiaRpc("Chapters", "GetChapterList", pbInt(1, pbNumber(novel, 1)));
+    const chapters = pbMessages(response, 1).flatMap((group) => pbMessages(group, 6));
+    return chapters.map((row, index2) => {
+      const chapterSlug = pbText(row, 3);
+      return {
+        number: pbNumber(row, 4) || index2 + 1,
+        title: pbText(row, 2),
+        volume: null,
+        sources: [{ provider: "wuxiaworld", chapterKey: "wuxiaworld:" + slug2 + ":" + chapterSlug, providerChapterId: slug2 + ":" + chapterSlug, language: "en", translator: null, releaseDate: null }]
+      };
+    }).filter((row) => row.sources[0].chapterKey.split(":")[2]).sort((a, b) => a.number - b.number);
+  },
+  async getContent(key) {
+    const rest = key.startsWith("wuxiaworld:") ? key.slice(11) : key;
+    const [novelSlug, chapterSlug] = rest.split(":");
+    if (!novelSlug || !chapterSlug || !/^[\w-]+$/.test(novelSlug) || !/^[\w-]+$/.test(chapterSlug)) return null;
+    const slugs = concat(pbString(1, novelSlug), pbString(2, chapterSlug));
+    const response = await wuxiaRpc("Chapters", "GetChapter", pbBytes(1, pbBytes(2, slugs)));
+    const item = pbMessages(response, 1)[0];
+    if (!item) return null;
+    const content = pbMessages(item, 5)[0];
+    const html3 = content ? pbText(content, 1) : pbMessages(item, 21).map((p) => {
+      const c = pbMessages(p, 4)[0];
+      return c ? pbText(c, 1) : "";
+    }).join("\n");
+    const $2 = loadHtml('<div id="body">' + html3 + "</div>");
+    $2("script,style").remove();
+    const texts = [];
+    $2("#body p").each((_, el) => {
+      const text3 = $2(el).text().trim();
+      if (text3) texts.push(text3);
+    });
+    if (!texts.length) texts.push(...$2("#body").text().split(/\n+/).map((t) => t.trim()).filter(Boolean));
+    if (!texts.length) return null;
+    return { provider: "wuxiaworld", title: pbText(item, 2), number: pbNumber(item, 4) || null, paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })) };
+  }
+};
+var wuxiaworld_default = provider46;
+
+// src/providers/novel/justlightnovels.ts
+var BASE27 = "https://www.justlightnovels.com";
+var PROVIDER_NAME18 = "justlightnovels";
+function toUrl3(href) {
+  return href.startsWith("http") ? href : `${BASE27}${href.startsWith("/") ? "" : "/"}${href}`;
+}
+async function searchSeries(query) {
+  const urls = [
+    `${BASE27}/?s=${encodeURIComponent(query)}`,
+    `${BASE27}/search/${encodeURIComponent(query)}`
+  ];
+  const byHref = /* @__PURE__ */ new Map();
+  for (const url of urls) {
+    const html3 = await fetchNovelSearchHtml(url);
+    if (!html3) continue;
+    const $2 = loadHtml(html3);
+    $2("article a[href], .post a[href], .search-results a[href], a.post-title[href]").each((_, el) => {
+      const a = $2(el);
+      const href = (a.attr("href") || "").trim();
+      if (!href || !href.startsWith(BASE27) && !href.startsWith("/")) return;
+      if (/chapter|episode|page/i.test(href)) return;
+      const name = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+      if (!name || name.length < 2 || byHref.has(href)) return;
+      byHref.set(href, { href, name });
+    });
+    if (byHref.size > 0) break;
+  }
+  return Array.from(byHref.values()).slice(0, 20);
+}
+async function resolveSeriesHref3(params) {
+  const titles = await resolveMangaTitles(params);
+  if (titles.length === 0) return null;
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const title of titles.slice(0, 2)) {
+    for (const cand of await searchSeries(title)) {
+      if (seen.has(cand.href)) continue;
+      seen.add(cand.href);
+      pool.push(cand);
+    }
+  }
+  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  return best ? best.candidate.href : null;
+}
+function parseChapterNumber3(label, href) {
+  let m = label.match(/(?:ch(?:apter)?|part|episode)\.?\s*(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = href.match(/chapter[-_.\s]*(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : NaN;
+}
+function extractParagraphs($2) {
+  const selectors = [
+    ".entry-content p",
+    ".reading-content p",
+    ".text-content p",
+    ".post-content p",
+    "article .entry-content p"
+  ];
+  for (const sel of selectors) {
+    const nodes = $2(sel);
+    if (nodes.length === 0) continue;
+    const out = [];
+    nodes.each((_, el) => {
+      const text3 = $2(el).text().replace(/\s+/g, " ").trim();
+      if (text3.length < 2) return;
+      if (/^(translator|editor|proofreader)\s*:/i.test(text3) && text3.length < 120) return;
+      if (/^previous|^next|^table of contents/i.test(text3) && text3.length < 60) return;
+      out.push(text3);
+    });
+    if (out.length >= 2) return out;
+  }
+  return [];
+}
+var provider47 = {
+  name: PROVIDER_NAME18,
+  sites: ["https://www.justlightnovels.com", "https://justlightnovels.com"],
+  async search(query) {
+    return (await searchSeries(query)).map((row) => ({ id: row.href, title: row.name, url: toUrl3(row.href) }));
+  },
+  async getChapters(params) {
+    try {
+      const href = params.seriesId || await resolveSeriesHref3(params);
+      if (!href) return [];
+      if (new URL(toUrl3(href)).origin !== BASE27) throw new Error("Invalid JustLightNovels title URL");
+      const html3 = await fetchText(toUrl3(href), { timeoutMs: 12e3 });
+      if (!html3) return [];
+      const $2 = loadHtml(html3);
+      const byNumber = /* @__PURE__ */ new Map();
+      let order = 0;
+      $2('a[href*="chapter"], .chapter-list a, .su-accordion a[href], .elementor-accordion a[href], .lcp_catlist a[href]').each((_, el) => {
+        const a = $2(el);
+        const chHref = (a.attr("href") || "").trim();
+        if (!chHref) return;
+        const label = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+        if (!label || label.length < 1) return;
+        order += 1;
+        const num = parseChapterNumber3(label, chHref);
+        const n = Number.isFinite(num) ? num : order;
+        if (byNumber.has(n)) return;
+        const full = toUrl3(chHref);
+        const source = {
+          provider: PROVIDER_NAME18,
+          chapterKey: `${PROVIDER_NAME18}:${encodeURIComponent(full)}`,
+          providerChapterId: full,
+          language: "en",
+          translator: null,
+          releaseDate: null
+        };
+        byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
+      });
+      return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
+    } catch {
+      return [];
+    }
+  },
+  async getContent(chapterKey) {
+    try {
+      const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
+      const url = decodeURIComponent(rest);
+      if (!url) return null;
+      const html3 = await fetchText(url.startsWith("http") ? url : toUrl3(url), { timeoutMs: 15e3 });
+      if (!html3) return null;
+      const $2 = loadHtml(html3);
+      const title = $2("h1.entry-title, h1.post-title, .entry-header h1").first().text().trim() || $2("title").first().text().trim() || null;
+      const texts = extractParagraphs($2);
+      if (texts.length === 0) return null;
+      return {
+        title,
+        number: null,
+        paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
+        provider: PROVIDER_NAME18
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+var justlightnovels_default = provider47;
+
+// src/providers/novel/lightnovelto.ts
+var BASE28 = "https://lightnovel.to";
+var PROVIDER_NAME19 = "lightnovelto";
+function toUrl4(href) {
+  return href.startsWith("http") ? href : `${BASE28}${href.startsWith("/") ? "" : "/"}${href}`;
+}
+async function searchSeries2(query) {
+  const urls = [
+    `${BASE28}/search?q=${encodeURIComponent(query)}`,
+    `${BASE28}/search/${encodeURIComponent(query)}`
+  ];
+  const byHref = /* @__PURE__ */ new Map();
+  for (const url of urls) {
+    const html3 = await fetchNovelSearchHtml(url);
+    if (!html3) continue;
+    const $2 = loadHtml(html3);
+    $2('a[href*="/novel/"], a[href*="/series/"], .novel-item a[href], .search-item a[href]').each((_, el) => {
+      const a = $2(el);
+      const href = (a.attr("href") || "").trim();
+      if (!href || /chapter/i.test(href) || byHref.has(href)) return;
+      const name = (a.attr("title") || a.find("h3, .novel-title").first().text() || a.find("img").attr("alt") || a.text()).trim().replace(/\s+/g, " ");
+      if (!name || name.length < 2) return;
+      byHref.set(href, { href, name });
+    });
+    if (byHref.size > 0) break;
+  }
+  return Array.from(byHref.values()).slice(0, 20);
+}
+async function resolveSeriesHref4(params) {
+  const titles = await resolveMangaTitles(params);
+  if (titles.length === 0) return null;
+  const pool = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const title of titles.slice(0, 2)) {
+    for (const cand of await searchSeries2(title)) {
+      if (seen.has(cand.href)) continue;
+      seen.add(cand.href);
+      pool.push(cand);
+    }
+  }
+  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  return best ? best.candidate.href : null;
+}
+function parseChapterNumber4(label, href) {
+  let m = label.match(/(?:ch(?:apter)?|part|episode)\.?\s*(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = href.match(/chapter[-_/.\s]*(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]);
+  m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : NaN;
+}
+function extractParagraphs2($2) {
+  const selectors = [
+    "#chapter-content p",
+    ".ln-prose p",
+    ".chapter-content p",
+    "#chapter-container p",
+    ".reading-content p",
+    ".novel-content p",
+    "article p"
+  ];
+  for (const sel of selectors) {
+    const nodes = $2(sel);
+    if (nodes.length === 0) continue;
+    const out = [];
+    nodes.each((_, el) => {
+      const text3 = $2(el).text().replace(/\s+/g, " ").trim();
+      if (text3.length < 2) return;
+      if (/^(translator|editor)\s*:/i.test(text3) && text3.length < 120) return;
+      out.push(text3);
+    });
+    if (out.length >= 2) return out;
+  }
+  return [];
+}
+var provider48 = {
+  name: PROVIDER_NAME19,
+  sites: ["https://lightnovel.to", "https://www.lightnovel.to"],
+  async search(query) {
+    return (await searchSeries2(query)).map((row) => ({ id: row.href, title: row.name, url: toUrl4(row.href) }));
+  },
+  async getChapters(params) {
+    try {
+      const href = params.seriesId || await resolveSeriesHref4(params);
+      if (!href) return [];
+      if (new URL(toUrl4(href)).origin !== BASE28) throw new Error("Invalid LightNovel.to title URL");
+      const html3 = await fetchText(toUrl4(href), { timeoutMs: 12e3 });
+      if (!html3) return [];
+      const $2 = loadHtml(html3);
+      const byNumber = /* @__PURE__ */ new Map();
+      const slug2 = new URL(toUrl4(href)).pathname.split("/").filter(Boolean)[1];
+      const catalog = await fetchJson(`${BASE28}/api/novel-chapters?slug=${encodeURIComponent(slug2)}`, { timeoutMs: 15e3 });
+      const chapterRows = Array.isArray(catalog) ? catalog : catalog?.chapters || [];
+      for (const row of chapterRows) {
+        if (!row.slug || !Number.isFinite(Number(row.number)) || !/^chapter-[\w.-]+$/.test(row.slug)) continue;
+        const full = `${BASE28}/novel/${encodeURIComponent(slug2)}/${row.slug}`;
+        byNumber.set(Number(row.number), { number: Number(row.number), title: row.title || `Chapter ${row.number}`, volume: null, sources: [{ provider: PROVIDER_NAME19, chapterKey: `${PROVIDER_NAME19}:${encodeURIComponent(full)}`, providerChapterId: full, language: "en", translator: null, releaseDate: row.createdAt || null }] });
+      }
+      let order = 0;
+      $2('a[href*="/chapter-"], a[href*="/chapter/"], .chapter-list a[href], .chapters a[href], ul.chapter-list a[href]').each((_, el) => {
+        const a = $2(el);
+        const chHref = (a.attr("href") || "").trim();
+        if (!chHref) return;
+        const label = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
+        if (!label) return;
+        order += 1;
+        const num = parseChapterNumber4(label, chHref);
+        const n = Number.isFinite(num) ? num : order;
+        if (byNumber.has(n)) return;
+        const full = toUrl4(chHref);
+        const date = a.closest("li").find(".chapter-time, .chapter-date, time").first().text().trim() || null;
+        const source = {
+          provider: PROVIDER_NAME19,
+          chapterKey: `${PROVIDER_NAME19}:${encodeURIComponent(full)}`,
+          providerChapterId: full,
+          language: "en",
+          translator: null,
+          releaseDate: date
+        };
+        byNumber.set(n, { number: n, title: label || null, volume: null, sources: [source] });
+      });
+      return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
+    } catch {
+      return [];
+    }
+  },
+  async getContent(chapterKey) {
+    try {
+      const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
+      const url = decodeURIComponent(rest);
+      if (!url || new URL(toUrl4(url)).origin !== BASE28) return null;
+      const html3 = await fetchText(url.startsWith("http") ? url : toUrl4(url), { timeoutMs: 15e3 });
+      if (!html3) return null;
+      const $2 = loadHtml(html3);
+      const title = $2("h1.chapter-title, .chapter-header h1, h1.entry-title").first().text().trim() || $2("title").first().text().trim() || null;
+      const texts = extractParagraphs2($2);
+      if (texts.length === 0) return null;
+      return {
+        title,
+        number: null,
+        paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
+        provider: PROVIDER_NAME19
+      };
+    } catch {
+      return null;
+    }
+  }
+};
+var lightnovelto_default = provider48;
+
+// src/providers/novel/scraper-sites.ts
+var clean = (text3) => text3.replace(/\s+/g, " ").trim();
+function createHtmlNovelProvider(site) {
+  function safeUrl(value, relative = site.base) {
+    const url = new URL(value, relative);
+    if (url.origin !== new URL(site.base).origin || url.username || url.password) throw new Error(`Invalid ${site.name} URL`);
+    return url.href;
+  }
+  async function html3(url, referer, method = "GET") {
+    const response = await fetchResponse(safeUrl(url), { method, timeoutMs: 12e3, headers: { ...referer ? { Referer: referer, "X-Requested-With": "XMLHttpRequest" } : {} } });
+    if (!response.ok) throw new Error(`${site.name} HTTP ${response.status}${response.status === 403 ? " (access blocked)" : response.status === 410 ? " (site unavailable)" : ""}`);
+    return response.text();
+  }
+  return {
+    name: site.name,
+    sites: [site.base],
+    async search(query) {
+      const $2 = loadHtml(await html3(site.search(query)));
+      const found = /* @__PURE__ */ new Map();
+      $2("a[href]").each((_, node) => {
+        const a = $2(node);
+        let url;
+        try {
+          url = safeUrl(a.attr("href") || "");
+        } catch {
+          return;
+        }
+        if (!site.series.test(new URL(url).pathname)) return;
+        const title = clean(a.attr("title") || a.find("h3,h4,.novel-title,.title").first().text() || a.find("img").attr("alt") || a.text());
+        if (!title || title.length > 250) return;
+        if (!found.has(url)) found.set(url, { id: url, title, url });
+      });
+      return [...found.values()].slice(0, 30);
+    },
+    async getChapters(params) {
+      if (!params.seriesId) return [];
+      const series = safeUrl(params.seriesId);
+      const initial = await html3(series);
+      const $2 = loadHtml(initial);
+      let listUrl = series, listHtml = initial;
+      if (site.kind === "bin") {
+        const slug2 = new URL(series).pathname.split("/").filter(Boolean).pop();
+        listUrl = `${site.base}/ajax/chapter-archive?novelId=${encodeURIComponent(slug2)}`;
+        listHtml = await html3(listUrl, series);
+      } else if (site.kind === "buddy") {
+        const id = initial.match(/(?:var\s+)?(?:manga_id|novel_id|book_id)\s*[:=]\s*["']?(\d+)/)?.[1] || $2("[data-manga-id],[data-novel-id]").first().attr("data-manga-id") || $2("[data-novel-id]").first().attr("data-novel-id");
+        if (id) {
+          listUrl = `${site.base}/api/manga/${id}/chapters?source=detail`;
+          listHtml = await html3(listUrl, series);
+        }
+      } else if (site.kind === "fire") {
+        listUrl = series.replace(/\/$/, "") + "/chapters";
+        listHtml = await html3(listUrl, series);
+      } else if (site.kind === "madara" && $2(site.chapters).length === 0) {
+        listUrl = series.replace(/\/$/, "") + "/ajax/chapters/";
+        listHtml = await html3(listUrl, series, "POST");
+      }
+      const links = /* @__PURE__ */ new Map();
+      const visited = /* @__PURE__ */ new Set();
+      const queue = [listUrl];
+      const pages = /* @__PURE__ */ new Map([[listUrl, listHtml]]);
+      const deadline = Date.now() + 26e3;
+      while (queue.length) {
+        if (Date.now() > deadline) throw new Error(`${site.name} chapter catalog timed out; retry later.`);
+        const batch = queue.splice(0, 5).filter((url) => !visited.has(url));
+        await Promise.all(batch.map(async (pageUrl) => {
+          visited.add(pageUrl);
+          const page = loadHtml(pages.get(pageUrl) ?? await html3(pageUrl, series));
+          page(site.chapters).each((_, node) => {
+            const a = page(node);
+            let url;
+            try {
+              url = safeUrl(a.attr("href") || "", pageUrl);
+            } catch {
+              return;
+            }
+            if (url === series || links.has(url)) return;
+            const label = clean(a.attr("title") || a.text());
+            if (!label) return;
+            const raw = label.match(/(?:chapter|ch\.?|episode)\s*[:#.-]?\s*(\d+(?:\.\d+)?)/i)?.[1] || new URL(url).pathname.match(/chapter[-_](\d+(?:\.\d+)?)/i)?.[1] || a.find(".chapter-no").text().trim();
+            links.set(url, { url, label, number: raw && Number.isFinite(Number(raw)) ? Number(raw) : null });
+          });
+          page('.pagination a[href],a[rel="next"]').each((_, node) => {
+            let url;
+            try {
+              url = safeUrl(page(node).attr("href") || "", pageUrl);
+            } catch {
+              return;
+            }
+            const path = new URL(url).pathname;
+            if (path !== new URL(listUrl).pathname || visited.has(url) || queue.includes(url)) return;
+            if (!new URL(url).searchParams.has("page")) return;
+            if (visited.size + queue.length >= 100) throw new Error(`${site.name} catalog exceeds the 100-page limit.`);
+            queue.push(url);
+          });
+        }));
+      }
+      const values = [...links.values()];
+      if (site.kind === "madara") values.reverse();
+      return values.map((row, index2) => ({ number: row.number ?? index2 + 1, title: row.label, volume: null, sources: [{ provider: site.name, chapterKey: `${site.name}:${encodeURIComponent(row.url)}`, providerChapterId: row.url, language: "en", translator: null, releaseDate: null }] })).filter((row) => row.number > 0).sort((a, b) => a.number - b.number);
+    },
+    async getContent(chapterKey) {
+      const prefix = `${site.name}:`;
+      if (!chapterKey.startsWith(prefix)) throw new Error("Invalid novel chapter key");
+      const url = safeUrl(decodeURIComponent(chapterKey.slice(prefix.length)));
+      const $2 = loadHtml(await html3(url));
+      const body = $2(site.content).first();
+      if (!body.length) return null;
+      body.find("script,style,iframe,.ads,.advertisement,.adsbygoogle,.chapter-nav,.nav-buttons").remove();
+      const paragraphs = [];
+      body.find("p").each((_, node) => {
+        const text3 = clean($2(node).text());
+        if (text3) paragraphs.push(text3);
+      });
+      if (!paragraphs.length) {
+        body.find("br").replaceWith("\n");
+        paragraphs.push(...body.text().split(/\n+/).map(clean).filter(Boolean));
+      }
+      if (!paragraphs.length) return null;
+      return { provider: site.name, title: clean($2(".chapter-title,h1").first().text()) || null, number: null, paragraphs: paragraphs.map((text3, index2) => ({ text: text3, index: index2 })) };
+    }
+  };
+}
+var scraperNovelProviders = [
+  { name: "novelfull", base: "https://novelfull.com", search: (q) => `https://novelfull.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?!search|chapter|index)[^/]+\.html\/?$/, chapters: "ul.list-chapter li a", content: "#chapter-content" },
+  { name: "novelfire", base: "https://novelfire.net", search: (q) => `https://novelfire.net/search?keyword=${encodeURIComponent(q)}`, series: /^\/book\/[^/]+\/?$/, chapters: "ul.chapter-list li a", content: "#content.clearfix, #content", kind: "fire" },
+  { name: "novelbin", base: "https://novelbin.com", search: (q) => `https://novelbin.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/b\/[^/]+\/?$/, chapters: 'ul.list-chapter li a,#tab-chapters a[href*="chapter-"]', content: "#chr-content", kind: "bin" },
+  { name: "novelbuddy", base: "https://novelbuddy.com", search: (q) => `https://novelbuddy.com/search?keyword=${encodeURIComponent(q)}`, series: /^\/(?:novel|book)\/[^/]+\/?$/, chapters: "ul.chapter-list li a", content: "div.chapter__content div.content-inner", kind: "buddy" },
+  { name: "royalroad", base: "https://www.royalroad.com", search: (q) => `https://www.royalroad.com/fictions/search?title=${encodeURIComponent(q)}`, series: /^\/fiction\/\d+\/[^/]+\/?$/, chapters: "tr.chapter-row td:first-child a[href]", content: ".chapter-inner.chapter-content" },
+  { name: "wuxiaworldsite", base: "https://wuxiaworld.site", search: (q) => `https://wuxiaworld.site/?s=${encodeURIComponent(q)}&post_type=wp-manga`, series: /^\/novel\/[^/]+\/?$/, chapters: ".wp-manga-chapter a", content: ".reading-content .text-left", kind: "madara" }
+].map((site) => createHtmlNovelProvider(site));
+
 // src/providers/registry.ts
 var STREAM_PROVIDERS = [
   justanime_default,
@@ -67624,6 +68417,13 @@ var MANGA_PROVIDERS = [
   leercapitulo_default,
   novelcool_default
 ];
+var NOVEL_PROVIDERS = [
+  wuxiaworld_default,
+  webnovel_default,
+  justlightnovels_default,
+  lightnovelto_default,
+  ...scraperNovelProviders
+];
 var LEAD_STREAM_PROVIDERS = ["nebula"];
 var STREAM_RANK = new Map(STREAM_PROVIDERS.map((p, i) => [p.name, i]));
 var TORRENT_RANK = new Map(
@@ -67664,7 +68464,7 @@ var TokoBundleClass = class {
    * Ensures at least one provider is available
    */
   validate() {
-    const totalProviders = STREAM_PROVIDERS.length + TORRENT_PROVIDERS.length + MANGA_PROVIDERS.length;
+    const totalProviders = STREAM_PROVIDERS.length + TORRENT_PROVIDERS.length + MANGA_PROVIDERS.length + NOVEL_PROVIDERS.length;
     if (totalProviders === 0) {
       return { valid: false, reason: "No providers initialised" };
     }
@@ -67792,7 +68592,8 @@ var TokoBundleClass = class {
     return [
       ...STREAM_PROVIDERS.map((p) => ({ name: p.name, kind: "stream", priority: providerPriorityOf(p.name) })),
       ...TORRENT_PROVIDERS.map((p) => ({ name: p.name, kind: "torrent", priority: providerPriorityOf(p.name) })),
-      ...MANGA_PROVIDERS.map((p, i) => ({ name: p.name, kind: "manga", priority: i }))
+      ...MANGA_PROVIDERS.map((p, i) => ({ name: p.name, kind: "manga", priority: i })),
+      ...NOVEL_PROVIDERS.map((p, i) => ({ name: p.name, kind: "novel", priority: i }))
     ];
   }
   /**
@@ -67928,11 +68729,93 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider45 = MANGA_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider45) throw new ChapterNotFoundError(chapterKey);
-    const pages = await provider45.getPages(chapterKey);
+    const provider49 = MANGA_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider49) throw new ChapterNotFoundError(chapterKey);
+    const pages = await provider49.getPages(chapterKey);
     if (pages.length === 0) throw new ChapterNotFoundError(chapterKey);
     return pages;
+  }
+  // ── Novel Support ───────────────────────────────────────────────────────
+  async enrichNovelParams(params) {
+    if (params.seriesId && params.provider) return params;
+    if (params.titles && params.titles.length > 0) return params;
+    try {
+      const titles = await resolveMangaTitles(params);
+      return titles.length > 0 ? { ...params, titles } : params;
+    } catch {
+      return params;
+    }
+  }
+  async searchThenScrapeNovel(provider49, params) {
+    if (params.seriesId || !provider49.search) return provider49.getChapters(params);
+    const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
+    const queries = buildSearchQueries(titles).slice(0, 4);
+    const candidates = [];
+    for (const query of queries) {
+      candidates.push(...await provider49.search(query));
+      const match3 = pickBestNovelCandidate(titles, candidates);
+      if (match3?.score === 1) return provider49.getChapters({ ...params, provider: provider49.name, seriesId: match3.candidate.id });
+    }
+    const match2 = pickBestNovelCandidate(titles, candidates);
+    return match2 ? provider49.getChapters({ ...params, provider: provider49.name, seriesId: match2.candidate.id }) : [];
+  }
+  /**
+   * Returns novel chapters merged by chapter number.
+   * Multiple providers returning the same chapter number are merged.
+   */
+  async getNovelChapters(params) {
+    const enriched = await this.enrichNovelParams(params);
+    const all = await runProviders(
+      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
+      (p) => this.searchThenScrapeNovel(p, enriched),
+      void 0,
+      { timeoutMs: 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+    );
+    return mergeMangaChapters(all);
+  }
+  /**
+   * Debug variant of getNovelChapters() with diagnostics.
+   */
+  async debugNovelChapters(params) {
+    const enriched = await this.enrichNovelParams(params);
+    const diagnostics = [];
+    const all = await runProviders(
+      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
+      (p) => this.searchThenScrapeNovel(p, enriched),
+      diagnostics,
+      { timeoutMs: 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
+    );
+    return { results: mergeMangaChapters(all), diagnostics };
+  }
+  async getNovelSearch(params) {
+    const query = String(params.query || "").trim().slice(0, 200);
+    if (!query) return { results: [], providerStatus: [] };
+    const rows = await Promise.all(NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider).map(async (p) => {
+      try {
+        const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), 25e3);
+        return { results: matches.slice(0, 20).map((match2) => ({ ...match2, provider: p.name })), status: { provider: p.name, status: matches.length ? "ok" : "empty", resultCount: matches.length } };
+      } catch (error) {
+        return { results: [], status: { provider: p.name, status: "error", resultCount: 0, error: error.message } };
+      }
+    }));
+    return { results: rows.flatMap((row) => row.results), providerStatus: rows.map((row) => row.status) };
+  }
+  /**
+   * Returns text content for a specific novel chapter from the named provider.
+   * Parses chapterKey as "<provider>:<providerChapterId>".
+   */
+  async getNovelContent(params) {
+    const { chapterKey } = params;
+    let providerName = params.provider;
+    if (!providerName) {
+      const colonIdx = chapterKey.indexOf(":");
+      providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
+    }
+    const provider49 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider49) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider49.getContent(chapterKey);
+    if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
+    return content;
   }
   // ── Preview & Indexing ──────────────────────────────────────────────────
   /**
@@ -68025,6 +68908,7 @@ var TokoBundleClass = class {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   MANGA_PROVIDERS,
+  NOVEL_PROVIDERS,
   STREAM_PROVIDERS,
   TORRENT_PROVIDERS
 });

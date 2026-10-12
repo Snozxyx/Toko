@@ -157,3 +157,15 @@ wasmer deploy
 Wasmer supplies the `PORT` environment variable at runtime. The API bootstrap
 installs the API's production dependencies on first start, and the health check
 is available at `/api/v3/health`.
+
+## Novel sources (4.3.2)
+
+Automatic AniList title matching now also searches NovelFull, NovelFire,
+NovelBin, NovelBuddy, RoyalRoad, and wuxiaworld.site. These TypeScript adapters
+use the provider contracts from wongpinter/webnovel-scraper; attribution and the
+MIT license are included in the bundle. They run in desktop and native mobile
+without Python. The official Wuxiaworld.com adapter remains separate.
+
+Chapter catalogs support pagination and the NovelBin/NovelBuddy/Madara AJAX
+routes. HTTP access failures are reported through novel diagnostics. A site
+returning 403 or 410 cannot be treated as a successful empty catalog.

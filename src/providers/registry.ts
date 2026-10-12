@@ -2,7 +2,7 @@
  * Central provider registry for the Toko extension.
  * Import provider lists from here to keep index.ts focused on runtime logic.
  */
-import type { StreamProvider, TorrentProvider, MangaProvider } from '../types/index.js';
+import type { StreamProvider, TorrentProvider, MangaProvider, NovelProvider } from '../types/index.js';
 
 // ── Stream providers ──────────────────────────────────────────────────────────
 // Order is priority order. It is the extension — not the app — that decides
@@ -198,6 +198,27 @@ export const MANGA_PROVIDERS: MangaProvider[] = [
   novelcool,
 ];
 
+// ── Novel providers ───────────────────────────────────────────────────────────
+// Text-chapter sources (not image pages). Order is priority order.
+// `wuxiaworld` leads: it is the only one with a public JSON API, so it maps
+// fastest and most reliably. The other three are plain-HTML catalogues mapped
+// by fuzzy title via the shared AniList (MANGA/NOVEL) resolver, with
+// MangaBaka enrichment applied on the app side. The reader's cross-source
+// fallback skips any source whose content comes back empty.
+import webnovel from './novel/webnovel.js';
+import wuxiaworld from './novel/wuxiaworld.js';
+import justlightnovels from './novel/justlightnovels.js';
+import lightnovelto from './novel/lightnovelto.js';
+import { scraperNovelProviders } from './novel/scraper-sites.js';
+
+export const NOVEL_PROVIDERS: NovelProvider[] = [
+  wuxiaworld,
+  webnovel,
+  justlightnovels,
+  lightnovelto,
+  ...scraperNovelProviders,
+];
+
 // ── Priority ──────────────────────────────────────────────────────────────────
 
 /**
@@ -231,8 +252,7 @@ const TORRENT_RANK = new Map(
 );
 const UNRANKED = STREAM_PROVIDERS.length + TORRENT_PROVIDERS.length + 1000;
 
-export function providerPriorityOf(providerName: string | undefined | null): number {
-  const name = String(providerName || '').trim().toLowerCase();
+export function providerPriorityOf(providerName: string | undefined | null): number {  const name = String(providerName || '').trim().toLowerCase();
   if (!name) return UNRANKED;
   const stream = STREAM_RANK.get(name);
   if (stream !== undefined) return stream;

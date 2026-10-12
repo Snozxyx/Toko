@@ -10,6 +10,7 @@ export {
   STREAM_PROVIDERS,
   TORRENT_PROVIDERS,
   MANGA_PROVIDERS,
+  NOVEL_PROVIDERS,
 } from './providers/registry.js';
 
 // Re-export types for external consumers

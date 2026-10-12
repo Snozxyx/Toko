@@ -611,6 +611,33 @@ function flattenMangaChapters(entries) {
   return rows;
 }
 
+/**
+ * Flatten nested NovelChapterEntry[] to one row per source, preserving the
+ * chapter-level title/volume and the source-level translator so the caller
+ * gets translator and title without a second lookup.
+ */
+function flattenNovelChapters(entries) {
+  const rows = [];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const sources = Array.isArray(entry?.sources) ? entry.sources : [];
+    for (const src of sources) {
+      if (!src?.chapterKey) continue;
+      rows.push({
+        number: entry.number,
+        title: entry.title ?? null,
+        volume: entry.volume ?? null,
+        provider: src.provider ?? null,
+        chapterKey: src.chapterKey,
+        providerChapterId: src.providerChapterId ?? src.chapterKey,
+        language: src.language ?? null,
+        translator: src.translator ?? src.scanlator ?? null,
+        releaseDate: src.releaseDate ?? null,
+      });
+    }
+  }
+  return rows;
+}
+
 // ── Express app ───────────────────────────────────────────────────────────────
 
 const app = express();
@@ -1034,6 +1061,110 @@ app.get('/api/v3/toko/manga/pages', handleMangaPages);
 // Chapter index — alias of manga/chapters for parity with index/episodes.
 app.get('/api/v3/toko/index/chapters', handleMangaChapters);
 
+/**
+ * GET /api/v3/toko/novel/chapters — chapters from all novel providers, merged.
+ *
+ * Query: anilistId | malId | title | titles[] (same contract as manga).
+ * Response: { provider, providers, chapterCount, chapters: [{ number, title,
+ * volume, provider, chapterKey, providerChapterId, language, translator,
+ * releaseDate }] }
+ */
+async function handleNovelChapters(req, res) {
+  const t = getToko();
+  const empty = { provider: null, providers: [], chapterCount: 0, chapters: [] };
+  if (!t || typeof t.getNovelChapters !== 'function') return res.json(empty);
+
+  const params = { ...mangaParamsFromReq(req), provider: req.query.provider || undefined, seriesId: req.query.seriesId || undefined };
+  const key = `novel-chapters:${params.provider || ''}:${params.seriesId || ''}:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
+
+  const hit = cacheGet(key);
+  if (hit) return res.json({ ...hit, cached: true });
+
+  try {
+    let entries;
+    let providerStatus = [];
+    if (typeof t.debugNovelChapters === 'function') {
+      const debug = await t.debugNovelChapters(params);
+      entries = debug && Array.isArray(debug.results) ? debug.results : [];
+      providerStatus = debug && Array.isArray(debug.diagnostics) ? debug.diagnostics : [];
+    } else {
+      entries = await t.getNovelChapters(params);
+    }
+    const chapters = flattenNovelChapters(entries);
+    const providers = [...new Set(chapters.map((c) => c.provider).filter(Boolean))];
+    const result = {
+      provider: providers[0] || null,
+      providers,
+      chapterCount: chapters.length,
+      chapters,
+      providerStatus,
+      cached: false,
+      fetchedAt: new Date().toISOString(),
+    };
+    if (chapters.length > 0) cacheSet(key, result, MANGA_TTL_MS);
+    return res.json(result);
+  } catch (err) {
+    console.error('[toko/novel/chapters]', err.message);
+    return res.status(502).json({ ...empty, error: err.message });
+  }
+}
+
+/**
+ * GET /api/v3/toko/novel/content — ordered paragraphs for one chapter.
+ *
+ * Query: chapterKey (required, "<provider>:<providerChapterId>"), optional
+ * provider / providerChapterId / anilistId.
+ * Response: { paragraphCount, paragraphs: [{ index, text }], title, number }
+ */
+async function handleNovelContent(req, res) {
+  const t = getToko();
+  const empty = { paragraphCount: 0, paragraphs: [] };
+  if (!t || typeof t.getNovelContent !== 'function') return res.json(empty);
+
+  const chapterKey = String(req.query.chapterKey || '').trim();
+  if (!chapterKey) return res.status(400).json({ ...empty, error: 'chapterKey is required' });
+
+  const anilistId = Number(req.query.anilistId);
+  const params = {
+    chapterKey,
+    ...(req.query.provider ? { provider: String(req.query.provider) } : {}),
+    ...(req.query.providerChapterId ? { providerChapterId: String(req.query.providerChapterId) } : {}),
+    ...(Number.isFinite(anilistId) && anilistId > 0 ? { anilistId } : {}),
+  };
+
+  try {
+    const content = await t.getNovelContent(params);
+    const paragraphs = (content && Array.isArray(content.paragraphs) ? content.paragraphs : [])
+      .map((p, idx) => ({
+        index: typeof p?.index === 'number' ? p.index : idx,
+        text: String(p?.text || '').trim(),
+      }))
+      .filter((p) => p.text);
+    if (paragraphs.length === 0) {
+      return res.status(404).json({ ...empty, error: `Chapter not found: ${chapterKey}` });
+    }
+    return res.json({
+      paragraphCount: paragraphs.length,
+      paragraphs,
+      title: content.title ?? null,
+      number: content.number ?? null,
+      provider: content.provider ?? params.provider ?? null,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[toko/novel/content]', err.message);
+    const status = /not found/i.test(err.message) ? 404 : 502;
+    return res.status(status).json({ ...empty, error: err.message });
+  }
+}
+
+app.get('/api/v3/toko/novel/chapters', handleNovelChapters);
+app.get('/api/v3/toko/novel/search', async (req, res) => {
+  try { const t = getToko(); if (!t?.getNovelSearch) return res.status(501).json({ results: [], error: 'Update Toko to enable search' }); return res.json(await t.getNovelSearch({ query: req.query.query || '', provider: req.query.provider || undefined })); }
+  catch (error) { return res.status(502).json({ results: [], error: error.message }); }
+});
+app.get('/api/v3/toko/novel/content', handleNovelContent);
+
 // Cache management
 app.delete('/api/v3/toko/cache', (_req, res) => {
   const size = cache.size;
@@ -1069,7 +1200,7 @@ app.use('/api/v3', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, HOST, () => {
   console.log(`[toko-api] listening on http://${HOST}:${PORT}/api/v3`);
-  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /download/:anilistId/:episode  /manga/chapters  /manga/pages  /debug  /health`);
+  console.log(`[toko-api] endpoints: /stream  /torrent  /sources  /download/:anilistId/:episode  /manga/chapters  /manga/pages  /novel/chapters  /novel/content  /debug  /health`);
   getToko();
 });
 

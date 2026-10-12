@@ -2,16 +2,18 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "4.2.0",
+  "version": "4.3.2",
   "author": "Snozxyx",
-  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), and manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool).",
+  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool), and novel reading (Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, wuxiaworld.site).",
   "categories": [
     "Anime Stream",
     "Torrent",
-    "Manga"
+    "Manga",
+    "Novel"
   ],
   "capabilities": [
     "manga",
+    "novel",
     "preview",
     "websiteIndex"
   ],
@@ -24,7 +26,10 @@
       "stream",
       "torrent",
       "manga/chapters",
-      "manga/pages"
+      "manga/pages",
+      "novel/chapters",
+      "novel/content",
+      "novel/search"
     ],
     "healthPath": "/health"
   },
@@ -303,6 +308,21 @@
     "network:domain:www.myvi.ru",
     "network:domain:www.vidking.net",
     "network:domain:www3.seriesmetro.net",
-    "network:domain:xupalace.org"
+    "network:domain:xupalace.org",
+    "network:domain:www.webnovel.com",
+    "network:domain:webnovel.com",
+    "network:domain:www.wuxiaworld.com",
+    "network:domain:wuxiaworld.com",
+    "network:domain:www.justlightnovels.com",
+    "network:domain:justlightnovels.com",
+    "network:domain:lightnovel.to",
+    "network:domain:www.lightnovel.to",
+    "network:domain:api2.wuxiaworld.com",
+    "network:domain:novelfull.com",
+    "network:domain:novelfire.net",
+    "network:domain:novelbin.com",
+    "network:domain:novelbuddy.com",
+    "network:domain:www.royalroad.com",
+    "network:domain:wuxiaworld.site"
   ]
 }

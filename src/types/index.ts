@@ -24,11 +24,21 @@ export type {
   MangaChapterParams,
 } from './manga.types.js';
 
+// Novel types
+export type {
+  NovelChapterSource,
+  NovelChapterEntry,
+  NovelParagraph,
+  NovelContentEntry,
+  NovelChapterParams,
+} from './novel.types.js';
+
 // Provider types
 export type {
   StreamProvider,
   TorrentProvider,
   MangaProvider,
+  NovelProvider,
   ProviderSites,
   ProviderHealth,
   ProviderDiagnostic,

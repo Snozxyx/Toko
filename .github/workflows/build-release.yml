@@ -60,6 +60,14 @@ jobs:
           body: |
             ## Toko Extension ${{ steps.version.outputs.version }}
 
+            ### Novel support
+            - Automatic title search and chapter mapping using AniList titles and aliases.
+            - Chapter lists and readable text from 10 novel adapters: Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, and wuxiaworld.site.
+            - Native mobile-compatible HTTP adapters, paginated catalogs, and AJAX chapter discovery.
+            - Stricter matching preserves subtitles and sequel numbers to avoid mixing unrelated books.
+            - Provider diagnostics report access errors; availability depends on the upstream site. No paid-chapter unlocking is provided.
+            - MIT attribution for the adapted webnovel-scraper provider contracts is included in the download.
+
             ### Installation
             1. Download `toko.kai`
             2. Install in Tatakai via Settings → Extensions → Install from file
@@ -68,6 +76,7 @@ jobs:
             - **Stream**: 82 providers — anime, movies, and TV (HLS, MP4, captions, language metadata)
             - **Torrent**: 6 providers — magnet links, `.torrent` files, seeders/leechers
             - **Manga**: 16 providers — chapters, pages, scanlator metadata
+            - **Novel**: 10 providers — automatic matching, chapter catalogs, readable text, and diagnostics
           files: dist/toko.kai
           draft: false
           prerelease: false

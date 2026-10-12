@@ -44,10 +44,23 @@ export interface TorrentProvider extends ProviderSites {
   batch(opts: SourceOptions): Promise<SourceResult[]>;
 }
 
+import type {
+  NovelChapterParams,
+  NovelChapterEntry,
+  NovelContentEntry,
+} from './novel.types.js';
+
 export interface MangaProvider extends ProviderSites {
   name: string;
   getChapters(params: MangaChapterParams): Promise<MangaChapterEntry[]>;
   getPages(chapterKey: string): Promise<MangaPageEntry[]>;
+}
+
+export interface NovelProvider extends ProviderSites {
+  name: string;
+  search?(query: string): Promise<Array<{ id: string; title: string; url?: string }>>;
+  getChapters(params: NovelChapterParams): Promise<NovelChapterEntry[]>;
+  getContent(chapterKey: string): Promise<NovelContentEntry | null>;
 }
 
 /** One provider's reachability verdict, from `TokoBundleClass.checkProviders()`. */
