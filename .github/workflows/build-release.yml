@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - 'toko-v*'
   workflow_dispatch:
     inputs:
       version:
@@ -58,25 +59,19 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: Toko Extension ${{ steps.version.outputs.version }}
           body: |
-            ## Toko Extension ${{ steps.version.outputs.version }}
+            ## Toko 4.5.4
 
-            ### Novel support
-            - Automatic title search and chapter mapping using AniList titles and aliases.
-            - Chapter lists and readable text from 10 novel adapters: Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, and wuxiaworld.site.
-            - Native mobile-compatible HTTP adapters, paginated catalogs, and AJAX chapter discovery.
-            - Stricter matching preserves subtitles and sequel numbers to avoid mixing unrelated books.
-            - Provider diagnostics report access errors; availability depends on the upstream site. No paid-chapter unlocking is provided.
-            - MIT attribution for the adapted webnovel-scraper provider contracts is included in the download.
+            - Prevent manga providers from selecting same-title novels and inflating chapter counts.
+            - Check NovelCool reader pages for actual manga panels before accepting a chapter catalog.
+            - Improve MangaDex title mapping, multilingual catalog pagination, scanlator labels, and chapter-zero handling.
+            - Keep readable MangaDex chapters while excluding empty, external-only, and future releases.
 
             ### Installation
-            1. Download `toko.kai`
-            2. Install in Tatakai via Settings → Extensions → Install from file
+            1. Download `toko.kai`.
+            2. Install in Tatakai via Settings → Extensions → Install from file.
+            3. Refresh the manga chapter list in the updated Tatakai app to clear cached results.
 
-            ### Coverage
-            - **Stream**: 82 providers — anime, movies, and TV (HLS, MP4, captions, language metadata)
-            - **Torrent**: 6 providers — magnet links, `.torrent` files, seeders/leechers
-            - **Manga**: 16 providers — chapters, pages, scanlator metadata
-            - **Novel**: 10 providers — automatic matching, chapter catalogs, readable text, and diagnostics
+            Validation: extension build and manga matching, MangaDex catalog, and mobile novel bundle regression checks passed. Physical mobile-device verification remains pending.
           files: dist/toko.kai
           draft: false
           prerelease: false

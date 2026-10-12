@@ -34,6 +34,7 @@ interface MdManga {
     title?: Record<string, string>;
     altTitles?: Array<Record<string, string>>;
     links?: Record<string, string>;
+    availableTranslatedLanguages?: string[];
   };
 }
 
@@ -46,6 +47,7 @@ interface MdChapter {
     translatedLanguage?: string | null;
     publishAt?: string | null;
     pages?: number;
+    externalUrl?: string | null;
   };
   relationships?: Array<{ type: string; attributes?: { name?: string } }>;
 }
@@ -68,7 +70,7 @@ function allNames(m: MdManga): string[] {
 }
 
 /** Resolve an AniList id / titles to a MangaDex manga id. Deterministic first. */
-async function resolveMangaId(params: MangaChapterParams): Promise<string | null> {
+async function resolveMangaId(params: MangaChapterParams): Promise<MdManga | null> {
   const titles = await resolveMangaTitles(params);
   if (titles.length === 0) return null;
 
@@ -89,13 +91,13 @@ async function resolveMangaId(params: MangaChapterParams): Promise<string | null
         seen.add(m.id);
         pool.push(m);
         // Deterministic hit: the AniList id is stamped on the title itself.
-        if (wantAl && m.attributes?.links?.al === wantAl) return m.id;
+        if (wantAl && String(m.attributes?.links?.al) === wantAl) return m;
       }
     }
   }
 
   const best = pickBestMangaCandidate(titles, pool, (m) => allNames(m), 0.6);
-  return best ? best.candidate.id : null;
+  return best ? best.candidate : null;
 }
 
 const provider: MangaProvider = {
@@ -104,35 +106,49 @@ const provider: MangaProvider = {
 
   async getChapters(params: MangaChapterParams): Promise<MangaChapterEntry[]> {
     try {
-      const mangaId = await resolveMangaId(params);
-      if (!mangaId) return [];
+      const manga = await resolveMangaId(params);
+      if (!manga) return [];
 
       const byNumber = new Map<number, MangaChapterEntry>();
       const limit = 500;
-      let offset = 0;
-      let total = Infinity;
+      const seen = new Set<string>();
+      const languages = [...new Set(manga.attributes?.availableTranslatedLanguages || [])];
+      const feeds: Array<string | undefined> = [undefined];
 
       // Page through the feed in ALL translated languages — each language's
       // chapter becomes its own source and the reader picks per chapter.
       // limit=500 (MangaDex max) clears most series in a couple of requests;
       // the offset cap is raised to absorb the larger all-language feed while
       // still bounding a pathological title.
-      while (offset < total && offset < 20000) {
+      for (const language of feeds) {
+      let offset = 0;
+      let total = Infinity;
+      while (offset < total && offset + limit <= 10000) {
         const url =
-          `${API}/manga/${mangaId}/feed?limit=${limit}&offset=${offset}` +
+          `${API}/manga/${manga.id}/feed?limit=${limit}&offset=${offset}` +
           `&order[chapter]=asc&order[volume]=asc` +
-          `&includes[]=scanlation_group` +
+          `&includes[]=scanlation_group&includeExternalUrl=0&includeEmptyPages=0&includeFuturePublishAt=0` +
+          (language ? `&translatedLanguage[]=${encodeURIComponent(language)}` : '') +
           CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join('');
         const res = await fetchJson<{ data?: MdChapter[]; total?: number }>(url, { timeoutMs: 12000 });
+        // Keep successfully fetched pages when a later page is unavailable.
+        if (!res) break;
         const rows = res?.data ?? [];
         total = typeof res?.total === 'number' ? res.total : rows.length;
+        // Large multilingual feeds exceed one offset window. Partition by
+        // language instead, preserving every group and deduplicating UUIDs.
+        const partition = !language && total > 10000 && languages.length > 1;
+        if (partition) feeds.push(...languages);
         if (rows.length === 0) break;
 
         for (const ch of rows) {
-          const num = parseFloat(String(ch.attributes?.chapter ?? ''));
+          const rawNumber = String(ch.attributes?.chapter ?? '').trim();
+          if (!/^\d+(?:\.\d+)?$/.test(rawNumber) || ch.attributes?.externalUrl || ch.attributes?.pages === 0 || !ch.id || seen.has(ch.id)) continue;
+          const num = Number(rawNumber);
           if (!Number.isFinite(num)) continue;
+          seen.add(ch.id);
           const scanlator =
-            ch.relationships?.find((r) => r.type === 'scanlation_group')?.attributes?.name ?? null;
+            ch.relationships?.filter(r => r.type === 'scanlation_group').map(r => r.attributes?.name).filter(Boolean).join(', ') || null;
           const source: MangaChapterSource = {
             provider: PROVIDER_NAME,
             chapterKey: `${PROVIDER_NAME}:${ch.id}`,
@@ -154,6 +170,8 @@ const provider: MangaProvider = {
           }
         }
         offset += limit;
+        if (partition) break;
+      }
       }
 
       const entries = Array.from(byNumber.values());

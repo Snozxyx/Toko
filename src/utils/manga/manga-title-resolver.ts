@@ -13,6 +13,7 @@
 
 import { fetchResponse } from '../http/fetch.js';
 import { normalizeTitle, scoreMatch } from '../scraping/title-normalizer.js';
+import { isNovelMangaCandidate } from './manga-format.js';
 import type { MangaChapterParams } from '../../types/index.js';
 
 const ANILIST_GRAPHQL = 'https://graphql.anilist.co';
@@ -100,9 +101,9 @@ export function pickBestMangaCandidate<T>(
 
   let best: { candidate: T; score: number } | null = null;
   for (const candidate of candidates) {
-    const names = getNames(candidate)
-      .filter((n): n is string => Boolean(n && n.trim()))
-      .map((n) => normalizeTitle(n));
+    const rawNames = getNames(candidate).filter((n): n is string => Boolean(n && n.trim()));
+    if (isNovelMangaCandidate(candidate, rawNames)) continue;
+    const names = rawNames.map((n) => normalizeTitle(n));
     let score = 0;
     for (const name of names) {
       for (const target of targets) {

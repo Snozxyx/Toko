@@ -45626,6 +45626,63 @@ function scoreMatch(query, candidate) {
   return overlap / Math.max(qWords.length, cWords.length);
 }
 
+// src/utils/manga/manga-format.ts
+function isNovelFormat(value) {
+  const format = String(value ?? "").trim().toLowerCase().replace(/\([^)]*\)/g, "").replace(/[\s_-]+/g, "");
+  return [
+    "novel",
+    "lightnovel",
+    "webnovel",
+    "ln",
+    "wn",
+    "prose",
+    "textnovel"
+  ].includes(format);
+}
+function isNovelMangaCandidate(candidate, names) {
+  const record = candidate && typeof candidate === "object" ? candidate : {};
+  if (record.isNovel === true || record.is_novel === true) return true;
+  const formats = [
+    record.format,
+    record.type,
+    record.medium,
+    record.mediaType,
+    record.contentType
+  ];
+  if (formats.some(isNovelFormat)) return true;
+  if (names.some(
+    (name) => /[([]\s*(?:novel|light[\s-]*novel|web[\s-]*novel|ln|wn)\s*[)\]]\s*$/i.test(
+      name
+    ) || /^\s*[([]\s*(?:novel|light[\s-]*novel|web[\s-]*novel|ln|wn)\s*[)\]]/i.test(
+      name
+    ) || /\s[-–:]\s*(?:novel|light[\s-]*novel|web[\s-]*novel)\s*$/i.test(name)
+  ))
+    return true;
+  const knownComic = formats.some(
+    (value) => ["comic", "manga", "manhwa", "manhua", "webtoon"].includes(
+      String(value || "").toLowerCase()
+    )
+  );
+  if (knownComic) return false;
+  const path = String(record.href || record.url || "").split(/[?#]/)[0];
+  const novelCool = /novelcool\.com/i.test(path);
+  return !novelCool && /\/novels?\//i.test(path) || /-(?:light-|web-)?novel(?:\.html)?\/?$/i.test(path);
+}
+function hasNovelSeriesMetadata($2) {
+  let novel = false;
+  $2(
+    ".post-content_item, .summary-content-item, [data-content-type], [data-medium]"
+  ).each((_, el) => {
+    const item = $2(el);
+    if (isNovelFormat(item.attr("data-content-type")) || isNovelFormat(item.attr("data-medium")))
+      novel = true;
+    const label = item.find(".summary-heading, .label, dt").first().text().trim().replace(/:$/, "").trim().toLowerCase();
+    if (["type", "format", "medium"].includes(label) && isNovelFormat(item.find(".summary-content, .value, dd").first().text()))
+      novel = true;
+  });
+  return novel;
+}
+
 // src/utils/manga/manga-title-resolver.ts
 var ANILIST_GRAPHQL = "https://graphql.anilist.co";
 var LATIN_ONLY_RE2 = /^[\p{Script=Latin}\p{Nd}\p{P}\p{Zs}\p{S}]+$/u;
@@ -45672,7 +45729,9 @@ function pickBestMangaCandidate(titles, candidates, getNames, threshold = 0.6) {
   if (targets.length === 0 || candidates.length === 0) return null;
   let best = null;
   for (const candidate of candidates) {
-    const names = getNames(candidate).filter((n) => Boolean(n && n.trim())).map((n) => normalizeTitle(n));
+    const rawNames = getNames(candidate).filter((n) => Boolean(n && n.trim()));
+    if (isNovelMangaCandidate(candidate, rawNames)) continue;
+    const names = rawNames.map((n) => normalizeTitle(n));
     let score = 0;
     for (const name of names) {
       for (const target of targets) {
@@ -65870,55 +65929,67 @@ async function resolveMangaId(params) {
       if (m?.id && !seen.has(m.id)) {
         seen.add(m.id);
         pool.push(m);
-        if (wantAl && m.attributes?.links?.al === wantAl) return m.id;
+        if (wantAl && String(m.attributes?.links?.al) === wantAl) return m;
       }
     }
   }
   const best = pickBestMangaCandidate(titles, pool, (m) => allNames(m), 0.6);
-  return best ? best.candidate.id : null;
+  return best ? best.candidate : null;
 }
 var provider29 = {
   name: PROVIDER_NAME,
   sites: ["https://mangadex.org"],
   async getChapters(params) {
     try {
-      const mangaId = await resolveMangaId(params);
-      if (!mangaId) return [];
+      const manga = await resolveMangaId(params);
+      if (!manga) return [];
       const byNumber = /* @__PURE__ */ new Map();
       const limit = 500;
-      let offset = 0;
-      let total = Infinity;
-      while (offset < total && offset < 2e4) {
-        const url = `${API3}/manga/${mangaId}/feed?limit=${limit}&offset=${offset}&order[chapter]=asc&order[volume]=asc&includes[]=scanlation_group` + CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join("");
-        const res = await fetchJson(url, { timeoutMs: 12e3 });
-        const rows = res?.data ?? [];
-        total = typeof res?.total === "number" ? res.total : rows.length;
-        if (rows.length === 0) break;
-        for (const ch of rows) {
-          const num = parseFloat(String(ch.attributes?.chapter ?? ""));
-          if (!Number.isFinite(num)) continue;
-          const scanlator = ch.relationships?.find((r) => r.type === "scanlation_group")?.attributes?.name ?? null;
-          const source = {
-            provider: PROVIDER_NAME,
-            chapterKey: `${PROVIDER_NAME}:${ch.id}`,
-            providerChapterId: ch.id,
-            language: ch.attributes?.translatedLanguage ?? "en",
-            scanlator,
-            releaseDate: ch.attributes?.publishAt ?? null
-          };
-          const existing = byNumber.get(num);
-          if (existing) {
-            existing.sources.push(source);
-          } else {
-            byNumber.set(num, {
-              number: num,
-              title: ch.attributes?.title || null,
-              volume: ch.attributes?.volume ?? null,
-              sources: [source]
-            });
+      const seen = /* @__PURE__ */ new Set();
+      const languages = [...new Set(manga.attributes?.availableTranslatedLanguages || [])];
+      const feeds = [void 0];
+      for (const language of feeds) {
+        let offset = 0;
+        let total = Infinity;
+        while (offset < total && offset + limit <= 1e4) {
+          const url = `${API3}/manga/${manga.id}/feed?limit=${limit}&offset=${offset}&order[chapter]=asc&order[volume]=asc&includes[]=scanlation_group&includeExternalUrl=0&includeEmptyPages=0&includeFuturePublishAt=0` + (language ? `&translatedLanguage[]=${encodeURIComponent(language)}` : "") + CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join("");
+          const res = await fetchJson(url, { timeoutMs: 12e3 });
+          if (!res) break;
+          const rows = res?.data ?? [];
+          total = typeof res?.total === "number" ? res.total : rows.length;
+          const partition = !language && total > 1e4 && languages.length > 1;
+          if (partition) feeds.push(...languages);
+          if (rows.length === 0) break;
+          for (const ch of rows) {
+            const rawNumber = String(ch.attributes?.chapter ?? "").trim();
+            if (!/^\d+(?:\.\d+)?$/.test(rawNumber) || ch.attributes?.externalUrl || ch.attributes?.pages === 0 || !ch.id || seen.has(ch.id)) continue;
+            const num = Number(rawNumber);
+            if (!Number.isFinite(num)) continue;
+            seen.add(ch.id);
+            const scanlator = ch.relationships?.filter((r) => r.type === "scanlation_group").map((r) => r.attributes?.name).filter(Boolean).join(", ") || null;
+            const source = {
+              provider: PROVIDER_NAME,
+              chapterKey: `${PROVIDER_NAME}:${ch.id}`,
+              providerChapterId: ch.id,
+              language: ch.attributes?.translatedLanguage ?? "en",
+              scanlator,
+              releaseDate: ch.attributes?.publishAt ?? null
+            };
+            const existing = byNumber.get(num);
+            if (existing) {
+              existing.sources.push(source);
+            } else {
+              byNumber.set(num, {
+                number: num,
+                title: ch.attributes?.title || null,
+                volume: ch.attributes?.volume ?? null,
+                sources: [source]
+              });
+            }
           }
+          offset += limit;
+          if (partition) break;
         }
-        offset += limit;
       }
       const entries = Array.from(byNumber.values());
       for (const e of entries) e.sources.sort(orderSources);
@@ -66515,7 +66586,7 @@ async function search6(query) {
   const docs = [];
   for (const hit of res?.hits ?? []) {
     const d = hit?.document;
-    if (d?.id && (d.medium ?? "Comic") !== "Novel") docs.push(d);
+    if (d?.id && !isNovelFormat(d.medium)) docs.push(d);
   }
   return docs;
 }
@@ -66831,7 +66902,7 @@ async function searchApi(query) {
     if (!json?.data) return [];
     const out = [];
     for (const d of json.data) {
-      if (d?.url && d?.title) out.push({ url: d.url, name: d.title });
+      if (d?.url && d?.title) out.push({ url: d.url, name: d.title, format: d.format || d.type });
     }
     return out;
   } catch {
@@ -66890,6 +66961,7 @@ var provider38 = {
       }
       if (!html3) return [];
       const $2 = loadHtml(html3);
+      if (hasNovelSeriesMetadata($2)) return [];
       const byNumber = /* @__PURE__ */ new Map();
       $2("li.wp-manga-chapter a[href], .wp-manga-chapter a[href]").each((_, el) => {
         const href = ($2(el).attr("href") || "").trim();
@@ -66967,7 +67039,7 @@ async function searchApi2(query) {
     if (!json?.data) return [];
     const out = [];
     for (const d of json.data) {
-      if (d?.url && d?.title) out.push({ url: d.url, name: d.title });
+      if (d?.url && d?.title) out.push({ url: d.url, name: d.title, format: d.format || d.type });
     }
     return out;
   } catch {
@@ -67026,6 +67098,7 @@ var provider39 = {
       }
       if (!html3) return [];
       const $2 = loadHtml(html3);
+      if (hasNovelSeriesMetadata($2)) return [];
       const byNumber = /* @__PURE__ */ new Map();
       $2("li.wp-manga-chapter a[href], .wp-manga-chapter a[href]").each((_, el) => {
         const href = ($2(el).attr("href") || "").trim();
@@ -67103,7 +67176,7 @@ async function searchApi3(query) {
     if (!json?.data) return [];
     const out = [];
     for (const d of json.data) {
-      if (d?.url && d?.title) out.push({ url: d.url, name: d.title });
+      if (d?.url && d?.title) out.push({ url: d.url, name: d.title, format: d.format || d.type });
     }
     return out;
   } catch {
@@ -67162,6 +67235,7 @@ var provider40 = {
       }
       if (!html3) return [];
       const $2 = loadHtml(html3);
+      if (hasNovelSeriesMetadata($2)) return [];
       const byNumber = /* @__PURE__ */ new Map();
       $2("li.wp-manga-chapter a[href], .wp-manga-chapter a[href]").each((_, el) => {
         const href = ($2(el).attr("href") || "").trim();
@@ -67536,7 +67610,7 @@ async function search11(query) {
     const href = (a.attr("href") || "").trim();
     const name = (card.find(".book-name").first().text() || a.attr("title") || a.text()).trim();
     if (!href || !name || byHref.has(href)) return;
-    byHref.set(href, { href, name });
+    byHref.set(href, { href: toUrl2(href), name });
   });
   if (byHref.size === 0) {
     $2('a[href*="/novel/"]').each((_, el) => {
@@ -67544,7 +67618,7 @@ async function search11(query) {
       const href = (a.attr("href") || "").trim();
       const name = (a.attr("title") || a.text()).trim();
       if (!href || !name || !/\/novel\/.+\.html/.test(href) || byHref.has(href)) return;
-      byHref.set(href, { href, name });
+      byHref.set(href, { href: toUrl2(href), name });
     });
   }
   return Array.from(byHref.values());
@@ -67562,8 +67636,23 @@ async function resolveSeriesHref2(params) {
       }
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
-  return best ? best.candidate.href : null;
+  while (pool.length) {
+    const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+    if (!best) return null;
+    pool.splice(pool.indexOf(best.candidate), 1);
+    const html3 = await fetchText(toUrl2(best.candidate.href), { timeoutMs: 12e3 });
+    if (!html3) continue;
+    const $2 = loadHtml(html3);
+    if (hasNovelSeriesMetadata($2)) continue;
+    const href = $2('.chapter-item-list .chp-item a[href*="/chapter/"]').first().attr("href");
+    if (!href) continue;
+    const sample = await fetchText(toUrl2(href), { timeoutMs: 8e3 });
+    if (!sample) continue;
+    const panels = [];
+    collectPanels(loadHtml(sample), panels, /* @__PURE__ */ new Set());
+    if (panels.length) return { href: best.candidate.href, html: html3 };
+  }
+  return null;
 }
 function parseChapterNumber(label, href) {
   let m = label.match(/ch(?:apter)?\.?\s*(\d+(?:\.\d+)?)/i);
@@ -67593,11 +67682,9 @@ var provider44 = {
   sites: ["https://novelcool.com", "https://www.novelcool.com", "https://img.novelcool.com"],
   async getChapters(params) {
     try {
-      const href = await resolveSeriesHref2(params);
-      if (!href) return [];
-      const html3 = await fetchText(toUrl2(href), { timeoutMs: 12e3 });
-      if (!html3) return [];
-      const $2 = loadHtml(html3);
+      const series = await resolveSeriesHref2(params);
+      if (!series) return [];
+      const $2 = loadHtml(series.html);
       const byNumber = /* @__PURE__ */ new Map();
       $2(".chapter-item-list .chp-item").each((_, el) => {
         const item = $2(el);

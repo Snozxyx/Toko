@@ -27,6 +27,7 @@ import type {
 
 import { fetchJson } from '../../utils/http/fetch.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { isNovelFormat } from '../../utils/manga/manga-format.js';
 
 const BASE = 'https://atsu.moe';
 const CDN = 'https://cdn.atsu.moe';
@@ -69,7 +70,7 @@ async function search(query: string): Promise<AtsuDoc[]> {
   const docs: AtsuDoc[] = [];
   for (const hit of res?.hits ?? []) {
     const d = hit?.document;
-    if (d?.id && (d.medium ?? 'Comic') !== 'Novel') docs.push(d);
+    if (d?.id && !isNovelFormat(d.medium)) docs.push(d);
   }
   return docs;
 }

@@ -31,6 +31,7 @@ import type {
 import { loadHtml } from '../../utils/http/fetch.js';
 import { fetchTextWithBypass } from '../../utils/common/fetch-bypass.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { hasNovelSeriesMetadata } from '../../utils/manga/manga-format.js';
 
 const BASE = 'https://toongod.org';
 const PROVIDER_NAME = 'toongod';
@@ -41,6 +42,7 @@ interface TgCandidate {
   /** Full detail URL (whatever post-type base the site uses). */
   url: string;
   name: string;
+  format?: string;
 }
 
 /** Parse a chapter ordinal from its URL first, then its link text. */
@@ -69,11 +71,11 @@ async function searchApi(query: string): Promise<TgCandidate[]> {
   });
   if (!text) return [];
   try {
-    const json = JSON.parse(text) as { success?: boolean; data?: Array<{ title?: string; url?: string }> };
+    const json = JSON.parse(text) as { success?: boolean; data?: Array<{ title?: string; url?: string; type?: string; format?: string }> };
     if (!json?.data) return [];
     const out: TgCandidate[] = [];
     for (const d of json.data) {
-      if (d?.url && d?.title) out.push({ url: d.url, name: d.title });
+      if (d?.url && d?.title) out.push({ url: d.url, name: d.title, format: d.format || d.type });
     }
     return out;
   } catch {
@@ -145,6 +147,7 @@ const provider: MangaProvider = {
       }
       if (!html) return [];
       const $ = loadHtml(html);
+      if (hasNovelSeriesMetadata($)) return [];
 
       const byNumber = new Map<number, MangaChapterEntry>();
       $('li.wp-manga-chapter a[href], .wp-manga-chapter a[href]').each((_, el) => {

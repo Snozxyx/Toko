@@ -7,7 +7,7 @@
  * (www=en, es/br/it/ru/de/fr); we default to the English `www` host. Both novels
  * and comics live under `/novel/{Title-With-Hyphens}.html`, so we cannot tell them
  * apart from search alone — the manga/novel split surfaces at read time: only comic
- * chapters render `img.mangaread-manga-pic`, so a text novel simply yields no pages.
+ * chapters render `img.mangaread-manga-pic`; verify a reader sample before accepting its chapter list.
  *
  * Three request shapes:
  *   - search   → `/search/?name=<query>`; result cards are `.book-item`, title in
@@ -50,6 +50,7 @@ import type {
 import { fetchText, loadHtml } from '../../utils/http/fetch.js';
 import type { TokoCheerio } from '../../utils/http/fetch.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { hasNovelSeriesMetadata } from '../../utils/manga/manga-format.js';
 
 const BASE = 'https://www.novelcool.com';
 const PROVIDER_NAME = 'novelcool';
@@ -79,7 +80,7 @@ async function search(query: string): Promise<NcCandidate[]> {
     const href = (a.attr('href') || '').trim();
     const name = (card.find('.book-name').first().text() || a.attr('title') || a.text()).trim();
     if (!href || !name || byHref.has(href)) return;
-    byHref.set(href, { href, name });
+    byHref.set(href, { href:toUrl(href), name });
   });
 
   // Fallback: any /novel/{Title}.html anchor carrying text/title.
@@ -89,7 +90,7 @@ async function search(query: string): Promise<NcCandidate[]> {
       const href = (a.attr('href') || '').trim();
       const name = (a.attr('title') || a.text()).trim();
       if (!href || !name || !/\/novel\/.+\.html/.test(href) || byHref.has(href)) return;
-      byHref.set(href, { href, name });
+      byHref.set(href, { href:toUrl(href), name });
     });
   }
 
@@ -97,7 +98,7 @@ async function search(query: string): Promise<NcCandidate[]> {
 }
 
 /** Resolve an AniList id / titles to a NovelCool series href via fuzzy match. */
-async function resolveSeriesHref(params: MangaChapterParams): Promise<string | null> {
+async function resolveSeriesHref(params: MangaChapterParams): Promise<{href:string;html:string} | null> {
   const titles = await resolveMangaTitles(params);
   if (titles.length === 0) return null;
 
@@ -112,8 +113,21 @@ async function resolveSeriesHref(params: MangaChapterParams): Promise<string | n
     }
   }
 
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
-  return best ? best.candidate.href : null;
+  while(pool.length) {
+    const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+    if(!best)return null;
+    pool.splice(pool.indexOf(best.candidate),1);
+    const html=await fetchText(toUrl(best.candidate.href),{timeoutMs:12000});
+    if(!html)continue;
+    const $=loadHtml(html);if(hasNovelSeriesMetadata($))continue;
+    const href=$('.chapter-item-list .chp-item a[href*="/chapter/"]').first().attr('href');
+    if(!href)continue;
+    const sample=await fetchText(toUrl(href),{timeoutMs:8000});
+    if(!sample)continue;
+    const panels:string[]=[];collectPanels(loadHtml(sample),panels,new Set());
+    if(panels.length)return {href:best.candidate.href,html};
+  }
+  return null;
 }
 
 /** Chapter number from a label ("Vol.TBD Ch.240", "Chapter 1") or the href slug. */
@@ -151,12 +165,9 @@ const provider: MangaProvider = {
 
   async getChapters(params: MangaChapterParams): Promise<MangaChapterEntry[]> {
     try {
-      const href = await resolveSeriesHref(params);
-      if (!href) return [];
-
-      const html = await fetchText(toUrl(href), { timeoutMs: 12000 });
-      if (!html) return [];
-      const $ = loadHtml(html);
+      const series = await resolveSeriesHref(params);
+      if (!series) return [];
+      const $ = loadHtml(series.html);
 
       const byNumber = new Map<number, MangaChapterEntry>();
       $('.chapter-item-list .chp-item').each((_, el) => {
