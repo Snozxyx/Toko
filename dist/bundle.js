@@ -19284,8 +19284,8 @@ var require_redirect_handler = __commonJS({
           this.handler.onResponseStart?.(controller, statusCode, headers, statusMessage);
           return;
         }
-        const { origin, pathname, search: search13 } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path = search13 ? `${pathname}${search13}` : pathname;
+        const { origin, pathname, search: search14 } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
+        const path = search14 ? `${pathname}${search14}` : pathname;
         const redirectUrlString = `${origin}${path}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
@@ -37041,7 +37041,7 @@ function getLoad(parse8, render3) {
       if (typeof selector !== "string") {
         throw new TypeError("Unexpected type of selector");
       }
-      let search13 = selector;
+      let search14 = selector;
       const searchContext = context ? (
         // If we don't have a context, maybe we have a root, from loading
         typeof context === "string" ? isHtml(context) ? (
@@ -37049,7 +37049,7 @@ function getLoad(parse8, render3) {
           new LoadedCheerio([parse8(context, options2, false, null)], rootInstance, options2)
         ) : (
           // $('li', 'ul')
-          (search13 = `${context} ${search13}`, rootInstance)
+          (search14 = `${context} ${search14}`, rootInstance)
         ) : isCheerio(context) ? (
           // $('li', $)
           context
@@ -37060,7 +37060,7 @@ function getLoad(parse8, render3) {
       ) : rootInstance;
       if (!searchContext)
         return instance;
-      return searchContext.find(search13);
+      return searchContext.find(search14);
     }
     Object.assign(initialize, static_exports, {
       load: load2,
@@ -46293,19 +46293,19 @@ function resolveProviderRunOptions(opts) {
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider52, fn, options) {
+async function runProviderWithRetry(provider53, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider52)),
+        Promise.resolve().then(() => fn(provider53)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider52.name,
+          provider: provider53.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -46318,7 +46318,7 @@ async function runProviderWithRetry(provider52, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider52.name,
+            provider: provider53.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -46336,7 +46336,7 @@ async function runProviderWithRetry(provider52, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider52.name,
+      provider: provider53.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -46412,15 +46412,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider52 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider52, fn, options);
+      const provider53 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider53, fn, options);
       emit(
         {
-          provider: provider52.name,
+          provider: provider53.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider52.name.toLowerCase())
+        leadNames.has(provider53.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -50731,8 +50731,8 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE32) => {
-        const html3 = await fetchHtml3(`${BASE32}/?s=${encodeURIComponent(query)}`, BASE32);
+      BASES2.map(async (BASE33) => {
+        const html3 = await fetchHtml3(`${BASE33}/?s=${encodeURIComponent(query)}`, BASE33);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
@@ -50743,9 +50743,9 @@ async function searchAnime2(titles) {
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE32}${href}`,
+            url: href.startsWith("http") ? href : `${BASE33}${href}`,
             title,
-            base: BASE32,
+            base: BASE33,
             slug: m[1],
             score: scoreMatch(query, title)
           });
@@ -54146,19 +54146,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider52 = {
+  const provider53 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider52.movie = (opts) => run(opts, "movie");
+    provider53.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider52.getLanguages = async () => languages;
+    provider53.getLanguages = async () => languages;
   }
-  return provider52;
+  return provider53;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -58376,7 +58376,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider52, server, lang, item) {
+function pushCandidate(out, provider53, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58384,22 +58384,22 @@ function pushCandidate(out, provider52, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider52} \xB7 ${server || "Player"}`
+    server: `${provider53} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider52, isMovie, episodeNum) {
+function parseCandidates(data2, provider53, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider52, item.player || item.name, lang, item);
+        pushCandidate(out, provider53, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider52, item.name || item.player, lang, item);
+        pushCandidate(out, provider53, item.name || item.player, lang, item);
       }
     }
   }
@@ -58412,20 +58412,20 @@ function parseCandidates(data2, provider52, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider52, item.player, lang, item);
+            pushCandidate(out, provider53, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider52, item.name || item.player, lang, item);
+          pushCandidate(out, provider53, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider52, item.player || item.name, lang, item);
+      pushCandidate(out, provider53, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -69004,6 +69004,47 @@ var provider51 = {
 };
 var syosetu_default = provider51;
 
+// src/providers/novel/atsu.ts
+var BASE32 = "https://atsu.moe";
+async function search13(query) {
+  const result = await fetchJson(`${BASE32}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`, { timeoutMs: 12e3 });
+  return (result.hits || []).map((hit) => hit.document).filter((doc) => doc?.id && doc.medium?.toLowerCase() === "novel");
+}
+var provider52 = {
+  name: "atsu-novel",
+  sites: [BASE32],
+  async search(query) {
+    return (await search13(query)).map((doc) => ({ id: doc.id, title: doc.title, url: `${BASE32}/manga/${doc.id}` }));
+  },
+  async getChapters(params) {
+    let seriesId2 = params.seriesId;
+    if (!seriesId2) {
+      const titles = await resolveMangaTitles(params);
+      const docs = [];
+      for (const title of titles.slice(0, 2)) docs.push(...await search13(title));
+      seriesId2 = docs.find((doc) => params.anilistId && Number(doc.anilistId) === params.anilistId)?.id;
+      seriesId2 ||= pickBestNovelCandidate(titles, docs.flatMap((doc) => [doc.title, ...doc.otherNames || []].map((title) => ({ id: doc.id, title }))))?.candidate.id;
+    }
+    if (!seriesId2 || !/^[\w-]+$/.test(seriesId2)) return [];
+    const result = await fetchJson(`${BASE32}/api/manga/allChapters?mangaId=${encodeURIComponent(seriesId2)}`, { timeoutMs: 15e3 });
+    return (result.chapters || []).filter((chapter) => chapter.id && Number.isFinite(Number(chapter.number)) && Number(chapter.number) > 0).map((chapter) => ({
+      number: Number(chapter.number),
+      title: chapter.title || null,
+      volume: null,
+      sources: [{ provider: "atsu-novel", chapterKey: `atsu-novel:${seriesId2}|${chapter.id}`, providerChapterId: chapter.id, language: "en", translator: null, releaseDate: chapter.createdAt ? new Date(chapter.createdAt).toISOString() : null }]
+    })).sort((a, b) => a.number - b.number);
+  },
+  async getContent(key) {
+    const match2 = key.match(/^atsu-novel:([\w-]+)\|([\w-]+)$/);
+    if (!match2) return null;
+    const result = await fetchJson(`${BASE32}/api/read/novelChapter?mangaId=${encodeURIComponent(match2[1])}&chapterId=${encodeURIComponent(match2[2])}`, { timeoutMs: 15e3 });
+    const chapter = result.readNovelChapter;
+    const paragraphs = (chapter?.paragraphs || []).filter((text3) => typeof text3 === "string" && text3.trim()).map((text3, index2) => ({ text: text3.trim(), index: index2 }));
+    return paragraphs.length ? { provider: "atsu-novel", title: chapter?.title || null, number: chapter?.number ?? null, paragraphs } : null;
+  }
+};
+var atsu_default2 = provider52;
+
 // src/providers/registry.ts
 var STREAM_PROVIDERS = [
   justanime_default,
@@ -69068,6 +69109,7 @@ var MANGA_PROVIDERS = [
   novelcool_default
 ];
 var NOVEL_PROVIDERS = [
+  atsu_default2,
   syosetu_default,
   wuxiaworld_default,
   webnovel_default,
@@ -69387,9 +69429,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider52 = MANGA_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider52) throw new ChapterNotFoundError(chapterKey);
-    const pages2 = await provider52.getPages(chapterKey);
+    const provider53 = MANGA_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider53) throw new ChapterNotFoundError(chapterKey);
+    const pages2 = await provider53.getPages(chapterKey);
     if (pages2.length === 0) throw new ChapterNotFoundError(chapterKey);
     return pages2;
   }
@@ -69404,10 +69446,10 @@ var TokoBundleClass = class {
       return params;
     }
   }
-  async searchThenScrapeNovel(provider52, params, deadline) {
-    const blocked = this.blockedNovelProviders.get(provider52.name);
+  async searchThenScrapeNovel(provider53, params, deadline) {
+    const blocked = this.blockedNovelProviders.get(provider53.name);
     if (!params.provider && !params.fullScan && blocked && Date.now() - blocked.at < 6e4) throw blocked.error;
-    if (params.seriesId || !provider52.search) return provider52.getChapters(params);
+    if (params.seriesId || !provider53.search) return provider53.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
     const queries = buildNovelSearchQueries(titles).slice(0, params.fullScan ? 4 : 2);
     const candidates = [];
@@ -69416,23 +69458,23 @@ var TokoBundleClass = class {
     for (const query of queries) {
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
       try {
-        candidates.push(...await provider52.search(query));
+        candidates.push(...await provider53.search(query));
         answered = true;
       } catch (error) {
         lastError = error;
         if (/HTTP (?:403|429|502|503)|access blocked/i.test(String(error?.message))) {
-          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider52.name, { at: Date.now(), error });
+          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider53.name, { at: Date.now(), error });
           throw error;
         }
         continue;
       }
       const match3 = pickBestNovelCandidate(titles, candidates);
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
-      if (match3?.score === 1) return provider52.getChapters({ ...params, provider: provider52.name, seriesId: match3.candidate.id });
+      if (match3?.score === 1) return provider53.getChapters({ ...params, provider: provider53.name, seriesId: match3.candidate.id });
     }
     const match2 = pickBestNovelCandidate(titles, candidates);
     if (!answered && lastError) throw lastError;
-    return match2 ? provider52.getChapters({ ...params, provider: provider52.name, seriesId: match2.candidate.id }) : [];
+    return match2 ? provider53.getChapters({ ...params, provider: provider53.name, seriesId: match2.candidate.id }) : [];
   }
   /**
    * Returns novel chapters merged by chapter number.
@@ -69521,9 +69563,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider52 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider52) throw new ChapterNotFoundError(chapterKey);
-    const content = await provider52.getContent(chapterKey);
+    const provider53 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
+    if (!provider53) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider53.getContent(chapterKey);
     if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
     return content;
   }

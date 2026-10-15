@@ -214,8 +214,10 @@ import divinedaolibrary from './novel/divinedaolibrary.js';
 import novelbuddy from './novel/novelbuddy.js';
 import { scraperNovelProviders } from './novel/scraper-sites.js';
 import syosetu from './novel/syosetu.js';
+import atsuNovel from './novel/atsu.js';
 
 export const NOVEL_PROVIDERS: NovelProvider[] = [
+  atsuNovel,
   syosetu,
   wuxiaworld,
   webnovel,

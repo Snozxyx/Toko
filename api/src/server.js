@@ -647,7 +647,9 @@ app.use(express.json({ limit: '2mb' }));
 // ── Health ────────────────────────────────────────────────────────────────────
 
 app.get('/api/v3/health', (_req, res) => {
-  res.json({ ok: true, service: 'toko-api', toko: !!getToko(), cacheSize: cache.size });
+  res.json({ ok: true, service: 'toko-api', toko: !!getToko(), cacheSize: cache.size,
+    namespaces: [{ namespace: 'toko', capabilities: ['manga','novel'], routes: ['sources','stream','torrent','manga/chapters','manga/pages','novel/chapters','novel/content'] }],
+  });
 });
 
 // ── Generic progressive handler ───────────────────────────────────────────────

@@ -29,7 +29,12 @@ jobs:
           node-version: '24'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Provider regression tests
+        run: bun test tests
 
       - name: Build extension
         run: npm run build
@@ -58,20 +63,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: Toko Extension ${{ steps.version.outputs.version }}
-          body: |
-            ## Toko 4.5.4
-
-            - Prevent manga providers from selecting same-title novels and inflating chapter counts.
-            - Check NovelCool reader pages for actual manga panels before accepting a chapter catalog.
-            - Improve MangaDex title mapping, multilingual catalog pagination, scanlator labels, and chapter-zero handling.
-            - Keep readable MangaDex chapters while excluding empty, external-only, and future releases.
-
-            ### Installation
-            1. Download `toko.kai`.
-            2. Install in Tatakai via Settings → Extensions → Install from file.
-            3. Refresh the manga chapter list in the updated Tatakai app to clear cached results.
-
-            Validation: extension build and manga matching, MangaDex catalog, and mobile novel bundle regression checks passed. Physical mobile-device verification remains pending.
+          body_path: CHANGELOG.md
           files: dist/toko.kai
           draft: false
           prerelease: false
