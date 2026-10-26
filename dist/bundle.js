@@ -46136,6 +46136,22 @@ async function bypassCloudflare(options) {
   return task;
 }
 
+// src/utils/novel-text.ts
+function normalizeNovelParagraphs(values) {
+  if (!Array.isArray(values)) return [];
+  return values.flatMap((value) => {
+    let text3 = typeof value === "string" ? value : value && typeof value === "object" && typeof value.text === "string" ? value.text : "";
+    if (/<[a-z][^>]*>/i.test(text3)) {
+      const $2 = loadHtml(text3);
+      $2("script,style,img,iframe,video,audio,svg").remove();
+      text3 = $2.text();
+    }
+    text3 = text3.trim();
+    if (!text3 || /^(?:https?:\/\/|data:image\/|blob:)/i.test(text3)) return [];
+    return [text3];
+  }).map((text3, index2) => ({ text: text3, index: index2 }));
+}
+
 // src/utils/common/fetch-bypass.ts
 function applySession(url, headers) {
   const session = getCachedSession(url);
@@ -69387,10 +69403,10 @@ var TokoBundleClass = class {
   async enrichMangaParams(params) {
     if (params.titles && params.titles.length > 0) return params;
     try {
-      const titles = await resolveMangaTitles(params);
-      return titles.length > 0 ? { ...params, titles } : params;
+      const titles = await withProviderTimeout(resolveMangaTitles(params), 1500);
+      return titles.length > 0 ? { ...params, titles } : params.title ? { ...params, titles: [params.title] } : params;
     } catch {
-      return params;
+      return params.title ? { ...params, titles: [params.title] } : params;
     }
   }
   /**
@@ -69399,9 +69415,12 @@ var TokoBundleClass = class {
    */
   async getMangaChapters(params) {
     const enriched = await this.enrichMangaParams(params);
+    const deadline = Date.now() + 8e3;
     const all = await runProviders(
       MANGA_PROVIDERS,
-      (p) => p.getChapters(enriched)
+      (p) => withProviderTimeout(p.getChapters(enriched), Math.max(1, deadline - Date.now())),
+      void 0,
+      resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 6 })
     );
     return mergeMangaChapters(all);
   }
@@ -69411,10 +69430,12 @@ var TokoBundleClass = class {
   async debugMangaChapters(params) {
     const enriched = await this.enrichMangaParams(params);
     const diagnostics = [];
+    const deadline = Date.now() + 8e3;
     const all = await runProviders(
       MANGA_PROVIDERS,
-      (p) => p.getChapters(enriched),
-      diagnostics
+      (p) => withProviderTimeout(p.getChapters(enriched), Math.max(1, deadline - Date.now())),
+      diagnostics,
+      resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 6 })
     );
     return { results: mergeMangaChapters(all), diagnostics };
   }
@@ -69440,10 +69461,10 @@ var TokoBundleClass = class {
     if (params.seriesId && params.provider) return params;
     if (params.titles && params.titles.length > 0) return params;
     try {
-      const titles = await resolveMangaTitles(params);
-      return titles.length > 0 ? { ...params, titles } : params;
+      const titles = await withProviderTimeout(resolveMangaTitles(params), 1500);
+      return titles.length > 0 ? { ...params, titles } : params.title ? { ...params, titles: [params.title] } : params;
     } catch {
-      return params;
+      return params.title ? { ...params, titles: [params.title] } : params;
     }
   }
   async searchThenScrapeNovel(provider53, params, deadline) {
@@ -69481,7 +69502,15 @@ var TokoBundleClass = class {
    * Multiple providers returning the same chapter number are merged.
    */
   async getNovelChapters(params) {
-    return (await this.debugNovelChapters(params)).results;
+    const enriched = await this.enrichNovelParams(params);
+    const deadline = Date.now() + 8e3;
+    const all = await runProviders(
+      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
+      (p) => withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), Math.max(1, deadline - Date.now())),
+      void 0,
+      resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 4 })
+    );
+    return mergeMangaChapters(all);
   }
   /**
    * Debug variant of getNovelChapters() with diagnostics.
@@ -69566,8 +69595,10 @@ var TokoBundleClass = class {
     const provider53 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
     if (!provider53) throw new ChapterNotFoundError(chapterKey);
     const content = await provider53.getContent(chapterKey);
-    if (!content || content.paragraphs.length === 0) throw new ChapterNotFoundError(chapterKey);
-    return content;
+    if (!content) throw new ChapterNotFoundError(chapterKey);
+    const paragraphs = normalizeNovelParagraphs(content.paragraphs);
+    if (!paragraphs.length) throw new ChapterNotFoundError(chapterKey);
+    return { ...content, paragraphs };
   }
   // ── Preview & Indexing ──────────────────────────────────────────────────
   /**
