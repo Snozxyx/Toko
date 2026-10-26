@@ -1,5 +1,5 @@
 /** Preserve subtitles and sequel numbers when automatically matching novels. */
-import { pickBestMangaCandidate } from './manga/manga-title-resolver.js';
+import { scoreMatch } from './scraping/title-normalizer.js';
 const fullTitle = (value:string) => value.normalize('NFKC').toLowerCase().replace(/\((?:light\s*)?novel\)/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 /** Anime query normalization removes "Part N"; novel parts are distinct works. */
 export function buildNovelSearchQueries(titles: string[]): string[] {
@@ -23,5 +23,13 @@ export function pickBestNovelCandidate(titles:string[], candidates:Array<{id:str
    return ratio>=.85 && numbers(name)===numbers(target);
   });
  });
- return pickBestMangaCandidate(scopedTitles,eligible,row=>[row.title],.85);
+ const ranked=eligible.map(candidate=>({candidate,score:Math.max(0,...targets.map(target=>scoreMatch(target,fullTitle(candidate.title))))})).filter(row=>row.score>=.85).sort((a,b)=>b.score-a.score);
+ return ranked[0] || null;
+}
+
+/** Adapt provider aliases without applying manga's intentional novel rejection. */
+export function pickBestNovelProviderCandidate<T>(titles:string[],candidates:T[],getNames:(candidate:T)=>Array<string|null|undefined>,threshold=.85):{candidate:T;score:number}|null {
+ const aliases=candidates.flatMap((candidate,index)=>getNames(candidate).filter((title):title is string=>typeof title==='string' && !!title.trim()).map(title=>({id:String(index),title})));
+ const best=pickBestNovelCandidate(titles,aliases);
+ return best && best.score>=Math.max(.85,threshold) ? {candidate:candidates[Number(best.candidate.id)],score:best.score} : null;
 }

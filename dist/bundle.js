@@ -45769,7 +45769,13 @@ function pickBestNovelCandidate(titles, candidates) {
       return ratio >= 0.85 && numbers(name) === numbers(target);
     });
   });
-  return pickBestMangaCandidate(scopedTitles, eligible, (row) => [row.title], 0.85);
+  const ranked = eligible.map((candidate) => ({ candidate, score: Math.max(0, ...targets.map((target) => scoreMatch(target, fullTitle(candidate.title)))) })).filter((row) => row.score >= 0.85).sort((a, b) => b.score - a.score);
+  return ranked[0] || null;
+}
+function pickBestNovelProviderCandidate(titles, candidates, getNames, threshold = 0.85) {
+  const aliases2 = candidates.flatMap((candidate, index2) => getNames(candidate).filter((title) => typeof title === "string" && !!title.trim()).map((title) => ({ id: String(index2), title })));
+  const best = pickBestNovelCandidate(titles, aliases2);
+  return best && best.score >= Math.max(0.85, threshold) ? { candidate: candidates[Number(best.candidate.id)], score: best.score } : null;
 }
 
 // src/utils/common/browser-runtime-bootstrap.ts
@@ -67817,7 +67823,7 @@ async function resolveBookId(params) {
     }
   }
   if (pool.length === 0 && lastSearchError) throw lastSearchError;
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.bookId : null;
 }
 function parseChapterNumber2(label, href) {
@@ -68075,7 +68081,7 @@ async function match(params) {
   if (params.seriesId) return params.seriesId;
   const titles = await resolveMangaTitles(params);
   const candidates = (await Promise.all(titles.slice(0, 2).map(search12))).flat();
-  return pickBestMangaCandidate(titles, candidates, (row) => [row.title], 0.6)?.candidate.id;
+  return pickBestNovelProviderCandidate(titles, candidates, (row) => [row.title], 0.6)?.candidate.id;
 }
 var provider46 = {
   name: "wuxiaworld",
@@ -68181,7 +68187,7 @@ async function resolveSeriesHref3(params) {
       pool.push(cand);
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.href : null;
 }
 function parseChapterNumber3(label, href) {
@@ -68335,7 +68341,7 @@ async function resolveSeriesHref4(params) {
       pool.push(cand);
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.href : null;
 }
 function parseChapterNumber4(label, href) {
@@ -68490,7 +68496,7 @@ async function resolveSeriesHref5(params) {
       pool.push(cand);
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.href : null;
 }
 function parseChapterNumber5(label, href) {
@@ -68669,7 +68675,7 @@ async function resolveSeriesSlug(params) {
       pool.push(cand);
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   if (best) return best.candidate.href.replace(/^\/+|\/+$/g, "");
   if (pool.length === 0 && lastError) throw lastError;
   return null;
@@ -69414,12 +69420,22 @@ var TokoBundleClass = class {
    * Multiple providers returning the same chapter number are merged
    */
   async getMangaChapters(params) {
+    return this.streamMangaChapters(params, () => {
+    });
+  }
+  async streamMangaChapters(params, publish) {
     const enriched = await this.enrichMangaParams(params);
     const deadline = Date.now() + 8e3;
-    const all = await runProviders(
+    const all = await runProvidersProgressive(
       MANGA_PROVIDERS,
-      (p) => withProviderTimeout(p.getChapters(enriched), Math.max(1, deadline - Date.now())),
-      void 0,
+      (p) => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return Promise.reject(new Error("Manga discovery budget exhausted"));
+        return withProviderTimeout(p.getChapters(enriched), remaining);
+      },
+      (chunk) => {
+        if (chunk.results.length) publish(chunk.results);
+      },
       resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 6 })
     );
     return mergeMangaChapters(all);
@@ -69502,12 +69518,22 @@ var TokoBundleClass = class {
    * Multiple providers returning the same chapter number are merged.
    */
   async getNovelChapters(params) {
+    return this.streamNovelChapters(params, () => {
+    });
+  }
+  async streamNovelChapters(params, publish) {
     const enriched = await this.enrichNovelParams(params);
     const deadline = Date.now() + 8e3;
-    const all = await runProviders(
+    const all = await runProvidersProgressive(
       NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
-      (p) => withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), Math.max(1, deadline - Date.now())),
-      void 0,
+      (p) => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return Promise.reject(new Error("Novel discovery budget exhausted"));
+        return withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), remaining);
+      },
+      (chunk) => {
+        if (chunk.results.length) publish(chunk.results);
+      },
       resolveProviderRunOptions({ timeoutMs: 8e3, maxRetries: 0, maxConcurrency: 4 })
     );
     return mergeMangaChapters(all);

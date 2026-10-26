@@ -23,7 +23,8 @@ import type {
 
 import { fetchJson, loadHtml } from '../../utils/http/fetch.js';
 import { fetchNovelSearchHtml } from './novel-http.js';
-import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { resolveMangaTitles } from '../../utils/manga/manga-title-resolver.js';
+import { pickBestNovelProviderCandidate } from '../../utils/novel-title-match.js';
 
 const BASE = 'https://lightnovel.to';
 const PROVIDER_NAME = 'lightnovelto';
@@ -89,7 +90,7 @@ async function resolveSeriesHref(params: NovelChapterParams): Promise<string | n
       pool.push(cand);
     }
   }
-  const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
+  const best = pickBestNovelProviderCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.href : null;
 }
 

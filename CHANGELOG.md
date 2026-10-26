@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.5.7 - 2026-10-26
+
+- Fix novel adapters incorrectly rejecting prose titles through the manga format matcher.
+- Stream early manga and novel sources to compatible servers while retaining later provider results.
+
 ## 4.5.6 - 2026-10-26
 
 - Bound manga and novel discovery, metadata waits and retry concurrency.

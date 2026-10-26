@@ -373,14 +373,19 @@ export class TokoBundleClass {
    * Multiple providers returning the same chapter number are merged
    */
   async getMangaChapters(params: MangaChapterParams): Promise<MangaChapterEntry[]> {
+    return this.streamMangaChapters(params, () => {});
+  }
+
+  async streamMangaChapters(params: MangaChapterParams, publish: (rows: MangaChapterEntry[]) => void): Promise<MangaChapterEntry[]> {
     const enriched = await this.enrichMangaParams(params);
     const deadline = Date.now() + 8000;
-    const all = await runProviders(
-      MANGA_PROVIDERS,
-      p => withProviderTimeout(p.getChapters(enriched), Math.max(1, deadline - Date.now())), undefined,
-      resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 6 })
-    ) as MangaChapterEntry[];
-    return mergeMangaChapters(all);
+    const all = await runProvidersProgressive(MANGA_PROVIDERS, p => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return Promise.reject(new Error('Manga discovery budget exhausted'));
+      return withProviderTimeout(p.getChapters(enriched), remaining);
+    }, chunk => { if (chunk.results.length) publish(chunk.results); },
+    resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 6 }));
+    return mergeMangaChapters(all as MangaChapterEntry[]);
   }
 
   /**
@@ -480,15 +485,21 @@ export class TokoBundleClass {
    * Multiple providers returning the same chapter number are merged.
    */
   async getNovelChapters(params: NovelChapterParams): Promise<NovelChapterEntry[]> {
-    // Hosts may destroy the invocation worker when this method returns. Wait
-    // for the bounded scan here so later translators are not silently discarded.
+    return this.streamNovelChapters(params, () => {});
+  }
+
+  async streamNovelChapters(params: NovelChapterParams, publish: (rows: NovelChapterEntry[]) => void): Promise<NovelChapterEntry[]> {
     const enriched = await this.enrichNovelParams(params);
     const deadline = Date.now() + 8000;
-    const all = await runProviders(
+    const all = await runProvidersProgressive(
       NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
-      p => withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), Math.max(1, deadline - Date.now())),
-      undefined, resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 4 })
-    ) as NovelChapterEntry[];
+      p => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return Promise.reject(new Error('Novel discovery budget exhausted'));
+        return withProviderTimeout(this.searchThenScrapeNovel(p, enriched, deadline), remaining);
+      }, chunk => { if (chunk.results.length) publish(chunk.results); },
+      resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 4 })
+    );
     return mergeMangaChapters(all as any) as NovelChapterEntry[];
   }
 

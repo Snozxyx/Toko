@@ -1,7 +1,8 @@
 /** Wuxiaworld: search the public catalog, then load the matched chapter list. */
 import type { NovelProvider, NovelChapterParams } from '../../types/index.js';
 import { loadHtml } from '../../utils/http/fetch.js';
-import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
+import { resolveMangaTitles } from '../../utils/manga/manga-title-resolver.js';
+import { pickBestNovelProviderCandidate } from '../../utils/novel-title-match.js';
 import { wuxiaRpc, pbString, pbBytes, pbInt, concat, pbMessages, pbText, pbNumber } from './wuxia-rpc.js';
 const BASE = 'https://www.wuxiaworld.com';
 async function search(query: string) {
@@ -12,7 +13,7 @@ async function match(params: NovelChapterParams) {
   if (params.seriesId) return params.seriesId;
   const titles = await resolveMangaTitles(params);
   const candidates = (await Promise.all(titles.slice(0, 2).map(search))).flat();
-  return pickBestMangaCandidate(titles, candidates, row => [row.title], .6)?.candidate.id;
+  return pickBestNovelProviderCandidate(titles, candidates, row => [row.title], .6)?.candidate.id;
 }
 const provider: NovelProvider = {
   name: 'wuxiaworld', sites: [BASE, 'https://api2.wuxiaworld.com'], search,
