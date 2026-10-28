@@ -25,6 +25,7 @@ import type {
   MangaPageEntry,
 } from '../../types/index.js';
 
+import { getAtsuCatalog, atsuSource } from '../../utils/atsu-catalog.js';
 import { fetchJson } from '../../utils/http/fetch.js';
 import { resolveMangaTitles, pickBestMangaCandidate } from '../../utils/manga/manga-title-resolver.js';
 import { isNovelFormat } from '../../utils/manga/manga-format.js';
@@ -104,34 +105,18 @@ const provider: MangaProvider = {
       const mangaId = await resolveMangaId(params);
       if (!mangaId) return [];
 
-      const res = await fetchJson<{ chapters?: AtsuChapter[] }>(
-        `${BASE}/api/manga/allChapters?mangaId=${encodeURIComponent(mangaId)}`,
-        { timeoutMs: 12000 },
-      );
-      const rows = res?.chapters ?? [];
-      if (rows.length === 0) return [];
-
+      const { chapters: rows, scanlators } = await getAtsuCatalog(mangaId);
       const byNumber = new Map<number, MangaChapterEntry>();
+      const seen = new Set<string>();
       for (const ch of rows) {
         const num = Number(ch.number);
-        if (!ch.id || !Number.isFinite(num) || byNumber.has(num)) continue;
-
-        // Atsu's read endpoint needs both ids, so the key carries both:
-        // `atsu:<mangaId>|<chapterId>`. getPages splits them back out.
-        const source: MangaChapterSource = {
-          provider: PROVIDER_NAME,
-          chapterKey: `${PROVIDER_NAME}:${mangaId}|${ch.id}`,
-          providerChapterId: ch.id,
-          language: 'en',
-          scanlator: null,
-          releaseDate: ch.createdAt ? new Date(ch.createdAt).toISOString() : null,
-        };
-        byNumber.set(num, {
-          number: num,
-          title: ch.title || null,
-          volume: null,
-          sources: [source],
-        });
+        if (!ch.id || !Number.isFinite(num) || num < 0 || !/^[\w-]+$/.test(ch.id)) continue;
+        const source = atsuSource('atsu', mangaId, ch, scanlators);
+        if (seen.has(source.chapterKey)) continue;
+        seen.add(source.chapterKey);
+        const entry = byNumber.get(num) || { number: num, title: ch.title || null, volume: null, sources: [] };
+        entry.sources.push(source);
+        byNumber.set(num, entry);
       }
 
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);

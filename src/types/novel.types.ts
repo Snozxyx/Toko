@@ -12,6 +12,7 @@
 
 export interface NovelChapterSource {
   provider: string;
+  providerName?: string;
   /** Format: "<provider>:<providerChapterId>" (URL-safe, no spaces). */
   chapterKey: string;
   providerChapterId: string;

@@ -1,3 +1,4 @@
+import { atsuBaseProvider } from '../utils/atsu-catalog.js';
 /**
  * Toko Bundle Class
  * Main entry point for the Toko extension runtime
@@ -425,7 +426,7 @@ export class TokoBundleClass {
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
 
-    const provider = MANGA_PROVIDERS.find(p => p.name === providerName);
+    const provider = MANGA_PROVIDERS.find(p => p.name === atsuBaseProvider(providerName));
     if (!provider) throw new ChapterNotFoundError(chapterKey);
 
     const pages = await provider.getPages(chapterKey);
@@ -473,11 +474,11 @@ export class TokoBundleClass {
       }
       const match = pickBestNovelCandidate(titles, candidates);
       if (deadline && Date.now() >= deadline) throw new Error('Novel discovery budget exhausted');
-      if (match?.score === 1) return provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id });
+      if (match?.score === 1) return provider.getChapters({ ...params, provider: params.provider || provider.name, seriesId: match.candidate.id });
     }
     const match = pickBestNovelCandidate(titles, candidates);
     if (!answered && lastError) throw lastError;
-    return match ? provider.getChapters({ ...params, provider: provider.name, seriesId: match.candidate.id }) : [];
+    return match ? provider.getChapters({ ...params, provider: params.provider || provider.name, seriesId: match.candidate.id }) : [];
   }
 
   /**
@@ -492,7 +493,7 @@ export class TokoBundleClass {
     const enriched = await this.enrichNovelParams(params);
     const deadline = Date.now() + 8000;
     const all = await runProvidersProgressive(
-      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
+      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === atsuBaseProvider(params.provider)),
       p => {
         const remaining = deadline - Date.now();
         if (remaining <= 0) return Promise.reject(new Error('Novel discovery budget exhausted'));
@@ -500,7 +501,7 @@ export class TokoBundleClass {
       }, chunk => { if (chunk.results.length) publish(chunk.results); },
       resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 4 })
     );
-    return mergeMangaChapters(all as any) as NovelChapterEntry[];
+    return mergeMangaChapters(all as any) as unknown as NovelChapterEntry[];
   }
 
   /**
@@ -523,7 +524,7 @@ export class TokoBundleClass {
       if (this.novelRuns.size > 30) this.novelRuns.delete(this.novelRuns.keys().next().value!);
       // Start public catalogs before bot-walled sites. On mobile, a solver
       // otherwise occupied all native request slots ahead of readable sources.
-      const publicNames = ['syosetu','wuxiaworld','lightnovelto','novelbuddy','novgo','novelcool','novelfire','readnovelfull','relibrary','woopread','divinedaolibrary'];
+      const publicNames = ['atsu-novel','manta','syosetu','wuxiaworld','lightnovelto','novelbuddy','novgo','novelcool','novelfire','readnovelfull','relibrary','woopread','divinedaolibrary','royalroad','scribblehub','webnovel'];
       const providers = NOVEL_PROVIDERS.filter(p => !(process as any).browser || publicNames.includes(p.name)).sort((a,b) => {
         const rank=(name:string)=>{const index=publicNames.indexOf(name);return index<0?publicNames.length:index};
         return rank(a.name)-rank(b.name);
@@ -546,7 +547,7 @@ export class TokoBundleClass {
     }
     const diagnostics: ProviderDiagnostic[] = [];
     const all = await runProviders(
-      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider),
+      NOVEL_PROVIDERS.filter(p => !params.provider || p.name === atsuBaseProvider(params.provider)),
       p => this.searchThenScrapeNovel(p, enriched),
       diagnostics,
       { timeoutMs: (process as any).browser ? 60000 : 30000, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
@@ -557,7 +558,7 @@ export class TokoBundleClass {
   async getNovelSearch(params: { query: string; provider?: string }) {
     const query = String(params.query || '').trim().slice(0, 200);
     if (!query) return { results: [], providerStatus: [] };
-    const rows = await Promise.all(NOVEL_PROVIDERS.filter(p => !params.provider || p.name === params.provider).map(async p => {
+    const rows = await Promise.all(NOVEL_PROVIDERS.filter(p => !params.provider || p.name === atsuBaseProvider(params.provider)).map(async p => {
       try {
         const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), (process as any).browser ? 60000 : 25000);
         return { results: matches.slice(0, 20).map(match => ({ ...match, provider: p.name })), status: { provider: p.name, status: matches.length ? 'ok' : 'empty', resultCount: matches.length } };
@@ -582,7 +583,7 @@ export class TokoBundleClass {
       const colonIdx = chapterKey.indexOf(':');
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider = NOVEL_PROVIDERS.find(p => p.name === providerName);
+    const provider = NOVEL_PROVIDERS.find(p => p.name === atsuBaseProvider(providerName));
     if (!provider) throw new ChapterNotFoundError(chapterKey);
     const content = await provider.getContent(chapterKey);
     if (!content) throw new ChapterNotFoundError(chapterKey);

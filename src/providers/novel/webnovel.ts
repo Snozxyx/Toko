@@ -37,6 +37,7 @@ import { pickBestNovelProviderCandidate } from '../../utils/novel-title-match.js
 
 const BASE = 'https://www.webnovel.com';
 const PROVIDER_NAME = 'webnovel';
+const chapterUrls = new Map<string, string>();
 
 interface WnCandidate {
   bookId: string;
@@ -122,7 +123,6 @@ function cleanParagraphs($: ReturnType<typeof loadHtml>): string[] {
     '.cha-words p',
     '.chapter_content p',
     '#chapter-content p',
-    '.content p',
   ];
   for (const sel of selectors) {
     const nodes = $(sel);
@@ -152,7 +152,8 @@ const provider: NovelProvider = {
 
       // Prefer the embedded Next.js payload (full chapter index, paginated API
       // as fallback is rate-limited); scrape the book page HTML.
-      const html = await fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12000 });
+      const html = await fetchNovelSearchHtml(`${bookUrl(bookId)}/catalog`, { timeoutMs: 12000 })
+        .catch(() => fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12000 }));
       if (!html) return [];
       const $ = loadHtml(html);
 
@@ -211,9 +212,13 @@ const provider: NovelProvider = {
         const num = parseChapterNumber(label, href);
         const n = Number.isFinite(num) ? num : order;
         if (byNumber.has(n)) return;
-        const full = href.startsWith('http') ? href : `${BASE}${href.startsWith('/') ? '' : '/'}${href}`;
-        const idMatch = full.match(/(\d{6,})(?:\/)?$/);
-        const chapterId = idMatch ? idMatch[1] : full;
+        let target: URL; try { target = new URL(href, BASE); } catch { return; }
+        if (target.origin !== BASE || target.username || target.password || !target.pathname.includes(bookId)) return;
+        const idMatch = target.pathname.match(/(\d{6,})(?:\/)?$/);
+        if (!idMatch) return;
+        const chapterId = idMatch[1];
+        if (chapterUrls.size > 10000) chapterUrls.clear();
+        chapterUrls.set(`${bookId}:${chapterId}`, target.href);
         const source: NovelChapterSource = {
           provider: PROVIDER_NAME,
           chapterKey: `${PROVIDER_NAME}:${bookId}:${chapterId}`,
@@ -230,13 +235,12 @@ const provider: NovelProvider = {
 
   async getContent(chapterKey: string): Promise<NovelContentEntry | null> {
     try {
-      const rest = chapterKey.includes(':') ? chapterKey.slice(chapterKey.indexOf(':') + 1) : chapterKey;
-      const [bookId, chapterId] = rest.split(':');
-      if (!bookId || !chapterId) return null;
-
+      const match = chapterKey.match(/^webnovel:(\d+):(\d+)$/);
+      if (!match) return null;
+      const [, bookId, chapterId] = match;
       // Chapter URL shape: /book/<bookId>/<anything>_<chapterId> — the slug
       // segment is cosmetic, so the bare id pair resolves via search-page link.
-      const html = await fetchNovelSearchHtml(`${BASE}/book/${bookId}/${chapterId}`, { timeoutMs: 15000 });
+      const html = await fetchNovelSearchHtml(chapterUrls.get(`${bookId}:${chapterId}`) || `${BASE}/book/${bookId}/chapter_${chapterId}`, { timeoutMs: 15000 });
       if (!html) return null;
       const $ = loadHtml(html);
 

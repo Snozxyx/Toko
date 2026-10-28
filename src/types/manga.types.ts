@@ -5,6 +5,7 @@
 
 export interface MangaChapterSource {
   provider: string;
+  providerName?: string;
   /** Format: "<provider>:<providerChapterId>" */
   chapterKey: string;
   providerChapterId: string;

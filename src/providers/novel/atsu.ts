@@ -1,5 +1,7 @@
 /** Atsumaru novels use allChapters plus read/novelChapter, not manga image pages. */
 import type { NovelProvider, NovelChapterEntry } from '../../types/index.js';
+import { getAtsuCatalog, atsuSource } from '../../utils/atsu-catalog.js';
+import { isNovelFormat } from '../../utils/manga/manga-format.js';
 import { fetchJson } from '../../utils/http/fetch.js';
 import { resolveMangaTitles } from '../../utils/manga/manga-title-resolver.js';
 import { pickBestNovelCandidate } from '../../utils/novel-title-match.js';
@@ -7,7 +9,7 @@ const BASE = 'https://atsu.moe';
 interface Doc { id: string; title: string; medium?: string; otherNames?: string[]; anilistId?: number; }
 async function search(query: string): Promise<Doc[]> {
   const result = await fetchJson<{hits?: {document: Doc}[]}>(`${BASE}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`, { timeoutMs: 12000 });
-  return (result.hits || []).map(hit => hit.document).filter(doc => doc?.id && doc.medium?.toLowerCase() === 'novel');
+  return (result?.hits || []).map(hit => hit.document).filter(doc => doc?.id && isNovelFormat(doc.medium));
 }
 const provider: NovelProvider = {
   name: 'atsu-novel', sites: [BASE],
@@ -22,19 +24,28 @@ const provider: NovelProvider = {
       seriesId ||= pickBestNovelCandidate(titles,docs.flatMap(doc => [doc.title,...(doc.otherNames || [])].map(title => ({id:doc.id,title}))))?.candidate.id;
     }
     if (!seriesId || !/^[\w-]+$/.test(seriesId)) return [];
-    const result = await fetchJson<{chapters?: {id:string;number:number;title?:string;createdAt?:number}[]}>(`${BASE}/api/manga/allChapters?mangaId=${encodeURIComponent(seriesId)}`, {timeoutMs:15000});
-    return (result.chapters || []).filter(chapter => chapter.id && Number.isFinite(Number(chapter.number)) && Number(chapter.number)>0).map(chapter => ({
-      number:Number(chapter.number),title:chapter.title || null,volume:null,
-      sources:[{provider:'atsu-novel',chapterKey:`atsu-novel:${seriesId}|${chapter.id}`,providerChapterId:chapter.id,language:'en',translator:null,releaseDate:chapter.createdAt ? new Date(chapter.createdAt).toISOString() : null}],
-    })).sort((a,b)=>a.number-b.number);
+    const { chapters, scanlators } = await getAtsuCatalog(seriesId);
+    const byNumber = new Map<number, NovelChapterEntry>();
+    const seen = new Set<string>();
+    for (const chapter of chapters) {
+      const number = Number(chapter.number);
+      if (!chapter.id || !/^[\w-]+$/.test(chapter.id) || !Number.isFinite(number) || number < 0) continue;
+      const source = atsuSource('atsu-novel', seriesId, chapter, scanlators);
+      if (params.provider?.startsWith('atsu-novel@') && source.provider !== params.provider) continue;
+      if (seen.has(source.chapterKey)) continue;
+      seen.add(source.chapterKey);
+      const entry = byNumber.get(number) || { number, title: chapter.title || null, volume: null, sources: [] };
+      entry.sources.push(source); byNumber.set(number, entry);
+    }
+    return [...byNumber.values()].sort((a,b) => a.number-b.number);
   },
   async getContent(key) {
-    const match = key.match(/^atsu-novel:([\w-]+)\|([\w-]+)$/);
+    const match = key.match(/^atsu-novel(?:@[\w-]+)?:([\w-]+)\|([\w-]+)$/);
     if (!match) return null;
     const result = await fetchJson<{readNovelChapter?: {title?:string;number?:number;paragraphs?:string[]}}>(`${BASE}/api/read/novelChapter?mangaId=${encodeURIComponent(match[1])}&chapterId=${encodeURIComponent(match[2])}`, {timeoutMs:15000});
-    const chapter = result.readNovelChapter;
+    const chapter = result?.readNovelChapter;
     const paragraphs = (chapter?.paragraphs || []).filter(text => typeof text === 'string' && text.trim()).map((text,index)=>({text:text.trim(),index}));
-    return paragraphs.length ? { provider:'atsu-novel',title:chapter?.title || null,number:chapter?.number ?? null,paragraphs } : null;
+    return paragraphs.length ? { provider:key.slice(0,key.indexOf(':')),title:chapter?.title || null,number:chapter?.number ?? null,paragraphs } : null;
   },
 };
 export default provider;

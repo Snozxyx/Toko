@@ -215,9 +215,13 @@ import novelbuddy from './novel/novelbuddy.js';
 import { scraperNovelProviders } from './novel/scraper-sites.js';
 import syosetu from './novel/syosetu.js';
 import atsuNovel from './novel/atsu.js';
+import manta from './novel/manta.js';
+import scribblehub from './novel/scribblehub.js';
 
 export const NOVEL_PROVIDERS: NovelProvider[] = [
   atsuNovel,
+  manta,
+  scribblehub,
   syosetu,
   wuxiaworld,
   webnovel,

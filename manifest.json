@@ -2,10 +2,24 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "4.5.7",
-  "browserDomains": ["webnovel.com", "novelfull.com", "royalroad.com", "justlightnovels.com", "novelbin.com", "toonily.com", "onisaga.com", "toongod.org", "wuxiaworld.site", "woopread.com", "novgo.net"],
+  "version": "4.5.8",
+  "browserDomains": [
+    "webnovel.com",
+    "novelfull.com",
+    "royalroad.com",
+    "justlightnovels.com",
+    "novelbin.com",
+    "toonily.com",
+    "onisaga.com",
+    "toongod.org",
+    "wuxiaworld.site",
+    "woopread.com",
+    "novgo.net",
+    "manta.net",
+    "scribblehub.com"
+  ],
   "author": "Snozxyx",
-  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool), and novel reading (Atsu, Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, wuxiaworld.site, DivineDaoLibrary, ReadNovelFull, NovelCool, Novgo, Re:Library, WoopRead).",
+  "description": "The official all-in-one Tatakai extension. Primary streaming via Nebula (AniList-keyed, direct HLS), plus anime direct streaming (Animepahe, Anikoto, Anizone, Animeya, Toonstream, Reanime, Aniworld, 4Anime, Animelok, Animesalt, Animeheaven, AnimeBLkom, DesiDub, Shahiid, AniPM, AnimeXin, FireAni, TurkAnime, 1Anime, Mkissa, Senshi), movie/TV streaming via MovieBox, torrent discovery (Nyaa, Animetosho, SubPlease, Seadex, nekoBT, AniLiberty), manga reading (MangaDex, Comick, Mangapill, Mangakatana, Weebcentral, Nelomanga, Atsu, Webtoons, DemonicScans, ToonGod, Toonily, OniSaga, Mgeko, Scans.gg, LeerCapitulo, NovelCool), and novel and webnovel reading (Atsu with all upstream sources, Manta free chapters, Scribble Hub, Wuxiaworld.com, Webnovel, JustLightNovels, LightNovel.to, NovelFull, NovelFire, NovelBin, NovelBuddy, RoyalRoad, wuxiaworld.site, DivineDaoLibrary, ReadNovelFull, NovelCool, Novgo, Re:Library, WoopRead).",
   "categories": [
     "Anime Stream",
     "Torrent",
@@ -336,6 +350,10 @@
     "network:domain:www.re-library.com",
     "network:domain:re-library.com",
     "network:domain:woopread.com",
-    "network:domain:ncode.syosetu.com"
+    "network:domain:ncode.syosetu.com",
+    "network:domain:manta.net",
+    "network:domain:static.mantacdn.net",
+    "network:domain:www.scribblehub.com",
+    "network:domain:scribblehub.com"
   ]
 }

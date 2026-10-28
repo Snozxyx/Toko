@@ -38,6 +38,42 @@ function getBrowserRuntime(): BrowserRuntime | undefined {
   return browserRuntime ?? (typeof __tatakai_chromedp__ !== 'undefined' ? __tatakai_chromedp__ : undefined);
 }
 
+/** Render a public reader through the site's normal UI. No unlock or purchase actions. */
+export async function readPublicNovelText(seriesUrl: string, chapterUrl: string): Promise<string[]> {
+  if (new URL(seriesUrl).origin !== 'https://manta.net' || new URL(chapterUrl).origin !== 'https://manta.net') throw new Error('Invalid Manta reader URL');
+  const runtime = getBrowserRuntime();
+  let reader: ProviderBrowser | undefined;
+  let nodeBrowser: any;
+  try {
+    if (runtime) reader = await runtime.newBrowser({ headless: true, timeout: 25 });
+    else {
+      if ((process as any).browser) throw new Error('Manta needs the provider browser to render free novel chapters');
+      const connect = await loadConnect();
+      const { chromePath, hasXvfb } = ensureBrowserRuntime();
+      if (!connect || !chromePath) throw new Error('Manta needs a provider browser to render free novel chapters');
+      const connection = await connect({ headless: true, customConfig: { chromePath }, disableXvfb: !hasXvfb,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
+      nodeBrowser = connection.browser;
+      const page = connection.page;
+      reader = { navigate: url => page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }),
+        evaluate: expression => page.evaluate(expression), sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+        executeCDP: async () => ({}), close: () => nodeBrowser.close() };
+    }
+    // Visiting the series lets Manta initialize its ordinary anonymous reader session.
+    await reader.navigate(seriesUrl);
+    await reader.sleep(1500);
+    await reader.navigate(chapterUrl);
+    const deadline = Date.now() + 12000;
+    while (Date.now() < deadline) {
+      const result = await reader.evaluate(`({ origin:location.origin, paragraphs:Array.from(document.querySelectorAll('.epub-spine-root p')).map(p => p.textContent.trim()).filter(Boolean) })`);
+      if (result?.origin !== 'https://manta.net') throw new Error('Manta reader left its permitted origin');
+      if (result.paragraphs?.length) return result.paragraphs;
+      await reader.sleep(400);
+    }
+    throw new Error('Manta did not provide public chapter text. Open the chapter on Manta.');
+  } finally { try { await reader?.close(); } catch { try { await nodeBrowser?.close(); } catch {} } }
+}
+
 // The desktop host already owns a permitted Electron browser. Portable .kai
 // bundles cannot resolve puppeteer from the temporary directory they load in.
 async function solveWithHostBrowser(options: CloudflareBypassOptions, runtime: BrowserRuntime): Promise<CloudflareBypassResult | null> {

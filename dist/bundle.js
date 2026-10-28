@@ -17351,7 +17351,7 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path) {
+    function safeUrl2(path) {
       if (typeof path !== "string") {
         return path;
       }
@@ -17387,10 +17387,10 @@ var require_mock_utils = __commonJS({
     }
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
-      const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
+      const resolvedPath = typeof basePath === "string" ? safeUrl2(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
       let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path), resolvedPath);
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl2(path)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl2(path), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -45527,6 +45527,41 @@ function loadHtml(html3) {
   return $2;
 }
 
+// src/utils/atsu-catalog.ts
+var catalogs = /* @__PURE__ */ new Map();
+function atsuBaseProvider(name) {
+  return name?.match(/^(atsu(?:-novel)?)@[\w-]+$/)?.[1] || name;
+}
+async function getAtsuCatalog(id) {
+  if (!/^[\w-]+$/.test(id)) throw new Error("Invalid Atsu series id");
+  const hit = catalogs.get(id);
+  if (hit && Date.now() - hit.at < 6e4) return hit.value;
+  const value = Promise.all([
+    fetchJson(`https://atsu.moe/api/manga/allChapters?mangaId=${encodeURIComponent(id)}`, { timeoutMs: 12e3 }),
+    fetchJson(`https://atsu.moe/api/manga/page?id=${encodeURIComponent(id)}`, { timeoutMs: 8e3 }).catch(() => null)
+  ]).then(([chapters, page]) => ({ chapters: chapters?.chapters || [], scanlators: page?.mangaPage?.scanlators || [] }));
+  if (catalogs.size >= 40) catalogs.delete(catalogs.keys().next().value);
+  catalogs.set(id, { at: Date.now(), value });
+  void value.catch(() => catalogs.delete(id));
+  return value;
+}
+function atsuSource(base, seriesId2, chapter, scanlators) {
+  const groupId = chapter.scanlationMangaId;
+  const group = scanlators.find((row) => row.id === groupId);
+  const provider55 = groupId && /^[\w-]+$/.test(groupId) ? `${base}@${groupId}` : base;
+  const name = group?.name || groupId || null;
+  return {
+    provider: provider55,
+    providerName: name ? `Atsu \xB7 ${name}` : "Atsu",
+    chapterKey: `${provider55}:${seriesId2}|${chapter.id}`,
+    providerChapterId: chapter.id,
+    language: chapter.language || group?.language || "en",
+    releaseDate: chapter.createdAt && Number.isFinite(new Date(chapter.createdAt).getTime()) ? new Date(chapter.createdAt).toISOString() : null,
+    scanlator: name,
+    translator: name
+  };
+}
+
 // src/utils/scraping/quality.ts
 var QUALITY_MAP = {
   "2160p": "2160p",
@@ -45584,22 +45619,22 @@ var EXTRA_PATTERNS = [
   "FILM"
 ];
 var EXTRA_RE = new RegExp(`\\b(${EXTRA_PATTERNS.join("|")})\\b`, "gi");
-function normalizeTitle(title) {
-  return title.replace(/\b(\d+)(st|nd|rd|th)\b/gi, "$1").replace(/(\d+)\s*[Ss]eason/gi, "$1").replace(/[Ss]eason\s*(\d+)/gi, "$1").replace(EXTRA_RE, "").replace(/-[^-]+-/g, " ").replace(/[~:]/g, " ").replace(/\s+/g, " ").trim();
+function normalizeTitle(title2) {
+  return title2.replace(/\b(\d+)(st|nd|rd|th)\b/gi, "$1").replace(/(\d+)\s*[Ss]eason/gi, "$1").replace(/[Ss]eason\s*(\d+)/gi, "$1").replace(EXTRA_RE, "").replace(/-[^-]+-/g, " ").replace(/[~:]/g, " ").replace(/\s+/g, " ").trim();
 }
-function slugifyTitle(title) {
-  return title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
+function slugifyTitle(title2) {
+  return title2.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
 }
 var LATIN_ONLY_RE = /^[\p{Script=Latin}\p{Nd}\p{P}\p{Zs}\p{S}]+$/u;
-function looksLikeAbbreviation(title) {
-  const t = title.trim();
+function looksLikeAbbreviation(title2) {
+  const t = title2.trim();
   if (/\s/.test(t)) return false;
   if (t.length <= 4) return true;
   return t.length <= 6 && t === t.toUpperCase() && /[A-Z]/.test(t);
 }
-function queryRank(title) {
-  if (!LATIN_ONLY_RE.test(title)) return 2;
-  if (looksLikeAbbreviation(title)) return 1;
+function queryRank(title2) {
+  if (!LATIN_ONLY_RE.test(title2)) return 2;
+  if (looksLikeAbbreviation(title2)) return 1;
   return 0;
 }
 function buildSearchQueries(titles) {
@@ -45747,8 +45782,8 @@ function pickBestMangaCandidate(titles, candidates, getNames, threshold = 0.6) {
 var fullTitle = (value) => value.normalize("NFKC").toLowerCase().replace(/\((?:light\s*)?novel\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 function buildNovelSearchQueries(titles) {
   const seen = /* @__PURE__ */ new Set();
-  return titles.map((title) => title.normalize("NFKC").replace(/\((?:light\s*)?novel\)/gi, "").replace(/\s+/g, " ").trim()).filter((title) => {
-    const key = title.toLowerCase();
+  return titles.map((title2) => title2.normalize("NFKC").replace(/\((?:light\s*)?novel\)/gi, "").replace(/\s+/g, " ").trim()).filter((title2) => {
+    const key = title2.toLowerCase();
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -45757,7 +45792,7 @@ function buildNovelSearchQueries(titles) {
 function pickBestNovelCandidate(titles, candidates) {
   const part = (value) => value.match(/\bpart\s*(\d+)\b/i)?.[1];
   const requestedParts = [...new Set(titles.map(part).filter(Boolean))];
-  const scopedTitles = requestedParts.length === 1 ? titles.filter((title) => part(title) === requestedParts[0]) : titles;
+  const scopedTitles = requestedParts.length === 1 ? titles.filter((title2) => part(title2) === requestedParts[0]) : titles;
   const targets = scopedTitles.map(fullTitle).filter(Boolean);
   const exact = candidates.find((row) => targets.includes(fullTitle(row.title)));
   if (exact) return { candidate: exact, score: 1 };
@@ -45773,7 +45808,7 @@ function pickBestNovelCandidate(titles, candidates) {
   return ranked[0] || null;
 }
 function pickBestNovelProviderCandidate(titles, candidates, getNames, threshold = 0.85) {
-  const aliases2 = candidates.flatMap((candidate, index2) => getNames(candidate).filter((title) => typeof title === "string" && !!title.trim()).map((title) => ({ id: String(index2), title })));
+  const aliases2 = candidates.flatMap((candidate, index2) => getNames(candidate).filter((title2) => typeof title2 === "string" && !!title2.trim()).map((title2) => ({ id: String(index2), title: title2 })));
   const best = pickBestNovelCandidate(titles, aliases2);
   return best && best.score >= Math.max(0.85, threshold) ? { candidate: candidates[Number(best.candidate.id)], score: best.score } : null;
 }
@@ -45930,6 +45965,56 @@ function setCloudflareBrowserRuntime(runtime) {
 }
 function getBrowserRuntime() {
   return browserRuntime ?? (typeof __tatakai_chromedp__ !== "undefined" ? __tatakai_chromedp__ : void 0);
+}
+async function readPublicNovelText(seriesUrl2, chapterUrl) {
+  if (new URL(seriesUrl2).origin !== "https://manta.net" || new URL(chapterUrl).origin !== "https://manta.net") throw new Error("Invalid Manta reader URL");
+  const runtime = getBrowserRuntime();
+  let reader;
+  let nodeBrowser;
+  try {
+    if (runtime) reader = await runtime.newBrowser({ headless: true, timeout: 25 });
+    else {
+      if (process.browser) throw new Error("Manta needs the provider browser to render free novel chapters");
+      const connect = await loadConnect();
+      const { chromePath, hasXvfb } = ensureBrowserRuntime();
+      if (!connect || !chromePath) throw new Error("Manta needs a provider browser to render free novel chapters");
+      const connection = await connect({
+        headless: true,
+        customConfig: { chromePath },
+        disableXvfb: !hasXvfb,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+      });
+      nodeBrowser = connection.browser;
+      const page = connection.page;
+      reader = {
+        navigate: (url) => page.goto(url, { waitUntil: "domcontentloaded", timeout: 2e4 }),
+        evaluate: (expression) => page.evaluate(expression),
+        sleep: (ms) => new Promise((resolve2) => setTimeout(resolve2, ms)),
+        executeCDP: async () => ({}),
+        close: () => nodeBrowser.close()
+      };
+    }
+    await reader.navigate(seriesUrl2);
+    await reader.sleep(1500);
+    await reader.navigate(chapterUrl);
+    const deadline = Date.now() + 12e3;
+    while (Date.now() < deadline) {
+      const result = await reader.evaluate(`({ origin:location.origin, paragraphs:Array.from(document.querySelectorAll('.epub-spine-root p')).map(p => p.textContent.trim()).filter(Boolean) })`);
+      if (result?.origin !== "https://manta.net") throw new Error("Manta reader left its permitted origin");
+      if (result.paragraphs?.length) return result.paragraphs;
+      await reader.sleep(400);
+    }
+    throw new Error("Manta did not provide public chapter text. Open the chapter on Manta.");
+  } finally {
+    try {
+      await reader?.close();
+    } catch {
+      try {
+        await nodeBrowser?.close();
+      } catch {
+      }
+    }
+  }
 }
 async function solveWithHostBrowser(options, runtime) {
   let browser;
@@ -46315,19 +46400,19 @@ function resolveProviderRunOptions(opts) {
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider53, fn, options) {
+async function runProviderWithRetry(provider55, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider53)),
+        Promise.resolve().then(() => fn(provider55)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider53.name,
+          provider: provider55.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -46340,7 +46425,7 @@ async function runProviderWithRetry(provider53, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider53.name,
+            provider: provider55.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -46358,7 +46443,7 @@ async function runProviderWithRetry(provider53, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider53.name,
+      provider: provider55.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -46434,15 +46519,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider53 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider53, fn, options);
+      const provider55 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider55, fn, options);
       emit(
         {
-          provider: provider53.name,
+          provider: provider55.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider53.name.toLowerCase())
+        leadNames.has(provider55.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -46519,8 +46604,8 @@ function inferTorrentFileFormat(...values) {
   }
   return "video";
 }
-function parseEpisodeFromTitle(title) {
-  const name = title.replace(/\.(mkv|mp4|avi|m4v|ts|mov|webm)$/i, "");
+function parseEpisodeFromTitle(title2) {
+  const name = title2.replace(/\.(mkv|mp4|avi|m4v|ts|mov|webm)$/i, "");
   const subEp = name.match(/\(E(\d{1,4})\)/i);
   if (subEp) {
     return { season: null, episodeNumber: parseInt(subEp[1], 10), episodeEnd: null, isBatch: false };
@@ -46557,20 +46642,20 @@ function parseEpisodeFromTitle(title) {
   }
   return { episodeNumber: null, episodeEnd: null, season: null, isBatch: false };
 }
-function isBatchTitle(title) {
-  if (/\bbatch\b/i.test(title)) return true;
-  if (/\bcomplete\b/i.test(title)) return true;
-  if (/\bseries\b/i.test(title)) return true;
-  if (/\bseason\s*\d+\s*[-~]\s*\d+/i.test(title)) return true;
-  const range = title.match(/\b(\d{1,3})\s*[-~]\s*(\d{2,3})\b/);
+function isBatchTitle(title2) {
+  if (/\bbatch\b/i.test(title2)) return true;
+  if (/\bcomplete\b/i.test(title2)) return true;
+  if (/\bseries\b/i.test(title2)) return true;
+  if (/\bseason\s*\d+\s*[-~]\s*\d+/i.test(title2)) return true;
+  const range = title2.match(/\b(\d{1,3})\s*[-~]\s*(\d{2,3})\b/);
   if (range) {
     const diff = parseInt(range[2], 10) - parseInt(range[1], 10);
     if (diff >= 5) return true;
   }
   return false;
 }
-function normalizeForMatch(title) {
-  return title.toLowerCase().replace(/\[[^\]]*\]/g, " ").replace(/\([^)]*\)/g, " ").replace(/[._:!?'"]/g, " ").replace(/\s+/g, " ").trim();
+function normalizeForMatch(title2) {
+  return title2.toLowerCase().replace(/\[[^\]]*\]/g, " ").replace(/\([^)]*\)/g, " ").replace(/[._:!?'"]/g, " ").replace(/\s+/g, " ").trim();
 }
 var SKIP_WORDS = /* @__PURE__ */ new Set([
   "the",
@@ -46613,8 +46698,8 @@ var SKIP_WORDS = /* @__PURE__ */ new Set([
   "dubbed",
   "dub"
 ]);
-function titleWords(title) {
-  return normalizeForMatch(title).split(/\s+/).filter((w) => w.length >= 2 && !SKIP_WORDS.has(w) && !/^\d+$/.test(w));
+function titleWords(title2) {
+  return normalizeForMatch(title2).split(/\s+/).filter((w) => w.length >= 2 && !SKIP_WORDS.has(w) && !/^\d+$/.test(w));
 }
 function scoreTitleMatch(torrentTitle, animeTitle) {
   if (!torrentTitle || !animeTitle) return 0;
@@ -48136,9 +48221,9 @@ async function findSeriesSlug(titles) {
       const href = el.attr?.("href") ?? "";
       const m = href.match(/\/series\/([^/?#]+)/);
       if (!m) return;
-      const title = (el.attr?.("title") ?? el.text?.() ?? "").trim();
-      if (!title) return;
-      hits.push({ slug: m[1], title, score: scoreMatch(query, title) });
+      const title2 = (el.attr?.("title") ?? el.text?.() ?? "").trim();
+      if (!title2) return;
+      hits.push({ slug: m[1], title: title2, score: scoreMatch(query, title2) });
     });
     if (hits.length > 0) {
       hits.sort((a, b) => b.score - a.score);
@@ -48192,13 +48277,13 @@ async function _toonStreamSingle(opts, ep) {
     const series = await findSeriesSlug(opts.titles);
     if (!series) return [];
     const seriesPath = `/series/${series.slug}`;
-    const seriesUrl = `${series.base}${seriesPath}`;
+    const seriesUrl2 = `${series.base}${seriesPath}`;
     const seriesPage = await fetchHtml(seriesPath);
     if (seriesPage) {
       for (const season of [1, 2, 3, 4]) {
         const epHref = findEpisodeHref(seriesPage.html, series.slug, season, ep);
         if (epHref) {
-          const sources = await resolveEpisodeSources(epHref, seriesUrl);
+          const sources = await resolveEpisodeSources(epHref, seriesUrl2);
           if (sources.length > 0) return sources;
           break;
         }
@@ -48213,7 +48298,7 @@ async function _toonStreamSingle(opts, ep) {
       );
     }
     const settled = await Promise.allSettled(
-      epPaths.map((p) => resolveEpisodeSources(p, seriesUrl))
+      epPaths.map((p) => resolveEpisodeSources(p, seriesUrl2))
     );
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value.length > 0) return r.value;
@@ -48369,8 +48454,8 @@ function extractSubtitles(html3) {
 }
 function deepFindVideoUrl(value) {
   if (typeof value === "string") {
-    const clean2 = cleanUrl(value);
-    return videoType(clean2) !== "unknown" ? clean2 : null;
+    const clean3 = cleanUrl(value);
+    return videoType(clean3) !== "unknown" ? clean3 : null;
   }
   if (Array.isArray(value)) {
     for (const item of value) {
@@ -48967,9 +49052,9 @@ function bytesToHex(value) {
   return out;
 }
 function videoType(url) {
-  const clean2 = url.split("?")[0].toLowerCase();
-  if (clean2.endsWith(".m3u8")) return "m3u8";
-  if (clean2.endsWith(".mp4")) return "mp4";
+  const clean3 = url.split("?")[0].toLowerCase();
+  if (clean3.endsWith(".m3u8")) return "m3u8";
+  if (clean3.endsWith(".mp4")) return "mp4";
   return "unknown";
 }
 function cleanUrl(url) {
@@ -50290,8 +50375,8 @@ async function tryBases(path) {
   }
   return hit;
 }
-function slugify(title) {
-  return title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
+function slugify(title2) {
+  return title2.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
 }
 async function findAnimeSlug(titles) {
   for (const query of buildSearchQueries(titles)) {
@@ -50308,11 +50393,11 @@ async function findAnimeSlug(titles) {
         const href = el.attr?.("href") ?? "";
         const m = href.match(/\/(?:anime|series|show)\/([^/?#]+)\/?$/) || href.match(/\/([^/?#]+)-\d+x\d+\/?$/);
         if (!m) return;
-        const title = (el.attr?.("title") ?? el.text?.() ?? "").trim();
-        if (!title) return;
+        const title2 = (el.attr?.("title") ?? el.text?.() ?? "").trim();
+        if (!title2) return;
         const slug2 = m[1]?.replace(/[-_]+$/, "");
         if (!slug2 || /^(home|search|anime|series)$/i.test(slug2)) return;
-        hits.push({ slug: slug2, title, score: scoreMatch(query, title) });
+        hits.push({ slug: slug2, title: title2, score: scoreMatch(query, title2) });
       });
       if (hits.length > 0) {
         hits.sort((a, b) => b.score - a.score);
@@ -50383,8 +50468,8 @@ var provider5 = {
     try {
       const ep = opts.episode ?? 1;
       const titles = opts.titles;
-      for (const title of buildSearchQueries(titles)) {
-        const slug2 = slugify(title);
+      for (const title2 of buildSearchQueries(titles)) {
+        const slug2 = slugify(title2);
         if (!slug2) continue;
         const seriesPaths = [`/series/${slug2}/`, `/anime/${slug2}/`];
         for (const seriesPath of seriesPaths) {
@@ -50412,10 +50497,10 @@ var provider5 = {
       }
       const anime = await findAnimeSlug(titles);
       if (anime) {
-        const seriesUrl = `/series/${anime.slug}/`;
-        const seriesHtml = await fetchHtml2(`${anime.base}${seriesUrl}`);
+        const seriesUrl2 = `/series/${anime.slug}/`;
+        const seriesHtml = await fetchHtml2(`${anime.base}${seriesUrl2}`);
         if (seriesHtml) {
-          const sources = extractSources(seriesHtml, `${anime.base}${seriesUrl}`, anime.base);
+          const sources = extractSources(seriesHtml, `${anime.base}${seriesUrl2}`, anime.base);
           if (sources.length > 0) return sources;
         }
         for (const season of [1, 2, 3]) {
@@ -50753,23 +50838,23 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE33) => {
-        const html3 = await fetchHtml3(`${BASE33}/?s=${encodeURIComponent(query)}`, BASE33);
+      BASES2.map(async (BASE35) => {
+        const html3 = await fetchHtml3(`${BASE35}/?s=${encodeURIComponent(query)}`, BASE35);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
         $2.find('a[href*="/anime/"]').each((_, el) => {
           const href = el.attr?.("href") ?? "";
-          const title = (el.attr?.("title") ?? el.text?.() ?? "").trim();
-          if (!href || !title || href.endsWith("/anime/")) return;
+          const title2 = (el.attr?.("title") ?? el.text?.() ?? "").trim();
+          if (!href || !title2 || href.endsWith("/anime/")) return;
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE33}${href}`,
-            title,
-            base: BASE33,
+            url: href.startsWith("http") ? href : `${BASE35}${href}`,
+            title: title2,
+            base: BASE35,
             slug: m[1],
-            score: scoreMatch(query, title)
+            score: scoreMatch(query, title2)
           });
         });
         if (hits.length === 0) throw new Error("no hits");
@@ -50891,8 +50976,8 @@ var provider8 = {
     try {
       const targetEp = opts.episode ?? 1;
       const slugProbes = [];
-      for (const title of buildSearchQueries(opts.titles).slice(0, 3)) {
-        const slug2 = slugifyTitle(title);
+      for (const title2 of buildSearchQueries(opts.titles).slice(0, 3)) {
+        const slug2 = slugifyTitle(title2);
         if (!slug2) continue;
         for (const base of BASES2) {
           slugProbes.push(
@@ -50985,11 +51070,11 @@ async function searchAnime3(titles) {
         $2.find('a[href*="/watch/"]').each((_, el) => {
           const $el = $2(el);
           const href = $el.attr("href") ?? "";
-          const title = ($el.attr("title") ?? $el.find(".name").text() ?? $el.text() ?? "").trim();
+          const title2 = ($el.attr("title") ?? $el.find(".name").text() ?? $el.text() ?? "").trim();
           const m = href.match(/\/watch\/([^/?#]+)/);
-          if (!m || !title) return;
-          if (title.length < 2) return;
-          candidates.push({ slug: m[1], title, score: scoreMatch(query, title) });
+          if (!m || !title2) return;
+          if (title2.length < 2) return;
+          candidates.push({ slug: m[1], title: title2, score: scoreMatch(query, title2) });
         });
         $2.find("[data-jp]").each((_, el) => {
           const $el = $2(el);
@@ -51261,12 +51346,12 @@ var anikoto_default = provider9;
 var BASE2 = "https://animeheaven.me";
 var ANILIST_GRAPHQL3 = "https://graphql.anilist.co";
 var UA11 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
-function normalizeTitle2(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]/g, "");
+function normalizeTitle2(title2) {
+  return title2.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
-function scoreTitle(query, title) {
+function scoreTitle(query, title2) {
   const needle = normalizeTitle2(query);
-  const hay = normalizeTitle2(title);
+  const hay = normalizeTitle2(title2);
   if (!needle || !hay) return 0;
   if (hay === needle) return 100;
   if (hay.startsWith(needle) || needle.startsWith(hay)) return 80;
@@ -51316,9 +51401,9 @@ async function searchAnimeHeaven(query) {
       const $el = $2(el);
       const href = $el.attr("href") ?? "";
       const id = href.split("?")[1]?.trim();
-      const title = ($el.find(".fastname").text() || $el.find("img").attr("alt") || "").trim();
-      if (!id || !title) return;
-      results.push({ id, title });
+      const title2 = ($el.find(".fastname").text() || $el.find("img").attr("alt") || "").trim();
+      if (!id || !title2) return;
+      results.push({ id, title: title2 });
     });
     return results;
   } catch {
@@ -51456,17 +51541,17 @@ function parseSearchLinks(html3) {
     if (!slug2 || seen.has(slug2)) continue;
     const tagEnd = html3.indexOf(">", m.index);
     const tag = tagEnd !== -1 ? html3.slice(m.index, tagEnd + 1) : m[0];
-    let title = /title=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
-    if (!title) {
+    let title2 = /title=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+    if (!title2) {
       const closeIdx = html3.indexOf("</a>", tagEnd);
       if (closeIdx !== -1) {
         const inner = html3.slice((tagEnd ?? m.index) + 1, closeIdx);
-        title = inner.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        title2 = inner.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
       }
     }
-    if (!title || title.length < 2) continue;
+    if (!title2 || title2.length < 2) continue;
     seen.add(slug2);
-    out.push({ slug: slug2, main_title: title });
+    out.push({ slug: slug2, main_title: title2 });
   }
   return out;
 }
@@ -51577,8 +51662,8 @@ async function searchAnimeId(titles) {
         for (const item of items) {
           const slug2 = item.slug?.trim();
           if (!slug2) continue;
-          for (const title of titlesForItem(item)) {
-            const score = scoreMatch(query, title);
+          for (const title2 of titlesForItem(item)) {
+            const score = scoreMatch(query, title2);
             if (!best || score > best.score) best = { slug: slug2, score };
           }
         }
@@ -51761,9 +51846,9 @@ async function searchAnime4(titles) {
       const href = el.attr?.("href") ?? "";
       const parsed = extractSlugFromHref(href);
       if (!parsed) return;
-      const title = (el.attr?.("title") ?? el.text?.() ?? "").trim();
-      if (!title) return;
-      hits.push({ ...parsed, title, base: page.base });
+      const title2 = (el.attr?.("title") ?? el.text?.() ?? "").trim();
+      if (!title2) return;
+      hits.push({ ...parsed, title: title2, base: page.base });
     });
     if (hits.length === 0) continue;
     const scored = hits.map((h) => ({ ...h, score: scoreMatch(query, h.title) })).sort((a, b) => b.score - a.score);
@@ -51947,8 +52032,8 @@ var provider12 = {
   async single(opts) {
     try {
       const targetEp = opts.episode ?? 1;
-      for (const title of buildSearchQueries(opts.titles).slice(0, 2)) {
-        const slug2 = title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
+      for (const title2 of buildSearchQueries(opts.titles).slice(0, 2)) {
+        const slug2 = title2.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-");
         if (!slug2) continue;
         for (const season of [1, 2]) {
           const epUrl2 = `${BASES5[0]}/episode/${slug2}-${season}x${targetEp}/`;
@@ -52115,9 +52200,9 @@ function extractSlug(html3, query) {
     const href = el.attr?.("href") ?? "";
     const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
     if (!m) return;
-    const title = (el.attr?.("title") ?? el.text?.() ?? "").trim();
-    if (!title) return;
-    candidates.push({ slug: m[1], title, score: scoreTitle2(query, title) });
+    const title2 = (el.attr?.("title") ?? el.text?.() ?? "").trim();
+    if (!title2) return;
+    candidates.push({ slug: m[1], title: title2, score: scoreTitle2(query, title2) });
   });
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.score - a.score);
@@ -52227,7 +52312,7 @@ function extractAjaxEpisodeUrl(html3, base, query, epNumber) {
   const $2 = loadHtml(html3);
   const candidates = [];
   $2("article").each((index2, article) => {
-    const title = $2(article).find("h3 span").first().text().trim() || $2(article).find("h3").first().text().trim();
+    const title2 = $2(article).find("h3 span").first().text().trim() || $2(article).find("h3").first().text().trim();
     let episodeSlug = null;
     $2(article).find("a[href]").each((_, anchor) => {
       if (episodeSlug) return;
@@ -52238,7 +52323,7 @@ function extractAjaxEpisodeUrl(html3, base, query, epNumber) {
     if (episodeSlug) {
       candidates.push({
         url: `${base}/watch/${episodeSlug}-episode-${epNumber}/`,
-        title,
+        title: title2,
         order: index2
       });
     }
@@ -52489,8 +52574,8 @@ async function searchSubjects(titles, prefer, timeoutMs) {
     if (subjects.length === 0) continue;
     let best = null;
     for (const subject of subjects) {
-      const title = String(subject.title || "");
-      const score = scoreMatch(query, title);
+      const title2 = String(subject.title || "");
+      const score = scoreMatch(query, title2);
       if (!best || score > best.score) best = { subject, score };
     }
     if (!best) continue;
@@ -52679,8 +52764,8 @@ function collectCandidates(html3, q, out, seen) {
     if (/\/(page|feed|tag|category|genre)\//.test(href)) return;
     if (seen.has(href)) return;
     seen.add(href);
-    const title = (el.attr?.("title") ?? el.text?.() ?? "").replace(/\s+/g, " ").trim();
-    const score = Math.max(scoreMatch(q, title), scoreMatch(q, latinOf(href)));
+    const title2 = (el.attr?.("title") ?? el.text?.() ?? "").replace(/\s+/g, " ").trim();
+    const score = Math.max(scoreMatch(q, title2), scoreMatch(q, latinOf(href)));
     out.push({ url: href, score });
   });
 }
@@ -53054,8 +53139,8 @@ async function findEpisodeViaSearch(titles, ep) {
       let href = el.attr?.("href") ?? "";
       if (!href || !/\/anime\//.test(href)) return;
       if (href.startsWith("/")) href = `${BASE5}${href}`;
-      const title = (el.attr?.("title") ?? el.text?.() ?? "").replace(/\s+/g, " ").trim();
-      hits.push({ url: href, score: scoreMatch(q, title) });
+      const title2 = (el.attr?.("title") ?? el.text?.() ?? "").replace(/\s+/g, " ").trim();
+      hits.push({ url: href, score: scoreMatch(q, title2) });
     });
     if (!hits.length) continue;
     hits.sort((a, b) => b.score - a.score);
@@ -53854,12 +53939,12 @@ function buildTitleList(response, language, fallback) {
   const out = [];
   const seen = /* @__PURE__ */ new Set();
   const push = (value) => {
-    const title = String(value || "").trim();
-    if (!title) return;
-    const key = title.toLowerCase();
+    const title2 = String(value || "").trim();
+    if (!title2) return;
+    const key = title2.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    out.push(title);
+    out.push(title2);
   };
   const titles = response?.titles || {};
   const lang = (language || "").toLowerCase();
@@ -53872,7 +53957,7 @@ function buildTitleList(response, language, fallback) {
   push(titles.en);
   push(titles["x-jat"]);
   push(titles.ja);
-  for (const title of fallback) push(title);
+  for (const title2 of fallback) push(title2);
   return out;
 }
 function convertEpisode(response, episode) {
@@ -54168,19 +54253,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider53 = {
+  const provider55 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider53.movie = (opts) => run(opts, "movie");
+    provider55.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider53.getLanguages = async () => languages;
+    provider55.getLanguages = async () => languages;
   }
-  return provider53;
+  return provider55;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -54300,16 +54385,16 @@ async function siteFetchHtml(url, options = {}) {
 function deaccent(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-function toSlug(title) {
-  return deaccent(String(title || "").toLowerCase()).replace(/[':!.,?()[\]/–—"]/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+function toSlug(title2) {
+  return deaccent(String(title2 || "").toLowerCase()).replace(/[':!.,?()[\]/–—"]/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 function normalize(value) {
   return deaccent(String(value || "").toLowerCase()).replace(/[':!.,?()[\]/-]/g, " ").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
-function stripSeasonSuffix(title) {
-  if (!title) return title;
-  const cleaned = String(title).replace(/\s+(?:Season|Saison|Stagione|Temporada|Sezon)\s+\d+\s*$/i, "").replace(/\s+S\d+\s*$/i, "").replace(/\s+(?:Part|Partie|Cour)\s+\d+\s*$/i, "").trim();
-  return cleaned || title;
+function stripSeasonSuffix(title2) {
+  if (!title2) return title2;
+  const cleaned = String(title2).replace(/\s+(?:Season|Saison|Stagione|Temporada|Sezon)\s+\d+\s*$/i, "").replace(/\s+S\d+\s*$/i, "").replace(/\s+(?:Part|Partie|Cour)\s+\d+\s*$/i, "").trim();
+  return cleaned || title2;
 }
 var TITLE_NOISE_WORDS = /* @__PURE__ */ new Set([
   "saison",
@@ -54676,9 +54761,9 @@ async function searchSlugsScored(query, ctx) {
     if (!match2) return;
     const slug2 = match2[1];
     if (results.some((r) => r.slug === slug2)) return;
-    const title = $2(el).find(".asn-search-result-title").text().trim();
+    const title2 = $2(el).find(".asn-search-result-title").text().trim();
     const subtitle = $2(el).find(".asn-search-result-subtitle").text().trim();
-    results.push({ slug: slug2, score: scoreSearchResult(title, subtitle, query) });
+    results.push({ slug: slug2, score: scoreSearchResult(title2, subtitle, query) });
   });
   results.sort((a, b) => b.score - a.score);
   return results.filter((r) => r.score >= MIN_SEARCH_SCORE).map((r) => r.slug);
@@ -54788,9 +54873,9 @@ async function extract3(ctx) {
   if (streams.length === 0 && !isAborted(ctx.signal) && !isBudgetExhausted(startTime)) {
     const foundSlugs = [];
     const searchTitles = ctx.titles.slice(0, MAX_FALLBACK_TITLES).map(stripSeasonSuffix);
-    for (const title of searchTitles) {
+    for (const title2 of searchTitles) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-      for (const slug2 of await searchSlugsScored(title, ctx)) {
+      for (const slug2 of await searchSlugsScored(title2, ctx)) {
         if (!foundSlugs.includes(slug2)) foundSlugs.push(slug2);
         if (foundSlugs.length >= MAX_FALLBACK_SLUGS) break;
       }
@@ -54974,9 +55059,9 @@ async function resolveSeries(page, type, episodeNums, lang, signal) {
   }
   return { streams, licensed: false };
 }
-async function findSeriesForTitle(title, type, season, signal, startTime) {
-  const results = await searchSite(title, signal);
-  const scored = results.map((r) => ({ ...r, score: scoreSearchResult2(r, title, season) })).sort((a, b) => b.score - a.score);
+async function findSeriesForTitle(title2, type, season, signal, startTime) {
+  const results = await searchSite(title2, signal);
+  const scored = results.map((r) => ({ ...r, score: scoreSearchResult2(r, title2, season) })).sort((a, b) => b.score - a.score);
   for (const r of scored) {
     if (r.score < 40) continue;
     const fmt = (r.format || "").toUpperCase();
@@ -54988,7 +55073,7 @@ async function findSeriesForTitle(title, type, season, signal, startTime) {
     if (page?.serieId) return page;
   }
   if (isAborted(signal) || isBudgetExhausted(startTime)) return null;
-  const slug2 = toSlug(title);
+  const slug2 = toSlug(title2);
   if (!slug2) return null;
   const candidates = [`${slug2}-streaming.html`, `${slug2}-saison-1-streaming.html`];
   if (season && season > 1) {
@@ -55020,14 +55105,14 @@ async function extract4(ctx) {
   }
   const streams = [];
   const seenUrls = /* @__PURE__ */ new Set();
-  for (const title of (titlePool.length > 0 ? titlePool : ctx.titles).slice(
+  for (const title2 of (titlePool.length > 0 ? titlePool : ctx.titles).slice(
     0,
     MAX_SEARCH_TITLES
   )) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
     if (streams.length > 0) break;
     const page = await findSeriesForTitle(
-      title,
+      title2,
       ctx.type,
       ctx.season,
       ctx.signal,
@@ -55080,9 +55165,9 @@ var SPINOFF_KEYWORDS = [
 function sanitizeQuery(query) {
   return (query || "").replace(/[–—]/g, " ").replace(/[‘’`]/g, "'").replace(/[()[\]{}:;,!?]/g, " ").replace(/\s+/g, " ").trim();
 }
-function spinoffPenalty(title) {
-  if (!title) return 0;
-  const lower = title.toLowerCase();
+function spinoffPenalty(title2) {
+  if (!title2) return 0;
+  const lower = title2.toLowerCase();
   let penalty = 0;
   for (const keyword of SPINOFF_KEYWORDS) {
     if (new RegExp(keyword, "i").test(lower)) penalty += 60;
@@ -55092,8 +55177,8 @@ function spinoffPenalty(title) {
 function generateFallbackQueries(titles) {
   const seen = /* @__PURE__ */ new Set();
   const fallbacks = [];
-  for (const title of titles) {
-    const words = stripSeasonSuffix(title).split(/\s+/).filter((w) => w.length > 3);
+  for (const title2 of titles) {
+    const words = stripSeasonSuffix(title2).split(/\s+/).filter((w) => w.length > 3);
     if (words.length >= 2) {
       const lastWord = words[words.length - 1];
       if (!seen.has(lastWord) && lastWord.length >= 4) {
@@ -55125,29 +55210,29 @@ async function postSearch(query, ctx) {
   const results = [];
   $2("a.asn-search-result").each((_, el) => {
     const href = $2(el).attr("href") || "";
-    const title = $2(el).find(".asn-search-result-title").first().text().trim();
-    if (!href || !title) return;
+    const title2 = $2(el).find(".asn-search-result-title").first().text().trim();
+    if (!href || !title2) return;
     const idMatch = href.match(ANIME_ID);
     if (!idMatch) return;
     results.push({
       url: absoluteUrl2(href, SITE4),
       animeId: idMatch[1],
       slug: idMatch[2],
-      title
+      title: title2
     });
   });
   return results;
 }
 async function searchAnime5(ctx, startTime) {
   const titles = ctx.titles.slice(0, MAX_SEARCH_TITLES2);
-  for (const title of titles) {
+  for (const title2 of titles) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return null;
-    const results = await postSearch(stripSeasonSuffix(title), ctx);
+    const results = await postSearch(stripSeasonSuffix(title2), ctx);
     if (results.length === 0) continue;
     let best = null;
     let bestScore = 0;
     for (const result of results) {
-      const score = scoreTitleMatch2(result.title, title, SCORES) - spinoffPenalty(result.title);
+      const score = scoreTitleMatch2(result.title, title2, SCORES) - spinoffPenalty(result.title);
       if (score > bestScore) {
         bestScore = score;
         best = result;
@@ -55159,8 +55244,8 @@ async function searchAnime5(ctx, startTime) {
   for (const query of generateFallbackQueries(titles)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
     for (const result of await postSearch(query, ctx)) {
-      for (const title of titles) {
-        const score = scoreTitleMatch2(result.title, stripSeasonSuffix(title), SCORES) - spinoffPenalty(result.title);
+      for (const title2 of titles) {
+        const score = scoreTitleMatch2(result.title, stripSeasonSuffix(title2), SCORES) - spinoffPenalty(result.title);
         candidates.push({ hit: result, score });
       }
     }
@@ -55363,8 +55448,8 @@ function scoreSearchMatch(resultTitle, searchTitle) {
   if (extra > 0) score -= Math.min(extra * 15, 60);
   return score;
 }
-function detectLang(title, url = "") {
-  const t = (title || "").trim();
+function detectLang(title2, url = "") {
+  const t = (title2 || "").trim();
   const u = (url || "").toLowerCase();
   if (/\bVF\b/i.test(t)) return "vf";
   if (/\bVOSTFR?\b/i.test(t)) return "vostfr";
@@ -55375,9 +55460,9 @@ function detectLang(title, url = "") {
   }
   return null;
 }
-function detectSeason(title, url = "") {
+function detectSeason(title2, url = "") {
   for (let i = 0; i < SEASON_PATTERNS.length; i++) {
-    const m = title.match(SEASON_PATTERNS[i]);
+    const m = title2.match(SEASON_PATTERNS[i]);
     if (m) {
       if (i === 1) return "final";
       return Number.parseInt(m[1], 10);
@@ -55385,7 +55470,7 @@ function detectSeason(title, url = "") {
   }
   const urlSeason = url.match(/saison[-\s]*(\d+)/i)?.[1] || url.match(/cour[-\s]*(\d+)/i)?.[1];
   if (urlSeason) return Number.parseInt(urlSeason, 10);
-  const numEnd = title.match(/(?:^|\s)(\d{1,2})\s*(?:vf|vostfr)?\s*$/i);
+  const numEnd = title2.match(/(?:^|\s)(\d{1,2})\s*(?:vf|vostfr)?\s*$/i);
   if (numEnd) {
     const v = Number.parseInt(numEnd[1], 10);
     if (v >= 1 && v <= 30) return v;
@@ -55395,8 +55480,8 @@ function detectSeason(title, url = "") {
 function newsIdOf(url) {
   return url.match(/\/(\d+)-/)?.[1] ?? null;
 }
-async function searchAnime6(title, signal) {
-  const url = `${SITE5}/index.php?do=search&subaction=search&story=${encodeURIComponent(title)}`;
+async function searchAnime6(title2, signal) {
+  const url = `${SITE5}/index.php?do=search&subaction=search&story=${encodeURIComponent(title2)}`;
   const html3 = await siteFetchText(url, {
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 8e3,
@@ -55409,7 +55494,7 @@ async function searchAnime6(title, signal) {
   const add2 = (href, resultTitle) => {
     const key = href || resultTitle;
     if (!href || href.length <= 5 || !resultTitle || seen.has(key)) return;
-    const score = scoreSearchMatch(resultTitle, title);
+    const score = scoreSearchMatch(resultTitle, title2);
     if (score < 30) return;
     seen.add(key);
     results.push({
@@ -55541,13 +55626,13 @@ async function extract6(ctx) {
   const matches = [];
   const seenIds = /* @__PURE__ */ new Set();
   const searched = /* @__PURE__ */ new Set();
-  const trySearchTitle = async (title) => {
-    if (!title || title.length > 50) return;
-    const clean2 = stripSeasonSuffix(title);
-    if (!clean2 || clean2.length < 3 || !SEARCHABLE_TITLE.test(clean2)) return;
-    if (searched.has(clean2)) return;
-    searched.add(clean2);
-    for (const r of await searchAnime6(clean2, ctx.signal)) {
+  const trySearchTitle = async (title2) => {
+    if (!title2 || title2.length > 50) return;
+    const clean3 = stripSeasonSuffix(title2);
+    if (!clean3 || clean3.length < 3 || !SEARCHABLE_TITLE.test(clean3)) return;
+    if (searched.has(clean3)) return;
+    searched.add(clean3);
+    for (const r of await searchAnime6(clean3, ctx.signal)) {
       const id = newsIdOf(r.url);
       if (id && !seenIds.has(id)) {
         seenIds.add(id);
@@ -55739,8 +55824,8 @@ async function searchAnime7(query, signal) {
   );
   return best && best.slug ? best : null;
 }
-function cleanQuery(title) {
-  return title.replace(/\s*(saison|season|s)\s*\d+/gi, "").replace(/\s*(episode|ep|e)\s*\d+/gi, "").trim();
+function cleanQuery(title2) {
+  return title2.replace(/\s*(saison|season|s)\s*\d+/gi, "").replace(/\s*(episode|ep|e)\s*\d+/gi, "").trim();
 }
 function pickSeason(details, season) {
   const seasons = Array.isArray(details?.seasons) ? details.seasons : [];
@@ -55809,9 +55894,9 @@ async function extract7(ctx) {
   }
   if (wanted.length === 0) return [];
   const triedQueries = /* @__PURE__ */ new Set();
-  for (const title of titles) {
+  for (const title2 of titles) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const query = cleanQuery(title);
+    const query = cleanQuery(title2);
     if (!query || triedQueries.has(query.toLowerCase())) continue;
     triedQueries.add(query.toLowerCase());
     const hit = await searchAnime7(query, ctx.signal);
@@ -55863,9 +55948,9 @@ function getPlayerName(url) {
   if (url.includes("moon")) return "Moon";
   return "Player";
 }
-function detectLang2(url, title) {
+function detectLang2(url, title2) {
   const u = url.toLowerCase();
-  const t = (title || "").toLowerCase();
+  const t = (title2 || "").toLowerCase();
   if (/\/animes\/[^/]*-vostfr(?:\/|$)/.test(u) || /\bvostfr\b/.test(t)) return "VOSTFR";
   if (/\/animes\/[^/]*-vf(?:\/|$)/.test(u) || /\bvf\b/.test(t)) return "VF";
   if (/\/animes\/[^/]*-vo(?:\/|$)/.test(u) || /\bvo\b/.test(t)) return "VO";
@@ -55887,8 +55972,8 @@ function scoreHit(hitTitle, simplifiedTitle, titleWords2) {
   const lenRatio = Math.min(n.length, simplifiedTitle.length) / Math.max(n.length, simplifiedTitle.length || 1);
   return Math.round(score * lenRatio);
 }
-async function searchAnime8(title, signal) {
-  const html3 = await siteFetchText(`${SITE7}/?s=${encodeURIComponent(title)}`, {
+async function searchAnime8(title2, signal) {
+  const html3 = await siteFetchText(`${SITE7}/?s=${encodeURIComponent(title2)}`, {
     signal,
     timeoutMs: SEARCH_TIMEOUT_MS,
     acceptLanguage: FR_ACCEPT_LANGUAGE
@@ -55926,7 +56011,7 @@ async function searchAnime8(title, signal) {
     return true;
   });
   if (unique.length === 0) return [];
-  const simplifiedTitle = normalizeSearch(title);
+  const simplifiedTitle = normalizeSearch(title2);
   const titleWords2 = simplifiedTitle.split(/\s+/).filter((w) => w.length > 2);
   const scored = unique.map((r) => ({ ...r, score: scoreHit(r.title, simplifiedTitle, titleWords2) })).sort((a, b) => b.score - a.score);
   const bestScore = scored[0]?.score ?? 0;
@@ -56250,10 +56335,10 @@ function parseAutocomplete(json) {
     const row = entry;
     const slug2 = String(row?.slug || "").trim().replace(/^\/+|\/+$/g, "");
     if (!slug2 || slug2.includes("/")) continue;
-    const title = String(row?.title || "").trim() || slug2.replace(/-/g, " ");
+    const title2 = String(row?.title || "").trim() || slug2.replace(/-/g, " ");
     out.push({
-      title,
-      title2: String(row?.title2 || "").trim() || title,
+      title: title2,
+      title2: String(row?.title2 || "").trim() || title2,
       slug: slug2,
       url: absoluteUrl2(String(row?.url || `/anime/${slug2}/`), SITE8)
     });
@@ -56273,16 +56358,16 @@ function parseSearchHtml(html3) {
       const slug2 = href.replace(/.*\/anime\//, "").replace(/\/$/, "");
       if (!slug2 || slug2.includes("/") || results.some((r) => r.slug === slug2)) continue;
       const imgAlt = $el.closest(ALT_SCOPE).find("img").first().attr("alt");
-      const title = String(imgAlt || text3).replace(/\s+/g, " ").trim();
-      results.push({ title, title2: title, slug: slug2, url: absoluteUrl2(href, SITE8) });
+      const title2 = String(imgAlt || text3).replace(/\s+/g, " ").trim();
+      results.push({ title: title2, title2, slug: slug2, url: absoluteUrl2(href, SITE8) });
     }
     if (results.length > 0) break;
   }
   return results;
 }
-async function searchAnime9(title, ctx) {
+async function searchAnime9(title2, ctx) {
   const json = await siteFetchJson(
-    `${SEARCH_URL}?q=${encodeURIComponent(title)}`,
+    `${SEARCH_URL}?q=${encodeURIComponent(title2)}`,
     {
       acceptLanguage: FR_ACCEPT_LANGUAGE,
       timeoutMs: 12e3,
@@ -56293,15 +56378,15 @@ async function searchAnime9(title, ctx) {
   );
   const fromApi = parseAutocomplete(json);
   if (fromApi.length > 0) return fromApi;
-  const slug2 = toSlug(title);
+  const slug2 = toSlug(title2);
   if (slug2.length > 3) {
     const url = `${SITE8}/anime/${slug2}/`;
     const html4 = await fetchPage2(url, ctx, 8e3, true);
     if (html4 && html4.length > 1e3) {
-      return [{ title: slug2.replace(/-/g, " "), title2: title, slug: slug2, url }];
+      return [{ title: slug2.replace(/-/g, " "), title2, slug: slug2, url }];
     }
   }
-  const html3 = await fetchPage2(`${SITE8}/?s=${encodeURIComponent(title)}`, ctx);
+  const html3 = await fetchPage2(`${SITE8}/?s=${encodeURIComponent(title2)}`, ctx);
   return html3 ? parseSearchHtml(html3) : [];
 }
 function parseSeasonNumber(seasonSlug) {
@@ -56326,22 +56411,22 @@ function parseSeasons(html3, slug2) {
   let filmHref = null;
   for (const el of $2(".season-card").toArray()) {
     const href = $2(el).attr("href");
-    const title = $2(el).find(".season-card-title").text().trim();
-    if (!href || !title) continue;
-    if (/film|movie/i.test(title)) {
+    const title2 = $2(el).find(".season-card-title").text().trim();
+    if (!href || !title2) continue;
+    if (/film|movie/i.test(title2)) {
       filmHref = href;
       continue;
     }
-    if (/oav|ona/i.test(title)) continue;
-    seasons.push({ href, title, seasonNum: parseSeasonNumber(href) });
+    if (/oav|ona/i.test(title2)) continue;
+    seasons.push({ href, title: title2, seasonNum: parseSeasonNumber(href) });
   }
   if (seasons.length === 0 && filmHref === null) {
     for (const el of $2('a[href*="saison-"]').toArray()) {
       const href = $2(el).attr("href");
-      const title = $2(el).text().trim();
-      if (!href || !title || !href.includes(`/anime/${slug2}/`)) continue;
+      const title2 = $2(el).text().trim();
+      if (!href || !title2 || !href.includes(`/anime/${slug2}/`)) continue;
       const seasonNum = parseSeasonNumber(href);
-      if (seasonNum) seasons.push({ href, title, seasonNum });
+      if (seasonNum) seasons.push({ href, title: title2, seasonNum });
     }
     for (const el of $2('a[href*="/film/"], a[href*="/movie/"]').toArray()) {
       const href = $2(el).attr("href");
@@ -56634,11 +56719,11 @@ var PAGE_TIMEOUT_MS = 5e3;
 var MAX_MOVIE_TITLES = 2;
 var MAX_SERIES_TITLES = 2;
 var MAX_SLUG_CANDIDATES = 4;
-function coflixSlug(title) {
-  return deaccent(stripSeasonSuffix(title).toLowerCase()).replace(/[':!.,?()[\]"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+function coflixSlug(title2) {
+  return deaccent(stripSeasonSuffix(title2).toLowerCase()).replace(/[':!.,?()[\]"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
-function generateSlugCandidates(title, season) {
-  const base = coflixSlug(title);
+function generateSlugCandidates(title2, season) {
+  const base = coflixSlug(title2);
   const candidates = [base];
   if (base.startsWith("the-")) candidates.push(base.slice(4));
   if (season) {
@@ -56771,11 +56856,11 @@ async function searchViaWpApi(query, type, season, episode, signal) {
   for (const post of posts) {
     if (isAborted(signal)) break;
     const slug2 = post.slug || "";
-    const title = (post.title?.rendered || "").toLowerCase();
+    const title2 = (post.title?.rendered || "").toLowerCase();
     const queryLower = query.toLowerCase();
-    const isRelevant = title.includes(queryLower) || slug2.includes(coflixSlug(query));
+    const isRelevant = title2.includes(queryLower) || slug2.includes(coflixSlug(query));
     if (!isRelevant) continue;
-    if (countExtraWords(normalize(title), normalize(queryLower)) >= 2) continue;
+    if (countExtraWords(normalize(title2), normalize(queryLower)) >= 2) continue;
     const seriesSlug = slug2 || coflixSlug(query);
     if (type === "tv" && season && episode) {
       for (const epPath of [
@@ -56808,8 +56893,8 @@ async function extract10(ctx) {
   const startTime = Date.now();
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   if (ctx.type === "movie") {
-    for (const title of ctx.titles.slice(0, MAX_MOVIE_TITLES)) {
-      for (const slug2 of generateSlugCandidates(title, null).slice(
+    for (const title2 of ctx.titles.slice(0, MAX_MOVIE_TITLES)) {
+      for (const slug2 of generateSlugCandidates(title2, null).slice(
         0,
         MAX_SLUG_CANDIDATES
       )) {
@@ -56834,8 +56919,8 @@ async function extract10(ctx) {
   );
   const targetEpisodes3 = [...new Set(targets.length > 0 ? targets : [1])];
   for (const ep of targetEpisodes3) {
-    for (const title of ctx.titles.slice(0, MAX_SERIES_TITLES)) {
-      for (const slug2 of generateSlugCandidates(title, targetSeason).slice(
+    for (const title2 of ctx.titles.slice(0, MAX_SERIES_TITLES)) {
+      for (const slug2 of generateSlugCandidates(title2, targetSeason).slice(
         0,
         MAX_SLUG_CANDIDATES
       )) {
@@ -56954,8 +57039,8 @@ function bestMatch(results, titles) {
   let bestScore = -1;
   let best = null;
   for (const result of results) {
-    for (const title of titles) {
-      const score = scoreMatch2(result.title, title);
+    for (const title2 of titles) {
+      const score = scoreMatch2(result.title, title2);
       if (score > bestScore) {
         bestScore = score;
         best = result;
@@ -56999,9 +57084,9 @@ function buildSearchQueries3(titles) {
   }
   if (priority.length === 0 && titles.length > 0) priority.push(titles[0]);
   const queries = /* @__PURE__ */ new Set();
-  for (const title of priority) {
-    queries.add(title);
-    const slug2 = toSlug(title);
+  for (const title2 of priority) {
+    queries.add(title2);
+    const slug2 = toSlug(title2);
     queries.add(slug2);
     const words = slug2.split("-").filter((w) => w.length > 3 || w === "dr" || w === "st");
     if (words.length > 1) queries.add(words.slice(0, 3).join(" "));
@@ -57136,11 +57221,11 @@ function scoreMatch3(resultTitle, searchTitle) {
   }
   return 0;
 }
-function bestMatch2(items, title) {
+function bestMatch2(items, title2) {
   let best = null;
   let bestScore = 0;
   for (const item of items) {
-    const score = scoreMatch3(item.title, title);
+    const score = scoreMatch3(item.title, title2);
     if (score > bestScore) {
       bestScore = score;
       best = item;
@@ -57212,10 +57297,10 @@ async function fetchPage3(url, signal) {
   });
 }
 async function trySearch(titles, wantSeries, signal, startTime) {
-  for (const title of titles.slice(0, MAX_SEARCH_TITLES3)) {
+  for (const title2 of titles.slice(0, MAX_SEARCH_TITLES3)) {
     if (isAborted(signal) || isBudgetExhausted(startTime)) break;
     const json = await siteFetchJson(
-      `${SEARCH_URL2}${encodeURIComponent(title)}`,
+      `${SEARCH_URL2}${encodeURIComponent(title2)}`,
       {
         headers: { "X-Requested-With": "XMLHttpRequest" },
         acceptLanguage: FR_ACCEPT_LANGUAGE,
@@ -57226,7 +57311,7 @@ async function trySearch(titles, wantSeries, signal, startTime) {
     const results = parseSearchResults(json);
     if (results.length === 0) continue;
     const filtered = results.filter((r) => r.isSeries === wantSeries);
-    const match2 = bestMatch2(filtered.length > 0 ? filtered : results, title);
+    const match2 = bestMatch2(filtered.length > 0 ? filtered : results, title2);
     if (match2) return match2;
   }
   return null;
@@ -57240,19 +57325,19 @@ async function browseCategory(type, titles, signal) {
   const items = [];
   $2(`a[href*="${linkPattern}"]`).each((_i, el) => {
     const href = $2(el).attr("href") || "";
-    const title = $2(el).text().trim() || $2(el).find("img").first().attr("alt") || "";
-    if (href && title) {
+    const title2 = $2(el).text().trim() || $2(el).find("img").first().attr("alt") || "";
+    if (href && title2) {
       items.push({
         url: absoluteUrl2(href, SITE11),
-        title,
+        title: title2,
         isSeries: type === "tv"
       });
     }
   });
   if (items.length === 0) return null;
-  for (const title of titles.slice(0, MAX_SEARCH_TITLES3)) {
+  for (const title2 of titles.slice(0, MAX_SEARCH_TITLES3)) {
     if (isAborted(signal)) break;
-    const match2 = bestMatch2(items, title);
+    const match2 = bestMatch2(items, title2);
     if (match2) return match2;
   }
   return null;
@@ -57387,15 +57472,15 @@ function scoreMatch4(resultTitle, searchTitle) {
   }
   return 0;
 }
-function extractSeason(title) {
-  const m = (title || "").match(SEASON_IN_TITLE);
+function extractSeason(title2) {
+  const m = (title2 || "").match(SEASON_IN_TITLE);
   return m ? Number.parseInt(m[1], 10) : null;
 }
-function bestMatch3(items, title, targetSeason) {
+function bestMatch3(items, title2, targetSeason) {
   let best = null;
   let bestScore = 0;
   for (const item of items) {
-    let score = scoreMatch4(item.title, title);
+    let score = scoreMatch4(item.title, title2);
     if (targetSeason && score > 0) {
       const rs = item.season;
       if (rs === targetSeason) {
@@ -57421,18 +57506,18 @@ function parseSearchResults2(html3) {
     const $card = $2(el);
     const $poster = $card.find("a.short-poster").first();
     const href = $poster.attr("href") || "";
-    const title = $card.find("div.short-title").first().text().trim();
+    const title2 = $card.find("div.short-title").first().text().trim();
     const altTitle = $poster.attr("alt") || "";
     const version = $card.find("span.film-version a").first().text().trim() || "VF";
-    if (!href || !title) return;
+    if (!href || !title2) return;
     const newsidMatch = href.match(NEWSID);
     results.push({
       url: href.startsWith("http") ? href : `${SITE12}${href}`,
       newsid: newsidMatch ? newsidMatch[1] : null,
-      title,
+      title: title2,
       altTitle,
       version,
-      season: extractSeason(title) || extractSeason(altTitle)
+      season: extractSeason(title2) || extractSeason(altTitle)
     });
   });
   $2("div.search-item").each((_i, el) => {
@@ -57440,17 +57525,17 @@ function parseSearchResults2(html3) {
     const onclick = $item.attr("onclick") || "";
     const hrefMatch = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
     const href = hrefMatch ? hrefMatch[1] : "";
-    const title = $item.find(".search-title").first().text().trim() || $item.find(".search-item-title").first().text().trim();
+    const title2 = $item.find(".search-title").first().text().trim() || $item.find(".search-item-title").first().text().trim();
     const poster = $item.find(".search-poster img").attr("alt") || $item.find(".search-item-poster img").attr("alt") || "";
-    if (!href || !title) return;
+    if (!href || !title2) return;
     const newsidMatch = href.match(/(\d+)-/);
     results.push({
       url: href.startsWith("http") ? href : `${SITE12}${href}`,
       newsid: newsidMatch ? newsidMatch[1] : null,
-      title,
+      title: title2,
       altTitle: poster,
       version: "VF",
-      season: extractSeason(title) || extractSeason(poster)
+      season: extractSeason(title2) || extractSeason(poster)
     });
   });
   return results;
@@ -57555,9 +57640,9 @@ async function trySearch2(titles, targetSeason, signal, startTime) {
   const dedup = /* @__PURE__ */ new Set();
   let listingFetched = false;
   let listing = [];
-  for (const title of cleanTitles.slice(0, MAX_SEARCH_TITLES4)) {
+  for (const title2 of cleanTitles.slice(0, MAX_SEARCH_TITLES4)) {
     if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-    const postResults = await ajaxSearch(title, signal);
+    const postResults = await ajaxSearch(title2, signal);
     for (const r of postResults) {
       const key = r.newsid || r.url;
       if (key && !dedup.has(key)) {
@@ -57565,7 +57650,7 @@ async function trySearch2(titles, targetSeason, signal, startTime) {
         allPostResults.push(r);
       }
     }
-    const postMatch = bestMatch3(postResults, title, targetSeason);
+    const postMatch = bestMatch3(postResults, title2, targetSeason);
     if (postMatch) return postMatch;
     if (!listingFetched) {
       listingFetched = true;
@@ -57576,7 +57661,7 @@ async function trySearch2(titles, targetSeason, signal, startTime) {
       });
       listing = html3 ? parseSearchResults2(html3) : [];
     }
-    const getMatch = bestMatch3(listing, title, targetSeason);
+    const getMatch = bestMatch3(listing, title2, targetSeason);
     if (getMatch) return getMatch;
   }
   if (allPostResults.length > 0) {
@@ -57756,9 +57841,9 @@ function pickNewsId(onclick, href) {
   if (numericMatch) return numericMatch[1];
   return null;
 }
-function isSeriesCard(hasEpisodeBadge, href, title) {
+function isSeriesCard(hasEpisodeBadge, href, title2) {
   if (hasEpisodeBadge) return true;
-  const text3 = `${href || ""} ${title || ""}`;
+  const text3 = `${href || ""} ${title2 || ""}`;
   return /saison|series|\/s-tv\//i.test(text3);
 }
 function parseSearchCards(html3, baseUrl) {
@@ -57771,8 +57856,8 @@ function parseSearchCards(html3, baseUrl) {
       const hrefRaw = $card.find("a.short-poster").first().attr("href") || $card.find("a.img-box").first().attr("href") || $card.find("a[href]").first().attr("href") || "";
       const href = absoluteUrl2(hrefRaw, baseUrl);
       if (!href) return;
-      const title = ($card.find(".short-title").first().text() || $card.find(".title").first().text() || $card.find("img").first().attr("alt") || "").trim();
-      if (!title) return;
+      const title2 = ($card.find(".short-title").first().text() || $card.find(".title").first().text() || $card.find("img").first().attr("alt") || "").trim();
+      if (!title2) return;
       const onclick = $card.find(".info-button").attr("onclick") || "";
       const dataId = $card.find("[data-id]").first().attr("data-id") || $card.attr("data-id") || "";
       let newsId = pickNewsId(onclick, hrefRaw) || dataId;
@@ -57787,8 +57872,8 @@ function parseSearchCards(html3, baseUrl) {
       cards.push({
         newsId,
         href,
-        title,
-        isSeries: isSeriesCard($card.find(".mli-eps").length > 0, href, title),
+        title: title2,
+        isSeries: isSeriesCard($card.find(".mli-eps").length > 0, href, title2),
         baseUrl
       });
     });
@@ -57804,9 +57889,9 @@ function buildTitleQueries(titles) {
     if (queries.some((q) => q.toLowerCase() === trimmed.toLowerCase())) return;
     queries.push(trimmed);
   };
-  for (const title of titles.slice(0, 2)) {
-    push(stripSeasonSuffix(title));
-    const beforeColon = stripSeasonSuffix(title).split(":")[0];
+  for (const title2 of titles.slice(0, 2)) {
+    push(stripSeasonSuffix(title2));
+    const beforeColon = stripSeasonSuffix(title2).split(":")[0];
     if (beforeColon && beforeColon.length >= 3) push(beforeColon);
   }
   return queries.slice(0, MAX_SEARCH_QUERIES3);
@@ -57880,12 +57965,12 @@ async function fetchPage4(url, ctx, timeoutMs) {
     timeoutMs
   });
 }
-async function searchByTitle(title, mediaType, season, ctx) {
+async function searchByTitle(title2, mediaType, season, ctx) {
   const allCards = [];
   for (const baseUrl of BASE_URLS2) {
     if (isAborted(ctx.signal)) break;
     const html3 = await siteFetchText(`${baseUrl}/index.php`, {
-      form: { do: "search", subaction: "search", story: title },
+      form: { do: "search", subaction: "search", story: title2 },
       headers: { Referer: `${baseUrl}/`, Origin: baseUrl },
       acceptLanguage: FR_ACCEPT_LANGUAGE,
       signal: ctx.signal,
@@ -57897,7 +57982,7 @@ async function searchByTitle(title, mediaType, season, ctx) {
     (card) => mediaType === "tv" ? card.isSeries : !card.isSeries
   );
   if (filtered.length === 0) return [];
-  return filtered.map((card) => ({ ...card, score: scoreCard(card, title, mediaType, season) })).sort((a, b) => b.score - a.score).slice(0, 8);
+  return filtered.map((card) => ({ ...card, score: scoreCard(card, title2, mediaType, season) })).sort((a, b) => b.score - a.score).slice(0, 8);
 }
 function extractSerieTag(html3) {
   const tagMatch = html3.match(/sd-tagz[^>]*>[\s\S]*?(s-[A-Za-z0-9_-]+)/);
@@ -57984,8 +58069,8 @@ function parseCategoryMovies(html3) {
     const newsId = $card.find("[data-id]").first().attr("data-id") || ($card.find(".info-button").attr("onclick") || "").match(
       /openModal\('(\d+)'\)/
     )?.[1] || "";
-    const title = ($card.find(".short-title").first().text() || "").trim();
-    if (newsId && title) movies.push({ newsId, title });
+    const title2 = ($card.find(".short-title").first().text() || "").trim();
+    if (newsId && title2) movies.push({ newsId, title: title2 });
   });
   return movies;
 }
@@ -58040,9 +58125,9 @@ async function streamsFromSeasonId(seasonNewsId, ctx, startTime) {
 }
 async function findSeriesLead(ctx, season, startTime) {
   const lead = { serieTag: null, firstSeasonNewsId: null };
-  for (const title of buildTitleQueries(ctx.titles)) {
+  for (const title2 of buildTitleQueries(ctx.titles)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const ranked = await searchByTitle(title, "tv", season, ctx);
+    const ranked = await searchByTitle(title2, "tv", season, ctx);
     if (ranked.length === 0 || ranked[0].score < MIN_MATCH_SCORE) continue;
     const card = ranked[0];
     const pageHtml = await fetchPage4(
@@ -58083,9 +58168,9 @@ async function extractSeries2(ctx, startTime) {
       if (streams.length > 0) return streams;
     }
   }
-  for (const title of buildTitleQueries(ctx.titles)) {
+  for (const title2 of buildTitleQueries(ctx.titles)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const ranked = await searchByTitle(title, "tv", season, ctx);
+    const ranked = await searchByTitle(title2, "tv", season, ctx);
     if (ranked.length === 0 || ranked[0].score < MIN_MATCH_SCORE) continue;
     const html3 = await fetchPage4(ranked[0].href, ctx, 1e4);
     if (!html3) continue;
@@ -58099,9 +58184,9 @@ async function extractSeries2(ctx, startTime) {
 async function extractMovie2(ctx, startTime) {
   const queries = buildTitleQueries(ctx.titles);
   let searchProducedCards = false;
-  for (const title of queries) {
+  for (const title2 of queries) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-    const ranked = await searchByTitle(title, "movie", void 0, ctx);
+    const ranked = await searchByTitle(title2, "movie", void 0, ctx);
     if (ranked.length === 0) {
       if (!searchProducedCards) break;
       continue;
@@ -58194,8 +58279,8 @@ async function searchAnime10(query, signal) {
     if (seen.has(path)) continue;
     seen.add(path);
     const slug2 = path.replace("/voir-anime/", "");
-    const title = slug2.replace(/-vostfr$/, "").replace(/-saison-\d+$/, "").replace(/-/g, " ");
-    results.push({ slug: slug2, url: `${SITE14}${path}`, title });
+    const title2 = slug2.replace(/-vostfr$/, "").replace(/-saison-\d+$/, "").replace(/-/g, " ");
+    results.push({ slug: slug2, url: `${SITE14}${path}`, title: title2 });
   }
   return results;
 }
@@ -58228,8 +58313,8 @@ function extractEmbedUrls(html3) {
   }
   return urls;
 }
-function inferLanguage(slug2, title) {
-  const combined = `${slug2} ${title}`.toLowerCase();
+function inferLanguage(slug2, title2) {
+  const combined = `${slug2} ${title2}`.toLowerCase();
   if (combined.includes("-vf") || combined.includes(" vf") || combined.includes("french")) {
     return "VF";
   }
@@ -58241,9 +58326,9 @@ function hostPriority(url) {
   return idx === -1 ? 99 : idx;
 }
 async function findByDirectUrl(titles, season, signal, startTime) {
-  for (const title of titles) {
+  for (const title2 of titles) {
     if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-    const slug2 = toSlug(title);
+    const slug2 = toSlug(title2);
     if (!slug2) continue;
     const attempts = season > 1 ? [`${SITE14}/voir-anime/${slug2}-saison-${season}-vostfr`, `${SITE14}/voir-anime/${slug2}-vostfr`] : [`${SITE14}/voir-anime/${slug2}-vostfr`];
     for (const url of attempts) {
@@ -58257,11 +58342,11 @@ async function findByDirectUrl(titles, season, signal, startTime) {
   return null;
 }
 async function findBySearch(titles, season, signal, startTime) {
-  for (const title of titles) {
+  for (const title2 of titles) {
     if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-    const results = await searchAnime10(title, signal);
+    const results = await searchAnime10(title2, signal);
     if (results.length === 0) continue;
-    const queryNorm = normalizeTitle3(title);
+    const queryNorm = normalizeTitle3(title2);
     const seasonSlug = season ? `saison-${season}` : "";
     const scored = results.map((r) => {
       const slugNorm = normalizeTitle3(r.slug);
@@ -58398,7 +58483,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider53, server, lang, item) {
+function pushCandidate(out, provider55, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58406,22 +58491,22 @@ function pushCandidate(out, provider53, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider53} \xB7 ${server || "Player"}`
+    server: `${provider55} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider53, isMovie, episodeNum) {
+function parseCandidates(data2, provider55, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider53, item.player || item.name, lang, item);
+        pushCandidate(out, provider55, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider53, item.name || item.player, lang, item);
+        pushCandidate(out, provider55, item.name || item.player, lang, item);
       }
     }
   }
@@ -58434,20 +58519,20 @@ function parseCandidates(data2, provider53, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider53, item.player, lang, item);
+            pushCandidate(out, provider55, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider53, item.name || item.player, lang, item);
+          pushCandidate(out, provider55, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider53, item.player || item.name, lang, item);
+      pushCandidate(out, provider55, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -58554,10 +58639,10 @@ async function fallbackCandidates(id, ctx, isMovie, season, episodes, startTime)
   return found;
 }
 async function searchAlternates(ctx, isMovie, season, episodes, startTime) {
-  const title = ctx.titles[0];
-  if (!title) return [];
+  const title2 = ctx.titles[0];
+  if (!title2) return [];
   const data2 = await siteFetchJson(
-    `${API2}/api/search?title=${encodeURIComponent(title)}`,
+    `${API2}/api/search?title=${encodeURIComponent(title2)}`,
     {
       headers: { Referer: `${SITE15}/`, Origin: SITE15 },
       acceptLanguage: FR_ACCEPT_LANGUAGE,
@@ -58903,12 +58988,12 @@ async function findSlugs(titles, signal, startTime) {
   tryQueries.sort((a, b) => a.priority - b.priority);
   const candidates = [];
   const seenSlugs = /* @__PURE__ */ new Set();
-  for (const { title } of tryQueries.slice(0, MAX_SLUG_SEARCH)) {
+  for (const { title: title2 } of tryQueries.slice(0, MAX_SLUG_SEARCH)) {
     if (isAborted(signal) || isBudgetExhausted(startTime)) break;
-    const nt = normalize(title);
+    const nt = normalize(title2);
     if (nt.length < 4) continue;
     const data2 = await siteFetchJson(
-      `${SITE16}/api/search?q=${encodeURIComponent(title)}`,
+      `${SITE16}/api/search?q=${encodeURIComponent(title2)}`,
       { signal, acceptLanguage: FR_ACCEPT_LANGUAGE, timeoutMs: 1e4 }
     );
     const results = Array.isArray(data2?.results) ? data2.results : [];
@@ -59116,9 +59201,9 @@ async function extract18(ctx) {
   const startTime = Date.now();
   const season = ctx.season;
   let episodes = [];
-  for (const title of ctx.titles) {
+  for (const title2 of ctx.titles) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    const slug2 = toSlug(title);
+    const slug2 = toSlug(title2);
     if (!slug2) continue;
     const candidates = [
       ...season ? [`${SITE17}/anime/${slug2}-saison-${season}/`] : [],
@@ -59132,11 +59217,11 @@ async function extract18(ctx) {
     if (episodes.length > 0) break;
   }
   if (episodes.length === 0) {
-    for (const title of ctx.titles) {
+    for (const title2 of ctx.titles) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-      const results = await searchAnime11(title, ctx);
+      const results = await searchAnime11(title2, ctx);
       if (results.length === 0) continue;
-      const queryNorm = normalizeSlug(title);
+      const queryNorm = normalizeSlug(title2);
       const seasonStr = season ? `saison-${season}` : "";
       const scored = results.map((result) => {
         const slugNorm = normalizeSlug(result.slug);
@@ -59238,11 +59323,11 @@ function collectIds(html3, pattern) {
 }
 async function findId(ctx, pattern, startTime) {
   const queries = [];
-  for (const title of ctx.titles.slice(0, 3)) {
-    if (!title) continue;
-    if (!queries.includes(title)) queries.push(title);
-    const main = title.split(":")[0].trim();
-    if (main && main !== title && !queries.includes(main)) queries.push(main);
+  for (const title2 of ctx.titles.slice(0, 3)) {
+    if (!title2) continue;
+    if (!queries.includes(title2)) queries.push(title2);
+    const main = title2.split(":")[0].trim();
+    if (main && main !== title2 && !queries.includes(main)) queries.push(main);
   }
   for (const query of queries) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
@@ -59278,8 +59363,8 @@ function episodeCandidates3(ctx) {
   }
   return out.length > 0 ? out : [1];
 }
-function hlsStream(url, title) {
-  const stream = toStream(url, "VF", LABEL17, SITE18, { quality: "HD", title });
+function hlsStream(url, title2) {
+  const stream = toStream(url, "VF", LABEL17, SITE18, { quality: "HD", title: title2 });
   stream.type = "hls";
   return stream;
 }
@@ -59306,12 +59391,12 @@ async function extractSeries3(ctx, startTime) {
   const imdbId = await findId(ctx, SERIES_ID_PATTERN, startTime);
   if (!imdbId) return [];
   if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-  const seriesUrl = `${SITE18}/series/${imdbId}`;
-  let html3 = await fetchPage6(seriesUrl, ctx.signal);
+  const seriesUrl2 = `${SITE18}/series/${imdbId}`;
+  let html3 = await fetchPage6(seriesUrl2, ctx.signal);
   if (!html3) return [];
   if (!html3.includes("/hls/") || !html3.includes("playlist.m3u8")) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-    const retry = await fetchPage6(seriesUrl, ctx.signal);
+    const retry = await fetchPage6(seriesUrl2, ctx.signal);
     if (!retry || !retry.includes("playlist.m3u8")) return [];
     html3 = retry;
   }
@@ -59373,9 +59458,9 @@ var SLUG_OVERRIDES = {
   "black clover": "black",
   black: "black"
 };
-function toSekaiSlug(title) {
-  if (!title) return "";
-  const slug2 = toSlug(title);
+function toSekaiSlug(title2) {
+  if (!title2) return "";
+  const slug2 = toSlug(title2);
   return SLUG_OVERRIDES[slug2] ?? slug2;
 }
 function normalizeTitle4(value) {
@@ -59485,8 +59570,8 @@ async function extract20(ctx) {
   const absEp = ctx.absoluteEpisode ?? ctx.episode;
   if (!absEp) return [];
   const slug2 = toSekaiSlug(titles[0]);
-  let seriesUrl = `${SITE19}/${slug2}`;
-  let mainHtml = await fetchSeriesPage2(seriesUrl, ctx.signal);
+  let seriesUrl2 = `${SITE19}/${slug2}`;
+  let mainHtml = await fetchSeriesPage2(seriesUrl2, ctx.signal);
   if (mainHtml.length < MIN_PAGE_LENGTH) {
     for (const altTitle of titles.slice(1)) {
       if (!altTitle || isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
@@ -59496,7 +59581,7 @@ async function extract20(ctx) {
       const altHtml = await fetchSeriesPage2(altUrl, ctx.signal);
       if (altHtml.length >= MIN_PAGE_LENGTH) {
         mainHtml = altHtml;
-        seriesUrl = altUrl;
+        seriesUrl2 = altUrl;
         break;
       }
     }
@@ -59511,13 +59596,13 @@ async function extract20(ctx) {
       const html3 = await fetchSeriesPage2(`${SITE19}/${known}`, ctx.signal);
       if (html3.length >= MIN_PAGE_LENGTH) {
         mainHtml = html3;
-        seriesUrl = `${SITE19}/${known}`;
+        seriesUrl2 = `${SITE19}/${known}`;
         break;
       }
     }
   }
   if (mainHtml.length < MIN_PAGE_LENGTH) return [];
-  const effectiveSlug = seriesUrl.split("/").pop()?.replace(/\?.*$/, "") || slug2;
+  const effectiveSlug = seriesUrl2.split("/").pop()?.replace(/\?.*$/, "") || slug2;
   if (!effectiveSlug) return [];
   const epMap = {};
   const sagaUrls = extractSagaUrls(mainHtml, effectiveSlug).slice(0, MAX_SAGAS);
@@ -59645,19 +59730,19 @@ function buildSlugCandidates(titles) {
     seen.add(value);
     out.push(value);
   };
-  for (const title of titles) {
+  for (const title2 of titles) {
     if (out.length >= MAX_GENERATED_SLUGS) break;
-    if (!title) continue;
-    const baseSlug = toSlug(title);
+    if (!title2) continue;
+    const baseSlug = toSlug(title2);
     if (!baseSlug || seen.has(baseSlug)) continue;
     push(baseSlug);
-    const words = title.split(/\s+/).filter((word) => word.length >= 4);
+    const words = title2.split(/\s+/).filter((word) => word.length >= 4);
     if (words.length >= 2) {
       push(toSlug(words.slice(-2).join("-")));
       push(toSlug(words.slice(0, 3).join("-")));
     }
-    if (title.length >= 15) {
-      const parts = toSlug(title).split("-");
+    if (title2.length >= 15) {
+      const parts = toSlug(title2).split("-");
       const compacted = parts.reduce((acc, word, index2, arr) => {
         if (word === "") return acc;
         if (word.length <= 3 && index2 < arr.length - 1) {
@@ -59842,8 +59927,8 @@ function expandMacrons(value) {
   }
   return out;
 }
-function isSpinoff(title) {
-  const lower = title.toLowerCase();
+function isSpinoff(title2) {
+  const lower = title2.toLowerCase();
   return SPINOFF_KEYWORDS3.some((k) => lower.includes(k));
 }
 function normalizeForSearch(value) {
@@ -59931,26 +60016,26 @@ async function wordpressSearch(query, season, ctx) {
   const selector = 'article a[href*="/anime/"], .post-title a[href*="/anime/"], .entry-title a[href*="/anime/"], .result-item a[href*="/anime/"]';
   for (const el of $2(selector).toArray()) {
     const href = $2(el).attr("href") || "";
-    const title = $2(el).text().trim();
-    if (!title || !href) continue;
+    const title2 = $2(el).text().trim();
+    if (!title2 || !href) continue;
     if (results.some((r) => r.url === href)) continue;
-    results.push({ title, url: href, score: scoreSearchResult3(title, href, query, season) });
+    results.push({ title: title2, url: href, score: scoreSearchResult3(title2, href, query, season) });
   }
   if (results.length === 0) {
     const animeRegex = /<a[^>]+href="([^"]*\/anime\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
     let m;
     while ((m = animeRegex.exec(html3)) !== null) {
       const href = absoluteUrl2(m[1], SITE21);
-      const title = m[2].trim();
-      if (!title || results.some((r) => r.url === href)) continue;
-      results.push({ title, url: href, score: scoreSearchResult3(title, href, query, season) });
+      const title2 = m[2].trim();
+      if (!title2 || results.some((r) => r.url === href)) continue;
+      results.push({ title: title2, url: href, score: scoreSearchResult3(title2, href, query, season) });
     }
   }
   results.sort((a, b) => b.score - a.score);
   return results.filter((r) => r.score >= 30).slice(0, 4).map((r) => ({ title: r.title, url: r.url }));
 }
-async function searchAnime12(title, season, ctx, cache3, probeStart) {
-  const baseSlug = toSlug(title);
+async function searchAnime12(title2, season, ctx, cache3, probeStart) {
+  const baseSlug = toSlug(title2);
   const results = [];
   if (season > 1 && baseSlug.length > 3) {
     const slugSets = [generateFallbackSlugs(baseSlug, season)];
@@ -59967,21 +60052,21 @@ async function searchAnime12(title, season, ctx, cache3, probeStart) {
       );
       if (found) {
         const lang = found.includes("-vf") ? "VF" : "VOSTFR";
-        return [{ title: `${title} S${season} ${lang}`, url: found }];
+        return [{ title: `${title2} S${season} ${lang}`, url: found }];
       }
     }
   }
   if (baseSlug.length > 3 && !isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) {
     const exactUrl = `${SITE21}/anime/${baseSlug}/`;
     const exactVfUrl = `${SITE21}/anime/${baseSlug}-vf/`;
-    if (await fetchPage7(exactUrl, ctx, cache3)) results.push({ title, url: exactUrl });
+    if (await fetchPage7(exactUrl, ctx, cache3)) results.push({ title: title2, url: exactUrl });
     if (!isAborted(ctx.signal) && await fetchPage7(exactVfUrl, ctx, cache3)) {
-      results.push({ title: `${title} VF`, url: exactVfUrl });
+      results.push({ title: `${title2} VF`, url: exactVfUrl });
     }
     if (results.length > 0) return results;
   }
   if (!isAborted(ctx.signal) && !isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) {
-    const words = title.split(/\s+/).filter((w) => w.length > 2);
+    const words = title2.split(/\s+/).filter((w) => w.length > 2);
     const altSlugs = [];
     const skipPrefixes = [
       "dealing",
@@ -60003,7 +60088,7 @@ async function searchAnime12(title, season, ctx, cache3, probeStart) {
       altSlugs.push(longWords2.slice(0, 3).join("-"));
       altSlugs.push(longWords2.slice(-2).join("-"));
     }
-    const compactWords = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[':!.,?()[\]]/g, "").replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).filter(Boolean);
+    const compactWords = title2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[':!.,?()[\]]/g, "").replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).filter(Boolean);
     if (compactWords.length >= 3) {
       const shortPos = [];
       for (let i = 0; i < compactWords.length - 1; i++) {
@@ -60046,15 +60131,15 @@ async function searchAnime12(title, season, ctx, cache3, probeStart) {
         probeStart
       );
       if (found) {
-        return [{ title: `${title} [alt]`, url: found }];
+        return [{ title: `${title2} [alt]`, url: found }];
       }
     }
   }
   if (isAborted(ctx.signal) || isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) return [];
-  const searchResults = await wordpressSearch(title, season, ctx);
+  const searchResults = await wordpressSearch(title2, season, ctx);
   if (searchResults.length > 0) return searchResults;
   if (isAborted(ctx.signal) || isBudgetExhausted(probeStart, PROBE_BUDGET_MS)) return [];
-  const longWords = title.split(/\s+/).filter((w) => w.length > 2);
+  const longWords = title2.split(/\s+/).filter((w) => w.length > 2);
   const keywordQueries = [
     longWords.slice(-2).join(" "),
     longWords.slice(0, 2).join(" "),
@@ -60245,8 +60330,8 @@ async function extract22(ctx) {
   ];
   const matches = [];
   const uniqueSlugs = [];
-  for (const title of orderedTitles) {
-    for (const slug2 of [toSlug(title), toSlug(expandMacrons(title))]) {
+  for (const title2 of orderedTitles) {
+    for (const slug2 of [toSlug(title2), toSlug(expandMacrons(title2))]) {
       if (slug2 && slug2.length > 3 && !uniqueSlugs.includes(slug2)) uniqueSlugs.push(slug2);
     }
   }
@@ -60264,9 +60349,9 @@ async function extract22(ctx) {
     matches.push({ title: isVf ? `${baseName} VF` : baseName, url });
   }
   if (matches.length === 0) {
-    for (const title of orderedTitles) {
+    for (const title2 of orderedTitles) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-      const found = await searchAnime12(title, season, ctx, cache3, startTime);
+      const found = await searchAnime12(title2, season, ctx, cache3, startTime);
       if (found.length > 0) {
         matches.push(...found);
         break;
@@ -60375,8 +60460,8 @@ async function ajaxSearch2(query, ctx) {
     signal: ctx.signal
   });
 }
-function parseSeason(title) {
-  const match2 = String(title || "").match(SEASON_IN_TITLE2);
+function parseSeason(title2) {
+  const match2 = String(title2 || "").match(SEASON_IN_TITLE2);
   if (!match2) return null;
   const value = Number(match2[1]);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -60406,11 +60491,11 @@ function scoreMatch6(resultTitle, searchTitle) {
   if (words.length >= 2 && matched < 2) return 0;
   return Math.round(matched / words.length * 50);
 }
-function bestMatch4(hits, title, targetSeason) {
+function bestMatch4(hits, title2, targetSeason) {
   let best = null;
   let bestScore = 0;
   for (const hit of hits) {
-    let score = scoreMatch6(hit.title, title);
+    let score = scoreMatch6(hit.title, title2);
     if (targetSeason && score > 0) {
       const found = hit.season;
       if (found === targetSeason) {
@@ -60436,34 +60521,34 @@ function parseSearchResults3(html3) {
     const $card = $2(el);
     const $poster = $card.find("a.short-poster").first();
     const href = $poster.attr("href") || "";
-    const title = $card.find("div.short-title").first().text().trim();
-    if (!href || !title) continue;
+    const title2 = $card.find("div.short-title").first().text().trim();
+    if (!href || !title2) continue;
     const altTitle = $poster.attr("alt") || "";
     const newsIdMatch = href.match(NEWSID2);
     results.push({
       url: href.startsWith("http") ? href : `${SITE22}${href}`,
       newsId: newsIdMatch ? newsIdMatch[1] : null,
-      title,
+      title: title2,
       altTitle,
       version: $card.find("span.film-version a").first().text().trim() || "VF",
-      season: parseSeason(title) ?? parseSeason(altTitle)
+      season: parseSeason(title2) ?? parseSeason(altTitle)
     });
   }
   for (const el of $2("div.search-item").toArray()) {
     const $item = $2(el);
     const hrefMatch = ($item.attr("onclick") || "").match(ONCLICK_HREF);
     const href = hrefMatch ? hrefMatch[1] : "";
-    const title = $item.find(".search-title").first().text().trim() || $item.find(".search-item-title").first().text().trim();
-    if (!href || !title) continue;
+    const title2 = $item.find(".search-title").first().text().trim() || $item.find(".search-item-title").first().text().trim();
+    if (!href || !title2) continue;
     const poster = $item.find(".search-poster img").attr("alt") || $item.find(".search-item-poster img").attr("alt") || "";
     const newsIdMatch = href.match(NEWSID_IN_PATH);
     results.push({
       url: href.startsWith("http") ? href : `${SITE22}${href}`,
       newsId: newsIdMatch ? newsIdMatch[1] : null,
-      title,
+      title: title2,
       altTitle: poster,
       version: "VF",
-      season: parseSeason(title) ?? parseSeason(poster)
+      season: parseSeason(title2) ?? parseSeason(poster)
     });
   }
   return results;
@@ -60515,11 +60600,11 @@ function fetchEpisodeApi2(newsId, ctx) {
     return parseEpisodeApi(json);
   });
 }
-async function searchListing(title, targetSeason, ctx) {
+async function searchListing(title2, targetSeason, ctx) {
   const html3 = await cached("listing", () => fetchPage8(LISTING_URL, ctx));
   const results = parseSearchResults3(html3);
   if (results.length === 0) return null;
-  return bestMatch4(results, title, targetSeason);
+  return bestMatch4(results, title2, targetSeason);
 }
 async function verifyCandidates(hits, titles, ctx, startTime) {
   const query = normalize(titles[0] || "");
@@ -60709,16 +60794,16 @@ var SPINOFF_KEYWORDS4 = [
   "chibi",
   "super deformed"
 ];
-function spinoffPenalty2(title) {
-  const lower = (title || "").toLowerCase();
+function spinoffPenalty2(title2) {
+  const lower = (title2 || "").toLowerCase();
   return SPINOFF_KEYWORDS4.some((k) => lower.includes(k)) ? -50 : 0;
 }
 function validateFallbackMatch(resultTitle, originalTitles) {
   const resultWords = new Set(
     normalize(resultTitle).split(/\s+/).filter((w) => w.length > 3)
   );
-  for (const title of originalTitles) {
-    const titleWords2 = normalize(stripSeasonSuffix(title)).split(/\s+/).filter((w) => w.length > 3);
+  for (const title2 of originalTitles) {
+    const titleWords2 = normalize(stripSeasonSuffix(title2)).split(/\s+/).filter((w) => w.length > 3);
     let overlap = 0;
     for (const w of titleWords2) {
       if (resultWords.has(w)) overlap++;
@@ -60734,19 +60819,19 @@ function parseSearchResults4(html3) {
   const results = [];
   for (const el of $2("a.va-search-result").toArray()) {
     const href = $2(el).attr("href") || "";
-    const title = $2(el).find(".va-search-result-title").first().text().trim();
-    if (!href || !title) continue;
+    const title2 = $2(el).find(".va-search-result-title").first().text().trim();
+    if (!href || !title2) continue;
     const slugMatch = href.match(SLUG);
     if (!slugMatch) continue;
-    results.push({ url: `${SITE23}${href}`, slug: slugMatch[1], title });
+    results.push({ url: `${SITE23}${href}`, slug: slugMatch[1], title: title2 });
   }
   return results;
 }
 function detectLanguage2(html3) {
   const $2 = loadHtml(html3);
-  const title = $2("title").text().toLowerCase();
-  if (/\bvostfr\b/.test(title)) return "VOSTFR";
-  if (/\bvf\b/.test(title) && !/\bvostfr\b/.test(title)) return "VF";
+  const title2 = $2("title").text().toLowerCase();
+  if (/\bvostfr\b/.test(title2)) return "VOSTFR";
+  if (/\bvf\b/.test(title2) && !/\bvostfr\b/.test(title2)) return "VF";
   const body = $2("body").text().toLowerCase().slice(0, 5e3);
   const hasVostfr = /\bvostfr\b/.test(body);
   const hasVf = /\bvf\b/.test(body);
@@ -60794,8 +60879,8 @@ function parseVideoUrls(html3) {
 function generateFallbackQueries2(titles) {
   const seen = /* @__PURE__ */ new Set();
   const fallbacks = [];
-  for (const title of titles) {
-    const words = title.split(/\s+/).filter((w) => w.length > 2);
+  for (const title2 of titles) {
+    const words = title2.split(/\s+/).filter((w) => w.length > 2);
     if (words.length >= 2) {
       const lastWord = words[words.length - 1];
       if (!seen.has(lastWord) && lastWord.length >= 3) {
@@ -60852,8 +60937,8 @@ async function trySearchQuery(query, isFallback, originalTitles, ctx) {
 }
 function compactedSlugs(titles) {
   const out = [];
-  for (const title of titles.slice(0, 3)) {
-    const normalized = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[':!.,?()[\]]/g, "").replace(/[^a-z0-9\s]/g, "").trim();
+  for (const title2 of titles.slice(0, 3)) {
+    const normalized = title2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[':!.,?()[\]]/g, "").replace(/[^a-z0-9\s]/g, "").trim();
     if (!normalized) continue;
     const normalSlug = normalized.replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
     const words = normalized.split(/\s+/).filter(Boolean);
@@ -60889,9 +60974,9 @@ function compactedSlugs(titles) {
 }
 async function searchAnime13(ctx, startTime) {
   const titles = ctx.titles;
-  for (const title of titles.slice(0, MAX_SEARCH_TITLES7)) {
+  for (const title2 of titles.slice(0, MAX_SEARCH_TITLES7)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return [];
-    const result = await trySearchQuery(title, false, titles, ctx);
+    const result = await trySearchQuery(title2, false, titles, ctx);
     if (result) return result;
   }
   for (const query of generateFallbackQueries2(titles)) {
@@ -61069,9 +61154,9 @@ function titleMatches(resultTitle, searchTitle) {
   const matched = searchWords.filter((w) => nResult.includes(w));
   return matched.length >= Math.min(searchWords.length, 2);
 }
-async function searchAnime14(title, ctx) {
+async function searchAnime14(title2, ctx) {
   const html3 = await siteFetchText(`${SITE24}/index.php?do=search`, {
-    form: { do: "search", subaction: "search", story: title },
+    form: { do: "search", subaction: "search", story: title2 },
     headers: { Referer: SITE24, Origin: SITE24 },
     acceptLanguage: FR_ACCEPT_LANGUAGE,
     timeoutMs: 12e3,
@@ -61094,7 +61179,7 @@ async function searchAnime14(title, ctx) {
     if (genre) hit.genre = genre;
     results.push(hit);
   });
-  return results.filter((r) => titleMatches(r.title, title));
+  return results.filter((r) => titleMatches(r.title, title2));
 }
 function buildEmbedUrl(content, elClass, playerName) {
   if (content.startsWith("http")) return content;
@@ -61170,9 +61255,9 @@ async function extract25(ctx) {
   const searchables = titlesOrdered.slice(0, MAX_SEARCH_TITLES8).filter((t) => t.length <= 60 && t.length >= MIN_QUERY_LENGTH && normalizeTitle5(t));
   let allMatches = [];
   const seenUrls = /* @__PURE__ */ new Set();
-  for (const title of searchables) {
+  for (const title2 of searchables) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    for (const hit of await searchAnime14(title, ctx)) {
+    for (const hit of await searchAnime14(title2, ctx)) {
       if (seenUrls.has(hit.url)) continue;
       seenUrls.add(hit.url);
       allMatches.push(hit);
@@ -61427,14 +61512,14 @@ async function extract26(ctx) {
   if (titles.length === 0) return [];
   const wantedFormats = ctx.type === "movie" ? ["movie"] : ["serie", "kai"];
   let serie = null;
-  for (const title of titles.slice(0, MAX_SEARCH_TITLES9)) {
+  for (const title2 of titles.slice(0, MAX_SEARCH_TITLES9)) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-    if (title.length < 3) continue;
+    if (title2.length < 3) continue;
     const results = await fetchSeriesList(
-      `${SITE25}/api/series?query=${encodeURIComponent(title)}`,
+      `${SITE25}/api/series?query=${encodeURIComponent(title2)}`,
       ctx.signal
     );
-    const scored = results.filter((r) => wantedFormats.includes(String(r.format))).map((r) => ({ serie: r, score: scoreSearchResult4(r, title) })).sort((a, b) => b.score - a.score);
+    const scored = results.filter((r) => wantedFormats.includes(String(r.format))).map((r) => ({ serie: r, score: scoreSearchResult4(r, title2) })).sort((a, b) => b.score - a.score);
     const best = scored.find((entry) => entry.score >= MIN_SEARCH_SCORE2);
     if (best) {
       serie = best.serie;
@@ -61557,11 +61642,11 @@ function scoreMatch7(resultTitle, searchTitle) {
   }
   return 0;
 }
-function bestMatch5(items, title) {
+function bestMatch5(items, title2) {
   let best = null;
   let bestScore = 0;
   for (const item of items) {
-    const score = scoreMatch7(item.title, title);
+    const score = scoreMatch7(item.title, title2);
     if (score > bestScore) {
       bestScore = score;
       best = item;
@@ -61575,11 +61660,11 @@ function parseSearchResults5(html3, domain) {
   $2(SELECTORS.SEARCH_CARD).each((_index, element) => {
     const $card = $2(element);
     const link = $card.find(SELECTORS.SEARCH_LINK).first().attr("href");
-    const title = ($card.find(SELECTORS.SEARCH_IMAGE).first().attr("alt") || "").trim();
-    if (!link || !title) return;
+    const title2 = ($card.find(SELECTORS.SEARCH_IMAGE).first().attr("alt") || "").trim();
+    if (!link || !title2) return;
     results.push({
       url: link,
-      title,
+      title: title2,
       isSeries: link.includes("/streaming/series/"),
       domain
     });
@@ -61607,14 +61692,14 @@ function parseEpisodes(html3) {
   $2(SELECTORS.EPISODE_ITEM).each((_index, element) => {
     const $link = $2(element).find(SELECTORS.EPISODE_LINK).first();
     const href = $link.attr("href") || "";
-    const title = $link.find(SELECTORS.EPISODE_TITLE).first().text().trim() || $link.text().trim();
+    const title2 = $link.find(SELECTORS.EPISODE_TITLE).first().text().trim() || $link.text().trim();
     const match2 = href.match(PATTERNS.EPISODE_URL);
     if (!match2) return;
     episodes.push({
       season: Number.parseInt(match2[1], 10),
       episode: Number.parseInt(match2[2], 10),
       link: href,
-      title
+      title: title2
     });
   });
   return episodes;
@@ -61650,8 +61735,8 @@ function detectLanguage3(url, html3) {
   }
   return "VF";
 }
-function detectQuality(url, title) {
-  const text3 = `${url} ${title || ""}`.toLowerCase();
+function detectQuality(url, title2) {
+  const text3 = `${url} ${title2 || ""}`.toLowerCase();
   if (/4k|2160/i.test(text3)) return "4K";
   if (/1080|hd|fullhd/i.test(text3)) return "1080p";
   if (/720|hd-ready/i.test(text3)) return "720p";
@@ -61684,19 +61769,19 @@ async function fetchFromPool(path, ctx, timeoutMs) {
   return null;
 }
 async function searchCatalogue(ctx, wantSeries, startTime) {
-  const titles = ctx.titles.slice(0, MAX_SEARCH_TITLES10).map((title) => stripSeasonSuffix(title)).filter(Boolean);
+  const titles = ctx.titles.slice(0, MAX_SEARCH_TITLES10).map((title2) => stripSeasonSuffix(title2)).filter(Boolean);
   for (const domain of DOMAINS2) {
-    for (const title of titles) {
+    for (const title2 of titles) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) return null;
       const html3 = await siteFetchText(
-        `${domain}/?s=${encodeURIComponent(title)}`,
+        `${domain}/?s=${encodeURIComponent(title2)}`,
         { acceptLanguage: FR_ACCEPT_LANGUAGE, signal: ctx.signal, timeoutMs: 8e3 }
       );
       if (!html3) continue;
       const results = parseSearchResults5(html3, domain);
       if (results.length === 0) continue;
       const preferred = results.filter((r) => r.isSeries === wantSeries);
-      const match2 = bestMatch5(preferred.length > 0 ? preferred : results, title) || bestMatch5(results, title);
+      const match2 = bestMatch5(preferred.length > 0 ? preferred : results, title2) || bestMatch5(results, title2);
       if (match2) return match2;
     }
   }
@@ -61706,9 +61791,9 @@ function cleanSlug2(slug2) {
   return slug2.replace(/-(?:1st|2nd|3rd|4th|5th)-season$/, "").replace(/-(?:season|saison)-?\d+$/, "").replace(/-s\d+$/, "").replace(/-(?:part|cour|arc|volume)-?\d+$/, "").replace(/-(?:tv|film|movie|special)$/, "").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
 }
 async function trySlugFallback(ctx, wantSeries, startTime) {
-  const title = ctx.titles[0];
-  if (!title) return null;
-  const slug2 = toSlug(title);
+  const title2 = ctx.titles[0];
+  if (!title2) return null;
+  const slug2 = toSlug(title2);
   const cleaned = cleanSlug2(slug2);
   const season = ctx.season ?? 1;
   const candidates = [
@@ -61771,11 +61856,11 @@ async function searchViaWpApi2(ctx, startTime) {
 async function findCandidate(ctx, wantSeries, startTime) {
   return await searchCatalogue(ctx, wantSeries, startTime) || await trySlugFallback(ctx, wantSeries, startTime) || await searchViaWpApi2(ctx, startTime);
 }
-async function streamsFromPage3(pageUrl, html3, title) {
+async function streamsFromPage3(pageUrl, html3, title2) {
   const iframeUrl = extractIframeUrl2(html3);
   if (!iframeUrl) return [];
   const language = detectLanguage3(pageUrl, html3);
-  const quality = detectQuality(iframeUrl, title);
+  const quality = detectQuality(iframeUrl, title2);
   return resolveEmbedStreams(iframeUrl, {
     language,
     providerLabel: LABEL25,
@@ -61978,8 +62063,8 @@ var cinemacity = createNuvioProvider({
 // src/providers/stream/nuvio/latino/cinecalidad.ts
 var SITE28 = "https://www.cinecalidad.vg";
 var LABEL27 = "CineCalidad";
-function buildSlug(title) {
-  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+function buildSlug(title2) {
+  return title2.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 async function findContentUrl(ctx, slug2) {
   const category = ctx.type === "movie" ? "pelicula" : "serie";
@@ -62386,8 +62471,8 @@ function langTag2(text3) {
   if (t.includes("sub") || t.includes("vose")) return "SUB";
   return "LAT";
 }
-async function searchContent(title, ctx) {
-  const html3 = await siteFetchText(`${SITE32}/search?keyword=${encodeURIComponent(title)}`, {
+async function searchContent(title2, ctx) {
+  const html3 = await siteFetchText(`${SITE32}/search?keyword=${encodeURIComponent(title2)}`, {
     headers: { Referer: `${SITE32}/` },
     acceptLanguage: ES_ACCEPT_LANGUAGE,
     timeoutMs: 8e3,
@@ -62402,7 +62487,7 @@ async function searchContent(title, ctx) {
     if (link) posts.push({ title: t, url: link });
   });
   if (!posts.length) return null;
-  const normQ = normalize(title);
+  const normQ = normalize(title2);
   const scored = posts.map((p) => ({
     post: p,
     score: (() => {
@@ -62415,8 +62500,8 @@ async function searchContent(title, ctx) {
   scored.sort((a, b) => b.score - a.score);
   return scored[0].score >= 20 ? scored[0].post : null;
 }
-async function getEpisodeUrl(seriesUrl, season, episode, ctx) {
-  const html3 = await siteFetchText(seriesUrl, {
+async function getEpisodeUrl(seriesUrl2, season, episode, ctx) {
+  const html3 = await siteFetchText(seriesUrl2, {
     headers: { Referer: `${SITE32}/` },
     acceptLanguage: ES_ACCEPT_LANGUAGE,
     timeoutMs: 8e3,
@@ -62436,7 +62521,7 @@ async function getEpisodeUrl(seriesUrl, season, episode, ctx) {
       body: form.toString(),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Referer: seriesUrl
+        Referer: seriesUrl2
       },
       acceptLanguage: ES_ACCEPT_LANGUAGE,
       timeoutMs: 8e3,
@@ -62615,8 +62700,8 @@ async function extract35(ctx) {
   $2(`a[href*="${type}"]`).each((_, el) => {
     if (contentUrl) return;
     const href = $2(el).attr("href") ?? "";
-    const title = normalize($2(el).text());
-    if (title.includes(normQ) || normQ.includes(title)) contentUrl = href;
+    const title2 = normalize($2(el).text());
+    if (title2.includes(normQ) || normQ.includes(title2)) contentUrl = href;
   });
   if (!contentUrl) {
     $2("article a[href], h2 a[href]").first().each((_, el) => {
@@ -62752,8 +62837,8 @@ var pelispedia = createNuvioProvider({
 // src/providers/stream/nuvio/latino/seriesmetro.ts
 var SITE36 = "https://www3.seriesmetro.net";
 var LABEL35 = "SeriesMetro";
-function buildSlug2(title) {
-  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+function buildSlug2(title2) {
+  return title2.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 function langTag4(text3) {
   const t = text3.toLowerCase();
@@ -62762,8 +62847,8 @@ function langTag4(text3) {
   return "LAT";
 }
 async function findContentUrl2(category, ctx) {
-  for (const title of ctx.titles.slice(0, 3)) {
-    const slug2 = buildSlug2(title);
+  for (const title2 of ctx.titles.slice(0, 3)) {
+    const slug2 = buildSlug2(title2);
     const url = `${SITE36}/${category}/${slug2}/`;
     const html3 = await siteFetchText(url, {
       headers: { Referer: `${SITE36}/` },
@@ -62804,7 +62889,7 @@ async function findContentUrl2(category, ctx) {
   }
   return null;
 }
-async function getEpisodeUrl2(seriesUrl, seriesHtml, season, episode, ctx) {
+async function getEpisodeUrl2(seriesUrl2, seriesHtml, season, episode, ctx) {
   const dpost = seriesHtml.match(/data-post="(\d+)"/)?.[1];
   if (!dpost) return null;
   const form = new URLSearchParams({
@@ -62817,7 +62902,7 @@ async function getEpisodeUrl2(seriesUrl, seriesHtml, season, episode, ctx) {
     body: form.toString(),
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Referer: seriesUrl
+      Referer: seriesUrl2
     },
     acceptLanguage: ES_ACCEPT_LANGUAGE,
     timeoutMs: 8e3,
@@ -63004,8 +63089,8 @@ async function extract39(ctx) {
   const candidates = [];
   $2("article.item a[href]").each((_, el) => {
     const href = $2(el).attr("href") ?? "";
-    const title = $2(el).find("h2").text().trim() || $2(el).text().trim();
-    if (href && title) candidates.push({ url: href, title });
+    const title2 = $2(el).find("h2").text().trim() || $2(el).text().trim();
+    if (href && title2) candidates.push({ url: href, title: title2 });
   });
   if (candidates.length === 0) return [];
   const best = candidates.find((c) => normalize(c.title).includes(normQ)) ?? candidates.find((c) => normQ.includes(normalize(c.title))) ?? candidates[0];
@@ -63089,8 +63174,8 @@ var SERVERS3 = [
   { id: "Vimeos", url: "https://api.videasy.net/vimeos/sources-with-title", label: "Vimeos", lang: "LAT" },
   { id: "Raze", url: "https://api.videasy.net/superflix/sources-with-title", label: "Superflix", lang: "LAT", useAndroidHeaders: true }
 ];
-async function queryServer(server, ctx, title, year) {
-  const doubleEncTitle = encodeURIComponent(encodeURIComponent(title));
+async function queryServer(server, ctx, title2, year) {
+  const doubleEncTitle = encodeURIComponent(encodeURIComponent(title2));
   let searchUrl = `${server.url}?title=${doubleEncTitle}&mediaType=${ctx.type}&year=${year}&tmdbId=${ctx.tmdbId ?? ""}`;
   if (ctx.type === "tv" && ctx.season != null && ctx.episode != null) {
     searchUrl += `&episodeId=${ctx.episode}&seasonId=${ctx.season}`;
@@ -63138,10 +63223,10 @@ async function queryServer(server, ctx, title, year) {
 async function extract40(ctx) {
   if (isAborted(ctx.signal) || !ctx.tmdbId || ctx.titles.length === 0) return [];
   const startTime = Date.now();
-  const title = ctx.titles[0];
+  const title2 = ctx.titles[0];
   const year = "";
   const results = await Promise.allSettled(
-    SERVERS3.map((server) => queryServer(server, ctx, title, year))
+    SERVERS3.map((server) => queryServer(server, ctx, title2, year))
   );
   const streams = [];
   for (const r of results) {
@@ -63360,8 +63445,8 @@ async function findPostByTmdbId(tmdbId, mainUrl, signal) {
   if (posts && posts.length > 0 && posts[0].link) return posts[0].link;
   return null;
 }
-async function findPostByTitle(title, mainUrl, isMovie, signal) {
-  const searchUrl = `${mainUrl}/?s=${encodeURIComponent(title)}`;
+async function findPostByTitle(title2, mainUrl, isMovie, signal) {
+  const searchUrl = `${mainUrl}/?s=${encodeURIComponent(title2)}`;
   const html3 = await siteFetchHtml(searchUrl, {
     acceptLanguage: HI_ACCEPT_LANGUAGE,
     signal,
@@ -63381,7 +63466,7 @@ async function findPostByTitle(title, mainUrl, isMovie, signal) {
     results.push({ url: absoluteUrl2(href, mainUrl), title: text3 });
   });
   if (results.length === 0) return null;
-  const queryNorm = title.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+  const queryNorm = title2.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
   results.sort((a, b) => {
     const aNorm = a.title.toLowerCase().replace(/[^a-z0-9\s]/g, "");
     const bNorm = b.title.toLowerCase().replace(/[^a-z0-9\s]/g, "");
@@ -63563,9 +63648,9 @@ async function extract42(ctx) {
     postUrl = await findPostByTmdbId(ctx.tmdbId, mainUrl, ctx.signal);
   }
   if (!postUrl) {
-    for (const title of ctx.titles) {
+    for (const title2 of ctx.titles) {
       if (isAborted(ctx.signal) || isBudgetExhausted(startTime)) break;
-      postUrl = await findPostByTitle(title, mainUrl, ctx.type === "movie", ctx.signal);
+      postUrl = await findPostByTitle(title2, mainUrl, ctx.type === "movie", ctx.signal);
       if (postUrl) break;
     }
   }
@@ -63635,12 +63720,12 @@ async function searchSite2(query, ctx) {
   if (!html3) return [];
   const results = [];
   html3("article.short-mid").each((_, el) => {
-    const title = html3(el).find("a > h3").text().trim();
+    const title2 = html3(el).find("a > h3").text().trim();
     const href = html3(el).find("a").attr("href") || "";
-    if (!title || !href) return;
-    const yearMatch = title.match(/\((\d{4})\)/);
+    if (!title2 || !href) return;
+    const yearMatch = title2.match(/\((\d{4})\)/);
     results.push({
-      title,
+      title: title2,
       href,
       year: yearMatch ? parseInt(yearMatch[1], 10) : null
     });
@@ -63761,14 +63846,14 @@ async function extractStreams5(mediaUrl, mediaType, season, episode, ctx) {
 async function extract43(ctx) {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   const startTime = Date.now();
-  for (const title of ctx.titles) {
+  for (const title2 of ctx.titles) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime, PROVIDER_BUDGET_MS)) break;
-    const results = await searchSite2(title, ctx);
+    const results = await searchSite2(title2, ctx);
     if (results.length === 0) continue;
     let bestMatch6 = null;
     let bestScore = -1;
     for (const r of results) {
-      let score = scoreTitleMatch2(r.title, title);
+      let score = scoreTitleMatch2(r.title, title2);
       if (score > bestScore && score > 30) {
         bestScore = score;
         bestMatch6 = r;
@@ -63826,8 +63911,8 @@ async function extract44(ctx) {
   $2("article a[href]").each((_, el) => {
     if (contentUrl) return;
     const href = $2(el).attr("href") ?? "";
-    const title = normalize($2(el).text().split("(")[0]);
-    if (title.includes(normQ) || normQ.includes(title)) contentUrl = href;
+    const title2 = normalize($2(el).text().split("(")[0]);
+    if (title2.includes(normQ) || normQ.includes(title2)) contentUrl = href;
   });
   if (!contentUrl) {
     $2("article a[href]").first().each((_, el) => {
@@ -63988,14 +64073,14 @@ async function fetchEpisodeVideos(internalId, season, episode, ctx) {
 async function extract45(ctx) {
   if (isAborted(ctx.signal) || ctx.titles.length === 0) return [];
   const startTime = Date.now();
-  for (const title of ctx.titles) {
+  for (const title2 of ctx.titles) {
     if (isAborted(ctx.signal) || isBudgetExhausted(startTime, PROVIDER_BUDGET_MS)) break;
-    const searchResults = await searchMovieBlast(title, ctx);
+    const searchResults = await searchMovieBlast(title2, ctx);
     if (searchResults.length === 0) continue;
     let bestMatch6 = null;
     let bestScore = -1;
     for (const result of searchResults) {
-      let score = scoreTitleMatch2(result.name || "", title);
+      let score = scoreTitleMatch2(result.name || "", title2);
       if (score > bestScore && score > 40) {
         bestScore = score;
         bestMatch6 = result;
@@ -64108,18 +64193,18 @@ async function getApiBase(ctx) {
   cachedApiBase = data2?.nfmirror ?? FALLBACK_API;
   return cachedApiBase;
 }
-async function extractService(apiBase, service, title, ctx, season, episode) {
+async function extractService(apiBase, service, title2, ctx, season, episode) {
   const headers = {
     "ott": service.code,
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0 /OS.GatuNewTV v1.0",
     "x-requested-with": "NetmirrorNewTV v1.0"
   };
   const searchData = await siteFetchJson(
-    `${apiBase}/search.php?s=${encodeURIComponent(title)}`,
+    `${apiBase}/search.php?s=${encodeURIComponent(title2)}`,
     { headers, timeoutMs: 8e3, signal: ctx.signal }
   );
   const results = searchData?.searchResult ?? [];
-  const match2 = results.find((r) => r.t?.trim().toLowerCase() === title.toLowerCase());
+  const match2 = results.find((r) => r.t?.trim().toLowerCase() === title2.toLowerCase());
   if (!match2?.id) return [];
   if (isAborted(ctx.signal)) return [];
   let playUrl = `${apiBase}/play.php?id=${match2.id}&ott=${service.code}`;
@@ -65169,12 +65254,12 @@ async function fetchMetadata(tmdbId, mediaType, signal) {
     headers: { Origin: SITE51, Referer: `${SITE51}/` }
   });
   if (!data2) return null;
-  const title = (mediaType === "movie" ? data2.title : data2.name) ?? "";
-  if (!title) return null;
+  const title2 = (mediaType === "movie" ? data2.title : data2.name) ?? "";
+  if (!title2) return null;
   const dateStr = (mediaType === "movie" ? data2.release_date : data2.first_air_date) ?? "";
   const year = dateStr.slice(0, 4);
   const imdbId = data2.external_ids?.imdb_id ?? data2.imdb_id ?? "";
-  return { title, year, imdbId };
+  return { title: title2, year, imdbId };
 }
 function normalizeSubtitles2(subs) {
   if (!Array.isArray(subs)) return void 0;
@@ -65184,10 +65269,10 @@ function normalizeSubtitles2(subs) {
     label: s.label ?? s.display ?? s.language ?? "Subtitle"
   }));
 }
-async function fetchServerSources(serverName2, serverEndpoint, mediaType, tmdbId, season, episode, title, year, imdbId, seed, signal) {
+async function fetchServerSources(serverName2, serverEndpoint, mediaType, tmdbId, season, episode, title2, year, imdbId, seed, signal) {
   const ts = String(Date.now());
   const params = new URLSearchParams({
-    title,
+    title: title2,
     mediaType,
     year,
     episodeId: episode,
@@ -65496,9 +65581,9 @@ function formatSize(bytes) {
   if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(0)} MB`;
   return `${(bytes / 1e3).toFixed(0)} KB`;
 }
-function matchesEpisode(title, ep) {
+function matchesEpisode(title2, ep) {
   if (!ep || ep <= 0) return true;
-  return scoreEpisodeMatch(title, ep) > 0;
+  return scoreEpisodeMatch(title2, ep) > 0;
 }
 var BASE8 = "https://feed.animetosho.org";
 var provider24 = {
@@ -65523,12 +65608,12 @@ var provider24 = {
       }
     }
     let items = [];
-    for (const title of buildSearchQueries(titles)) {
+    for (const title2 of buildSearchQueries(titles)) {
       if (ep > 0) {
-        items = await fetchItems(`${title}${epStr}`.trim());
+        items = await fetchItems(`${title2}${epStr}`.trim());
       }
       if (items.length === 0) {
-        items = await fetchItems(title);
+        items = await fetchItems(title2);
       }
       if (items.length > 0) break;
     }
@@ -65575,18 +65660,18 @@ function parseEpisodeNumber(key) {
 function isBatch(key) {
   return isBatchTitle(key);
 }
-function normalizeTitle6(title) {
-  return title.toLowerCase().replace(/\s+/g, " ").replace(/[[\](){}]/g, "").replace(/\bv\d+\b/g, "").trim();
+function normalizeTitle6(title2) {
+  return title2.toLowerCase().replace(/\s+/g, " ").replace(/[[\](){}]/g, "").replace(/\bv\d+\b/g, "").trim();
 }
 var BASE9 = "https://subsplease.org";
 var provider25 = {
   name: "subplease",
   sites: [BASE9],
   async batch(opts) {
-    const title = opts.titles[0] ?? "";
+    const title2 = opts.titles[0] ?? "";
     const ep = opts.episode ?? 0;
-    if (!title) return [];
-    const url = `${BASE9}/api/?f=search&tz=UTC&s=${encodeURIComponent(title)}`;
+    if (!title2) return [];
+    const url = `${BASE9}/api/?f=search&tz=UTC&s=${encodeURIComponent(title2)}`;
     let res;
     try {
       res = await fetchResponse(url, { signal: AbortSignal.timeout(1e4) });
@@ -65602,7 +65687,7 @@ var provider25 = {
     }
     if (!data2 || typeof data2 !== "object") return [];
     const results = [];
-    const normalizedSearchTitle = normalizeTitle6(title);
+    const normalizedSearchTitle = normalizeTitle6(title2);
     const titleMatches2 = [];
     for (const key of Object.keys(data2)) {
       const show = data2[key];
@@ -65774,8 +65859,8 @@ var provider27 = {
     const epPad = ep > 0 ? String(ep).padStart(2, "0") : "";
     const UA33 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
     let xml2 = "";
-    for (const title of buildSearchQueries(titles)) {
-      const qStr = ep > 0 ? `${title} ${epPad}` : title;
+    for (const title2 of buildSearchQueries(titles)) {
+      const qStr = ep > 0 ? `${title2} ${epPad}` : title2;
       const url = `${BASE11}/api/torznab/api?t=search&q=${encodeURIComponent(qStr)}`;
       try {
         const res = await fetchResponse(url, {
@@ -65798,12 +65883,12 @@ var provider27 = {
     const results = [];
     const seenUrls = /* @__PURE__ */ new Set();
     $2.find("item").each((_, item) => {
-      const title = $2(item).find("title").first().text().trim();
+      const title2 = $2(item).find("title").first().text().trim();
       const magnetUrl = $2(item).find("link").first().text().trim() || $2(item).find("enclosure").attr("url") || "";
       if (!magnetUrl || !magnetUrl.startsWith("magnet:") || seenUrls.has(magnetUrl)) return;
       if (ep > 0) {
-        if (isBatchTitle(title)) return;
-        if (scoreEpisodeMatch(title, ep) === 0) return;
+        if (isBatchTitle(title2)) return;
+        if (scoreEpisodeMatch(title2, ep) === 0) return;
       }
       seenUrls.add(magnetUrl);
       const sizeStr = $2(item).find("size").text().trim() || $2(item).find('torznab\\:attr[name="size"]').attr("value");
@@ -65816,12 +65901,12 @@ var provider27 = {
       results.push({
         source: "nekobt",
         url: magnetUrl,
-        quality: normalizeQuality(title),
+        quality: normalizeQuality(title2),
         headers: {},
         subtitles: [],
         sourceType: "torrent",
         audioLanguage: "ja",
-        torrentTitle: title,
+        torrentTitle: title2,
         seeders,
         leechers,
         peers: peers > 0 ? peers : void 0,
@@ -65843,10 +65928,10 @@ function humanSize(bytes) {
   if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`;
   return `${Math.round(bytes / 1e3)} KB`;
 }
-async function searchReleases(title) {
+async function searchReleases(title2) {
   for (const base of BASES8) {
     const data2 = await fetchJson(
-      `${base}/api/v1/app/search/releases?query=${encodeURIComponent(title)}&include=id,name.main,name.english`,
+      `${base}/api/v1/app/search/releases?query=${encodeURIComponent(title2)}&include=id,name.main,name.english`,
       { headers: { "User-Agent": UA32, Accept: "application/json" }, timeoutMs: 7e3 }
     );
     if (Array.isArray(data2) && data2.length > 0) return data2;
@@ -65867,10 +65952,10 @@ var provider28 = {
   name: "aniliberty",
   sites: BASES8,
   async batch(opts) {
-    const title = opts.titles[0] ?? "";
+    const title2 = opts.titles[0] ?? "";
     const ep = opts.episode ?? 0;
-    if (!title) return [];
-    const releases = await searchReleases(title);
+    if (!title2) return [];
+    const releases = await searchReleases(title2);
     if (releases.length === 0) return [];
     let best = null;
     for (const release of releases) {
@@ -65878,7 +65963,7 @@ var provider28 = {
       if (!Number.isFinite(id) || id <= 0) continue;
       const names = [release.name?.english, release.name?.main].filter((v) => Boolean(v?.trim()));
       if (names.length === 0) continue;
-      const score = Math.max(...names.map((n) => scoreTitleMatch(title, n)));
+      const score = Math.max(...names.map((n) => scoreTitleMatch(title2, n)));
       const label = names.join(" / ");
       if (!best || score > best.score) best = { id, label, score };
     }
@@ -65930,8 +66015,8 @@ function orderSources(a, b) {
 }
 function allNames(m) {
   const names = [];
-  const title = m.attributes?.title ?? {};
-  for (const v of Object.values(title)) if (v) names.push(v);
+  const title2 = m.attributes?.title ?? {};
+  for (const v of Object.values(title2)) if (v) names.push(v);
   for (const alt of m.attributes?.altTitles ?? []) {
     for (const v of Object.values(alt)) if (v) names.push(v);
   }
@@ -65944,8 +66029,8 @@ async function resolveMangaId(params) {
   const wantAl = Number.isFinite(anilistId) && anilistId > 0 ? String(anilistId) : null;
   const seen = /* @__PURE__ */ new Set();
   const pool = [];
-  for (const title of titles.slice(0, 2)) {
-    const url = `${API3}/manga?title=${encodeURIComponent(title)}&limit=15` + CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join("");
+  for (const title2 of titles.slice(0, 2)) {
+    const url = `${API3}/manga?title=${encodeURIComponent(title2)}&limit=15` + CONTENT_RATINGS.map((r) => `&contentRating[]=${r}`).join("");
     const res = await fetchJson(url, { timeoutMs: 12e3 });
     for (const m of res?.data ?? []) {
       if (m?.id && !seen.has(m.id)) {
@@ -66084,9 +66169,9 @@ async function resolveHid(params) {
   const wantMal = Number.isFinite(Number(params.malId)) && Number(params.malId) > 0 ? String(params.malId) : null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     const res = await ckJson(
-      `/v1.0/search?q=${encodeURIComponent(title)}&limit=20&type=comic`
+      `/v1.0/search?q=${encodeURIComponent(title2)}&limit=20&type=comic`
     );
     for (const it of Array.isArray(res) ? res : []) {
       if (!it?.hid || seen.has(it.hid)) continue;
@@ -66192,8 +66277,8 @@ async function resolveDetailHref(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search2(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search2(title2)) {
       if (!seen.has(cand.href)) {
         seen.add(cand.href);
         pool.push(cand);
@@ -66318,8 +66403,8 @@ var provider32 = {
       const pool = [];
       const seen = /* @__PURE__ */ new Set();
       let cachedDetail = null;
-      for (const title of titles.slice(0, 2)) {
-        const { candidates, directHtml, directUrl } = await search3(title);
+      for (const title2 of titles.slice(0, 2)) {
+        const { candidates, directHtml, directUrl } = await search3(title2);
         if (directHtml && directUrl) cachedDetail = { url: directUrl, html: directHtml };
         for (const c of candidates) {
           if (!seen.has(c.url)) {
@@ -66422,8 +66507,8 @@ var provider33 = {
       if (titles.length === 0) return [];
       const pool = [];
       const seen = /* @__PURE__ */ new Set();
-      for (const title of titles.slice(0, 2)) {
-        for (const c of await search4(title)) {
+      for (const title2 of titles.slice(0, 2)) {
+        for (const c of await search4(title2)) {
           if (!seen.has(c.id)) {
             seen.add(c.id);
             pool.push(c);
@@ -66526,8 +66611,8 @@ var provider34 = {
       if (titles.length === 0) return [];
       const pool = [];
       const seen = /* @__PURE__ */ new Set();
-      for (const title of titles.slice(0, 2)) {
-        for (const c of await search5(title)) {
+      for (const title2 of titles.slice(0, 2)) {
+        for (const c of await search5(title2)) {
           if (!seen.has(c.url)) {
             seen.add(c.url);
             pool.push(c);
@@ -66617,8 +66702,8 @@ async function resolveMangaId2(params) {
   if (titles.length === 0) return null;
   const seen = /* @__PURE__ */ new Set();
   const pool = [];
-  for (const title of titles.slice(0, 2)) {
-    for (const doc of await search6(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const doc of await search6(title2)) {
       if (!seen.has(doc.id)) {
         seen.add(doc.id);
         pool.push(doc);
@@ -66635,30 +66720,18 @@ var provider35 = {
     try {
       const mangaId = await resolveMangaId2(params);
       if (!mangaId) return [];
-      const res = await fetchJson(
-        `${BASE16}/api/manga/allChapters?mangaId=${encodeURIComponent(mangaId)}`,
-        { timeoutMs: 12e3 }
-      );
-      const rows = res?.chapters ?? [];
-      if (rows.length === 0) return [];
+      const { chapters: rows, scanlators } = await getAtsuCatalog(mangaId);
       const byNumber = /* @__PURE__ */ new Map();
+      const seen = /* @__PURE__ */ new Set();
       for (const ch of rows) {
         const num = Number(ch.number);
-        if (!ch.id || !Number.isFinite(num) || byNumber.has(num)) continue;
-        const source = {
-          provider: PROVIDER_NAME7,
-          chapterKey: `${PROVIDER_NAME7}:${mangaId}|${ch.id}`,
-          providerChapterId: ch.id,
-          language: "en",
-          scanlator: null,
-          releaseDate: ch.createdAt ? new Date(ch.createdAt).toISOString() : null
-        };
-        byNumber.set(num, {
-          number: num,
-          title: ch.title || null,
-          volume: null,
-          sources: [source]
-        });
+        if (!ch.id || !Number.isFinite(num) || num < 0 || !/^[\w-]+$/.test(ch.id)) continue;
+        const source = atsuSource("atsu", mangaId, ch, scanlators);
+        if (seen.has(source.chapterKey)) continue;
+        seen.add(source.chapterKey);
+        const entry = byNumber.get(num) || { number: num, title: ch.title || null, volume: null, sources: [] };
+        entry.sources.push(source);
+        byNumber.set(num, entry);
       }
       return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
     } catch {
@@ -66705,11 +66778,11 @@ async function search7(query) {
   $2("a._card_item").each((_, el) => {
     const a = $2(el);
     const titleNo = String(a.attr("data-title-no") || "").trim();
-    const title = a.find(".title").first().text().trim();
-    if (!titleNo || !title || byNo.has(titleNo)) return;
+    const title2 = a.find(".title").first().text().trim();
+    if (!titleNo || !title2 || byNo.has(titleNo)) return;
     byNo.set(titleNo, {
       titleNo,
-      title,
+      title: title2,
       author: a.find(".author").first().text().trim() || void 0
     });
   });
@@ -66720,8 +66793,8 @@ async function resolveTitleNo(params) {
   if (titles.length === 0) return null;
   const seen = /* @__PURE__ */ new Set();
   const pool = [];
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search7(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search7(title2)) {
       if (!seen.has(cand.titleNo)) {
         seen.add(cand.titleNo);
         pool.push(cand);
@@ -66827,8 +66900,8 @@ async function resolveDetailHref2(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search8(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search8(title2)) {
       if (!seen.has(cand.href)) {
         seen.add(cand.href);
         pool.push(cand);
@@ -66952,9 +67025,9 @@ async function resolveDetailUrl(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    let hits = await searchApi(title);
-    if (hits.length === 0) hits = await searchHtml(title);
+  for (const title2 of titles.slice(0, 2)) {
+    let hits = await searchApi(title2);
+    if (hits.length === 0) hits = await searchHtml(title2);
     for (const c of hits) {
       if (!seen.has(c.url)) {
         seen.add(c.url);
@@ -67089,9 +67162,9 @@ async function resolveDetailUrl2(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    let hits = await searchApi2(title);
-    if (hits.length === 0) hits = await searchHtml2(title);
+  for (const title2 of titles.slice(0, 2)) {
+    let hits = await searchApi2(title2);
+    if (hits.length === 0) hits = await searchHtml2(title2);
     for (const c of hits) {
       if (!seen.has(c.url)) {
         seen.add(c.url);
@@ -67226,9 +67299,9 @@ async function resolveDetailUrl3(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    let hits = await searchApi3(title);
-    if (hits.length === 0) hits = await searchHtml3(title);
+  for (const title2 of titles.slice(0, 2)) {
+    let hits = await searchApi3(title2);
+    if (hits.length === 0) hits = await searchHtml3(title2);
     for (const c of hits) {
       if (!seen.has(c.url)) {
         seen.add(c.url);
@@ -67327,8 +67400,8 @@ async function resolveSeriesHref(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search9(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search9(title2)) {
       if (!seen.has(cand.href)) {
         seen.add(cand.href);
         pool.push(cand);
@@ -67428,8 +67501,8 @@ async function resolveSeriesId(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    const data2 = await sgGet(`/series/search?q=${encodeURIComponent(title)}`);
+  for (const title2 of titles.slice(0, 2)) {
+    const data2 = await sgGet(`/series/search?q=${encodeURIComponent(title2)}`);
     for (const s of Array.isArray(data2) ? data2 : []) {
       if (typeof s?.id !== "number" || seen.has(s.id)) continue;
       seen.add(s.id);
@@ -67537,8 +67610,8 @@ async function resolveDetailHref3(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search10(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search10(title2)) {
       if (!seen.has(cand.href)) {
         seen.add(cand.href);
         pool.push(cand);
@@ -67650,8 +67723,8 @@ async function resolveSeriesHref2(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
-    for (const cand of await search11(title)) {
+  for (const title2 of titles.slice(0, 2)) {
+    for (const cand of await search11(title2)) {
       if (!seen.has(cand.href)) {
         seen.add(cand.href);
         pool.push(cand);
@@ -67781,6 +67854,7 @@ var novelcool_default = provider44;
 // src/providers/novel/webnovel.ts
 var BASE25 = "https://www.webnovel.com";
 var PROVIDER_NAME17 = "webnovel";
+var chapterUrls = /* @__PURE__ */ new Map();
 function bookUrl(bookId) {
   return `${BASE25}/book/${bookId}`;
 }
@@ -67808,10 +67882,10 @@ async function resolveBookId(params) {
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
   let lastSearchError = null;
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     let cands = [];
     try {
-      cands = await searchBooks(title);
+      cands = await searchBooks(title2);
     } catch (err) {
       lastSearchError = err;
       continue;
@@ -67844,8 +67918,7 @@ function cleanParagraphs($2) {
     '[class*="cha-words"] p',
     ".cha-words p",
     ".chapter_content p",
-    "#chapter-content p",
-    ".content p"
+    "#chapter-content p"
   ];
   for (const sel of selectors) {
     const nodes = $2(sel);
@@ -67871,7 +67944,7 @@ var provider45 = {
       const bookId = params.seriesId || await resolveBookId(params);
       if (!bookId) return [];
       if (!/^\d+$/.test(bookId)) throw new Error("Invalid Webnovel book id");
-      const html3 = await fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12e3 });
+      const html3 = await fetchNovelSearchHtml(`${bookUrl(bookId)}/catalog`, { timeoutMs: 12e3 }).catch(() => fetchNovelSearchHtml(bookUrl(bookId), { timeoutMs: 12e3 }));
       if (!html3) return [];
       const $2 = loadHtml(html3);
       try {
@@ -67930,9 +68003,18 @@ var provider45 = {
         const num = parseChapterNumber2(label, href);
         const n = Number.isFinite(num) ? num : order;
         if (byNumber.has(n)) return;
-        const full = href.startsWith("http") ? href : `${BASE25}${href.startsWith("/") ? "" : "/"}${href}`;
-        const idMatch = full.match(/(\d{6,})(?:\/)?$/);
-        const chapterId = idMatch ? idMatch[1] : full;
+        let target;
+        try {
+          target = new URL(href, BASE25);
+        } catch {
+          return;
+        }
+        if (target.origin !== BASE25 || target.username || target.password || !target.pathname.includes(bookId)) return;
+        const idMatch = target.pathname.match(/(\d{6,})(?:\/)?$/);
+        if (!idMatch) return;
+        const chapterId = idMatch[1];
+        if (chapterUrls.size > 1e4) chapterUrls.clear();
+        chapterUrls.set(`${bookId}:${chapterId}`, target.href);
         const source = {
           provider: PROVIDER_NAME17,
           chapterKey: `${PROVIDER_NAME17}:${bookId}:${chapterId}`,
@@ -67950,17 +68032,17 @@ var provider45 = {
   },
   async getContent(chapterKey) {
     try {
-      const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
-      const [bookId, chapterId] = rest.split(":");
-      if (!bookId || !chapterId) return null;
-      const html3 = await fetchNovelSearchHtml(`${BASE25}/book/${bookId}/${chapterId}`, { timeoutMs: 15e3 });
+      const match2 = chapterKey.match(/^webnovel:(\d+):(\d+)$/);
+      if (!match2) return null;
+      const [, bookId, chapterId] = match2;
+      const html3 = await fetchNovelSearchHtml(chapterUrls.get(`${bookId}:${chapterId}`) || `${BASE25}/book/${bookId}/chapter_${chapterId}`, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
-      const title = $2('h1.chapter-title, .chapter-title h1, [class*="cha-tit"]').first().text().trim() || $2("title").first().text().trim() || null;
+      const title2 = $2('h1.chapter-title, .chapter-title h1, [class*="cha-tit"]').first().text().trim() || $2("title").first().text().trim() || null;
       const texts = cleanParagraphs($2);
       if (texts.length === 0) return null;
       return {
-        title,
+        title: title2,
         number: null,
         paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
         provider: PROVIDER_NAME17
@@ -68174,10 +68256,10 @@ async function resolveSeriesHref3(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     let cands = [];
     try {
-      cands = await searchSeries(title);
+      cands = await searchSeries(title2);
     } catch {
       continue;
     }
@@ -68271,11 +68353,11 @@ var provider47 = {
       const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl3(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
-      const title = $2("h1.entry-title, h1.post-title, .entry-header h1").first().text().trim() || $2("title").first().text().trim() || null;
+      const title2 = $2("h1.entry-title, h1.post-title, .entry-header h1").first().text().trim() || $2("title").first().text().trim() || null;
       const texts = extractParagraphs($2);
       if (texts.length === 0) return null;
       return {
-        title,
+        title: title2,
         number: null,
         paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
         provider: PROVIDER_NAME18
@@ -68328,10 +68410,10 @@ async function resolveSeriesHref4(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     let cands = [];
     try {
-      cands = await searchSeries2(title);
+      cands = await searchSeries2(title2);
     } catch {
       continue;
     }
@@ -68435,11 +68517,11 @@ var provider48 = {
       const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl4(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
-      const title = $2("h1.chapter-title, .chapter-header h1, h1.entry-title").first().text().trim() || $2("title").first().text().trim() || null;
+      const title2 = $2("h1.chapter-title, .chapter-header h1, h1.entry-title").first().text().trim() || $2("title").first().text().trim() || null;
       const texts = extractParagraphs2($2);
       if (texts.length === 0) return null;
       return {
-        title,
+        title: title2,
         number: null,
         paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
         provider: PROVIDER_NAME19
@@ -68483,10 +68565,10 @@ async function resolveSeriesHref5(params) {
   if (titles.length === 0) return null;
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     let cands = [];
     try {
-      cands = await searchSeries3(title);
+      cands = await searchSeries3(title2);
     } catch {
       continue;
     }
@@ -68560,8 +68642,8 @@ async function getChapters(params) {
         const full = m[2].replace(/\\\//g, "/");
         if (!full.startsWith(`${BASE29}/story/`)) continue;
         const tail = full.split("/").filter(Boolean).pop() || "";
-        const title = tail.replace(new RegExp(`^${slug2}-chapter-[\\d.]+-?`, "i"), "").replace(/-/g, " ").trim();
-        push(full, `Chapter ${m[1]}${title ? `, ${title}` : ""}`, null);
+        const title2 = tail.replace(new RegExp(`^${slug2}-chapter-[\\d.]+-?`, "i"), "").replace(/-/g, " ").trim();
+        push(full, `Chapter ${m[1]}${title2 ? `, ${title2}` : ""}`, null);
       }
     }
     return Array.from(byNumber.values()).sort((a, b) => a.number - b.number);
@@ -68597,11 +68679,11 @@ var provider49 = {
       const html3 = await fetchNovelSearchHtml(url, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
-      const title = $2("h1.chapter__title").first().text().trim() || null;
+      const title2 = $2("h1.chapter__title").first().text().trim() || null;
       const texts = extractParagraphs3($2);
       if (texts.length === 0) return null;
       return {
-        title,
+        title: title2,
         number: null,
         paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })),
         provider: PROVIDER_NAME20
@@ -68661,10 +68743,10 @@ async function resolveSeriesSlug(params) {
   const pool = [];
   const seen = /* @__PURE__ */ new Set();
   let lastError = null;
-  for (const title of titles.slice(0, 2)) {
+  for (const title2 of titles.slice(0, 2)) {
     let cands = [];
     try {
-      cands = await searchSeries4(title);
+      cands = await searchSeries4(title2);
     } catch (err) {
       lastError = err;
       continue;
@@ -68813,13 +68895,13 @@ function flightChapterCatalog($2) {
   return null;
 }
 function createHtmlNovelProvider(site) {
-  function safeUrl(value, relative = site.base) {
+  function safeUrl2(value, relative = site.base) {
     const url = new URL(value, relative);
     if (url.origin !== new URL(site.base).origin || url.username || url.password) throw new Error(`Invalid ${site.name} URL`);
     return url.href;
   }
   async function html3(url, referer, method = "GET") {
-    const target = safeUrl(url);
+    const target = safeUrl2(url);
     return fetchNovelSearchHtml(target, {
       method,
       timeoutMs: 12e3,
@@ -68836,27 +68918,27 @@ function createHtmlNovelProvider(site) {
         const a = $2(node);
         let url;
         try {
-          url = safeUrl(a.attr("href") || "");
+          url = safeUrl2(a.attr("href") || "");
         } catch {
           return;
         }
         if (!site.series.test(new URL(url).pathname) || new URL(url).search || new URL(url).hash) return;
-        const title = clean(a.closest(".book-item").find(".book-name").first().text() || a.find("h2,h3,h4,.novel-title,.book-name,.title").first().text() || a.attr("title") || a.find("img").attr("alt") || a.text()).replace(/^Cover image for\s+/i, "");
-        if (!title || title.length > 250) return;
-        if (site.kind === "wordpress" && !title.toLowerCase().includes(query.toLowerCase())) return;
-        if (!found.has(url)) found.set(url, { id: url, title, url });
+        const title2 = clean(a.closest(".book-item").find(".book-name").first().text() || a.find("h2,h3,h4,.novel-title,.book-name,.title").first().text() || a.attr("title") || a.find("img").attr("alt") || a.text()).replace(/^Cover image for\s+/i, "");
+        if (!title2 || title2.length > 250) return;
+        if (site.kind === "wordpress" && !title2.toLowerCase().includes(query.toLowerCase())) return;
+        if (!found.has(url)) found.set(url, { id: url, title: title2, url });
       });
       return [...found.values()].slice(0, 30);
     },
     async getChapters(params) {
       if (!params.seriesId) return [];
-      const series = safeUrl(params.seriesId);
+      const series = safeUrl2(params.seriesId);
       const initial = await html3(series);
       const $2 = loadHtml(initial);
       if (site.name === "woopread") {
         const catalog = flightChapterCatalog($2);
         if (catalog?.length) return catalog.filter((row) => typeof row.slug === "string" && /^[\w-]+$/.test(row.slug) && Number(row.number) > 0).map((row) => {
-          const url = safeUrl(`${series.replace(/\/$/, "")}/${row.slug}`);
+          const url = safeUrl2(`${series.replace(/\/$/, "")}/${row.slug}`);
           return { number: Number(row.number), title: clean(String(row.title || "")), volume: null, sources: [{ provider: site.name, chapterKey: `${site.name}:${encodeURIComponent(url)}`, providerChapterId: url, language: "en", translator: null, releaseDate: row.publishDate || null }] };
         }).sort((a, b) => a.number - b.number);
       }
@@ -68892,7 +68974,7 @@ function createHtmlNovelProvider(site) {
             const a = page(node);
             let url;
             try {
-              url = safeUrl(a.attr("href") || "", pageUrl);
+              url = safeUrl2(a.attr("href") || "", pageUrl);
             } catch {
               return;
             }
@@ -68907,7 +68989,7 @@ function createHtmlNovelProvider(site) {
           page('.pagination a[href],a[rel="next"]').each((_, node) => {
             let url;
             try {
-              url = safeUrl(page(node).attr("href") || "", pageUrl);
+              url = safeUrl2(page(node).attr("href") || "", pageUrl);
             } catch {
               return;
             }
@@ -68931,7 +69013,7 @@ function createHtmlNovelProvider(site) {
     async getContent(chapterKey) {
       const prefix = `${site.name}:`;
       if (!chapterKey.startsWith(prefix)) throw new Error("Invalid novel chapter key");
-      const url = safeUrl(decodeURIComponent(chapterKey.slice(prefix.length)));
+      const url = safeUrl2(decodeURIComponent(chapterKey.slice(prefix.length)));
       const $2 = loadHtml(await html3(url));
       const body = $2(site.content).first();
       if (!body.length) return null;
@@ -68984,9 +69066,9 @@ var provider51 = {
   },
   async getChapters(params) {
     if (params.seriesId !== `${SERIES}:5`) return [];
-    const catalogs = await Promise.all([5, 6, 7].map((page) => fetchNovelSearchHtml(`${BASE31}/${SERIES}/?p=${page}`)));
+    const catalogs2 = await Promise.all([5, 6, 7].map((page) => fetchNovelSearchHtml(`${BASE31}/${SERIES}/?p=${page}`)));
     const chapters = /* @__PURE__ */ new Map();
-    for (const html3 of catalogs) {
+    for (const html3 of catalogs2) {
       const $2 = loadHtml(html3);
       $2(".p-eplist__subtitle").each((_, el) => {
         const href = $2(el).attr("href") || "";
@@ -69030,7 +69112,7 @@ var syosetu_default = provider51;
 var BASE32 = "https://atsu.moe";
 async function search13(query) {
   const result = await fetchJson(`${BASE32}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`, { timeoutMs: 12e3 });
-  return (result.hits || []).map((hit) => hit.document).filter((doc) => doc?.id && doc.medium?.toLowerCase() === "novel");
+  return (result?.hits || []).map((hit) => hit.document).filter((doc) => doc?.id && isNovelFormat(doc.medium));
 }
 var provider52 = {
   name: "atsu-novel",
@@ -69043,29 +69125,179 @@ var provider52 = {
     if (!seriesId2) {
       const titles = await resolveMangaTitles(params);
       const docs = [];
-      for (const title of titles.slice(0, 2)) docs.push(...await search13(title));
+      for (const title2 of titles.slice(0, 2)) docs.push(...await search13(title2));
       seriesId2 = docs.find((doc) => params.anilistId && Number(doc.anilistId) === params.anilistId)?.id;
-      seriesId2 ||= pickBestNovelCandidate(titles, docs.flatMap((doc) => [doc.title, ...doc.otherNames || []].map((title) => ({ id: doc.id, title }))))?.candidate.id;
+      seriesId2 ||= pickBestNovelCandidate(titles, docs.flatMap((doc) => [doc.title, ...doc.otherNames || []].map((title2) => ({ id: doc.id, title: title2 }))))?.candidate.id;
     }
     if (!seriesId2 || !/^[\w-]+$/.test(seriesId2)) return [];
-    const result = await fetchJson(`${BASE32}/api/manga/allChapters?mangaId=${encodeURIComponent(seriesId2)}`, { timeoutMs: 15e3 });
-    return (result.chapters || []).filter((chapter) => chapter.id && Number.isFinite(Number(chapter.number)) && Number(chapter.number) > 0).map((chapter) => ({
-      number: Number(chapter.number),
-      title: chapter.title || null,
-      volume: null,
-      sources: [{ provider: "atsu-novel", chapterKey: `atsu-novel:${seriesId2}|${chapter.id}`, providerChapterId: chapter.id, language: "en", translator: null, releaseDate: chapter.createdAt ? new Date(chapter.createdAt).toISOString() : null }]
-    })).sort((a, b) => a.number - b.number);
+    const { chapters, scanlators } = await getAtsuCatalog(seriesId2);
+    const byNumber = /* @__PURE__ */ new Map();
+    const seen = /* @__PURE__ */ new Set();
+    for (const chapter of chapters) {
+      const number = Number(chapter.number);
+      if (!chapter.id || !/^[\w-]+$/.test(chapter.id) || !Number.isFinite(number) || number < 0) continue;
+      const source = atsuSource("atsu-novel", seriesId2, chapter, scanlators);
+      if (params.provider?.startsWith("atsu-novel@") && source.provider !== params.provider) continue;
+      if (seen.has(source.chapterKey)) continue;
+      seen.add(source.chapterKey);
+      const entry = byNumber.get(number) || { number, title: chapter.title || null, volume: null, sources: [] };
+      entry.sources.push(source);
+      byNumber.set(number, entry);
+    }
+    return [...byNumber.values()].sort((a, b) => a.number - b.number);
   },
   async getContent(key) {
-    const match2 = key.match(/^atsu-novel:([\w-]+)\|([\w-]+)$/);
+    const match2 = key.match(/^atsu-novel(?:@[\w-]+)?:([\w-]+)\|([\w-]+)$/);
     if (!match2) return null;
     const result = await fetchJson(`${BASE32}/api/read/novelChapter?mangaId=${encodeURIComponent(match2[1])}&chapterId=${encodeURIComponent(match2[2])}`, { timeoutMs: 15e3 });
-    const chapter = result.readNovelChapter;
+    const chapter = result?.readNovelChapter;
     const paragraphs = (chapter?.paragraphs || []).filter((text3) => typeof text3 === "string" && text3.trim()).map((text3, index2) => ({ text: text3.trim(), index: index2 }));
-    return paragraphs.length ? { provider: "atsu-novel", title: chapter?.title || null, number: chapter?.number ?? null, paragraphs } : null;
+    return paragraphs.length ? { provider: key.slice(0, key.indexOf(":")), title: chapter?.title || null, number: chapter?.number ?? null, paragraphs } : null;
   }
 };
 var atsu_default2 = provider52;
+
+// src/providers/novel/manta.ts
+var BASE33 = "https://manta.net";
+var novelTypes = /* @__PURE__ */ new Set([20, 40, 120]);
+var readableStates = /* @__PURE__ */ new Set([100, 110]);
+var title = (row) => typeof row?.data?.title === "string" ? row.data.title : row?.data?.title?.en || "";
+var seriesUrl = (id) => `${BASE33}/en/series/novel?seriesId=${id}`;
+var provider53 = {
+  name: "manta",
+  sites: [BASE33],
+  async search(query) {
+    const result = await fetchJson(`${BASE33}/manta/v1/search/series?lang=en&q=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+    return (result?.data || []).filter((row) => novelTypes.has(row.type) && title(row) && /^\d+$/.test(String(row.id))).map((row) => ({ id: String(row.id), title: title(row), url: seriesUrl(String(row.id)) }));
+  },
+  async getChapters(params) {
+    const id = params.seriesId;
+    if (!id || !/^\d+$/.test(id)) return [];
+    const seriesResult = await fetchJson(`${BASE33}/front/v1/series/${id}?lang=en`, { timeoutMs: 12e3 });
+    const series = seriesResult?.data;
+    if (!novelTypes.has(series?.type)) return [];
+    return (series.episodes || []).filter((episode) => readableStates.has(episode.lockData?.state) && /^\d+$/.test(String(episode.id)) && Number(episode.ord) > 0).map((episode) => ({
+      number: Number(episode.ord),
+      title: title(episode) || `Chapter ${episode.ord}`,
+      volume: null,
+      sources: [{
+        provider: "manta",
+        providerName: "Manta",
+        chapterKey: `manta:${id}|${episode.id}`,
+        providerChapterId: `${id}|${episode.id}`,
+        language: "en",
+        translator: null,
+        releaseDate: episode.openAt || null
+      }]
+    })).sort((a, b) => a.number - b.number);
+  },
+  async getContent(key) {
+    const match2 = key.match(/^manta:(\d+)\|(\d+)$/);
+    if (!match2) return null;
+    const episodeResult = await fetchJson(`${BASE33}/front/v1/episodes/${match2[2]}?lang=en`, { timeoutMs: 12e3 });
+    const episode = episodeResult?.data;
+    if (String(episode?.seriesId) !== match2[1] || !novelTypes.has(episode?.series?.type)) return null;
+    if (!readableStates.has(episode.lockData?.state)) throw new Error("This Manta chapter requires access on Manta. Only public free chapters are supported.");
+    const paragraphs = await readPublicNovelText(seriesUrl(match2[1]), `${BASE33}/en/series/novel/episodes/chapter?episodeId=${match2[2]}`);
+    return {
+      provider: "manta",
+      title: title(episode) || null,
+      number: Number(episode.ord) || null,
+      paragraphs: paragraphs.map((text3, index2) => ({ text: text3, index: index2 }))
+    };
+  }
+};
+var manta_default = provider53;
+
+// src/providers/novel/scribblehub.ts
+var BASE34 = "https://www.scribblehub.com";
+var clean2 = (value) => value.replace(/\s+/g, " ").trim();
+function safeUrl(value) {
+  const url = new URL(value, BASE34);
+  if (url.origin !== BASE34 || url.username || url.password || url.hash) throw new Error("Invalid Scribble Hub URL");
+  return url;
+}
+var provider54 = {
+  name: "scribblehub",
+  sites: [BASE34],
+  async search(query) {
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE34}/?s=${encodeURIComponent(query)}&post_type=fictionposts`));
+    const found = /* @__PURE__ */ new Map();
+    $2(".search_title > a[href]").each((_, node) => {
+      let url;
+      try {
+        url = safeUrl($2(node).attr("href") || "");
+      } catch {
+        return;
+      }
+      if (!/^\/series\/\d+\/[^/]+\/?$/.test(url.pathname)) return;
+      const title2 = clean2($2(node).text());
+      if (title2) found.set(url.href, { id: url.href, title: title2, url: url.href });
+    });
+    return [...found.values()];
+  },
+  async getChapters(params) {
+    if (!params.seriesId) return [];
+    const series = safeUrl(params.seriesId);
+    const match2 = series.pathname.match(/^\/series\/(\d+)\/[^/]+\/?$/);
+    if (!match2) return [];
+    const body = new URLSearchParams({ action: "wi_getreleases_pagination", pagenum: "-1", mypostid: match2[1] });
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE34}/wp-admin/admin-ajax.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Referer: series.href },
+      body: body.toString()
+    }));
+    const links = /* @__PURE__ */ new Map();
+    $2(".toc_w .toc_a[href]").each((_, node) => {
+      let url;
+      try {
+        url = safeUrl($2(node).attr("href") || "");
+      } catch {
+        return;
+      }
+      if (!url.pathname.startsWith(`/read/${match2[1]}/`) || !/\/chapter\/\d+\/?$/.test(url.pathname)) return;
+      links.set(url.href, { url: url.href, title: clean2($2(node).text()) });
+    });
+    return [...links.values()].reverse().map((chapter, index2) => ({
+      number: index2 + 1,
+      title: chapter.title || null,
+      volume: null,
+      sources: [{
+        provider: "scribblehub",
+        providerName: "Scribble Hub",
+        chapterKey: `scribblehub:${encodeURIComponent(chapter.url)}`,
+        providerChapterId: chapter.url,
+        language: "en",
+        translator: null,
+        releaseDate: null
+      }]
+    }));
+  },
+  async getContent(key) {
+    if (!key.startsWith("scribblehub:")) return null;
+    const url = safeUrl(decodeURIComponent(key.slice("scribblehub:".length)));
+    if (!/^\/read\/\d+\/[^/]+\/chapter\/\d+\/?$/.test(url.pathname)) return null;
+    const $2 = loadHtml(await fetchNovelSearchHtml(url.href));
+    const body = $2(".chp_raw").first();
+    body.find("script,style,iframe,.wi_authornotes,.adsbygoogle").remove();
+    const paragraphs = [];
+    body.find("p").each((_, node) => {
+      const text3 = clean2($2(node).text());
+      if (text3) paragraphs.push(text3);
+    });
+    if (!paragraphs.length) {
+      body.find("br").replaceWith("\n");
+      paragraphs.push(...body.text().split(/\n+/).map(clean2).filter(Boolean));
+    }
+    return paragraphs.length ? {
+      provider: "scribblehub",
+      title: clean2($2(".chapter-title").first().text()) || null,
+      number: null,
+      paragraphs: paragraphs.map((text3, index2) => ({ text: text3, index: index2 }))
+    } : null;
+  }
+};
+var scribblehub_default = provider54;
 
 // src/providers/registry.ts
 var STREAM_PROVIDERS = [
@@ -69132,6 +69364,8 @@ var MANGA_PROVIDERS = [
 ];
 var NOVEL_PROVIDERS = [
   atsu_default2,
+  manta_default,
+  scribblehub_default,
   syosetu_default,
   wuxiaworld_default,
   webnovel_default,
@@ -69466,9 +69700,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider53 = MANGA_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider53) throw new ChapterNotFoundError(chapterKey);
-    const pages2 = await provider53.getPages(chapterKey);
+    const provider55 = MANGA_PROVIDERS.find((p) => p.name === atsuBaseProvider(providerName));
+    if (!provider55) throw new ChapterNotFoundError(chapterKey);
+    const pages2 = await provider55.getPages(chapterKey);
     if (pages2.length === 0) throw new ChapterNotFoundError(chapterKey);
     return pages2;
   }
@@ -69483,10 +69717,10 @@ var TokoBundleClass = class {
       return params.title ? { ...params, titles: [params.title] } : params;
     }
   }
-  async searchThenScrapeNovel(provider53, params, deadline) {
-    const blocked = this.blockedNovelProviders.get(provider53.name);
+  async searchThenScrapeNovel(provider55, params, deadline) {
+    const blocked = this.blockedNovelProviders.get(provider55.name);
     if (!params.provider && !params.fullScan && blocked && Date.now() - blocked.at < 6e4) throw blocked.error;
-    if (params.seriesId || !provider53.search) return provider53.getChapters(params);
+    if (params.seriesId || !provider55.search) return provider55.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
     const queries = buildNovelSearchQueries(titles).slice(0, params.fullScan ? 4 : 2);
     const candidates = [];
@@ -69495,23 +69729,23 @@ var TokoBundleClass = class {
     for (const query of queries) {
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
       try {
-        candidates.push(...await provider53.search(query));
+        candidates.push(...await provider55.search(query));
         answered = true;
       } catch (error) {
         lastError = error;
         if (/HTTP (?:403|429|502|503)|access blocked/i.test(String(error?.message))) {
-          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider53.name, { at: Date.now(), error });
+          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider55.name, { at: Date.now(), error });
           throw error;
         }
         continue;
       }
       const match3 = pickBestNovelCandidate(titles, candidates);
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
-      if (match3?.score === 1) return provider53.getChapters({ ...params, provider: provider53.name, seriesId: match3.candidate.id });
+      if (match3?.score === 1) return provider55.getChapters({ ...params, provider: params.provider || provider55.name, seriesId: match3.candidate.id });
     }
     const match2 = pickBestNovelCandidate(titles, candidates);
     if (!answered && lastError) throw lastError;
-    return match2 ? provider53.getChapters({ ...params, provider: provider53.name, seriesId: match2.candidate.id }) : [];
+    return match2 ? provider55.getChapters({ ...params, provider: params.provider || provider55.name, seriesId: match2.candidate.id }) : [];
   }
   /**
    * Returns novel chapters merged by chapter number.
@@ -69525,7 +69759,7 @@ var TokoBundleClass = class {
     const enriched = await this.enrichNovelParams(params);
     const deadline = Date.now() + 8e3;
     const all = await runProvidersProgressive(
-      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
+      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === atsuBaseProvider(params.provider)),
       (p) => {
         const remaining = deadline - Date.now();
         if (remaining <= 0) return Promise.reject(new Error("Novel discovery budget exhausted"));
@@ -69556,7 +69790,7 @@ var TokoBundleClass = class {
       }) };
       this.novelRuns.set(key, record);
       if (this.novelRuns.size > 30) this.novelRuns.delete(this.novelRuns.keys().next().value);
-      const publicNames = ["syosetu", "wuxiaworld", "lightnovelto", "novelbuddy", "novgo", "novelcool", "novelfire", "readnovelfull", "relibrary", "woopread", "divinedaolibrary"];
+      const publicNames = ["atsu-novel", "manta", "syosetu", "wuxiaworld", "lightnovelto", "novelbuddy", "novgo", "novelcool", "novelfire", "readnovelfull", "relibrary", "woopread", "divinedaolibrary", "royalroad", "scribblehub", "webnovel"];
       const providers = NOVEL_PROVIDERS.filter((p) => !process.browser || publicNames.includes(p.name)).sort((a, b) => {
         const rank = (name) => {
           const index2 = publicNames.indexOf(name);
@@ -69587,7 +69821,7 @@ var TokoBundleClass = class {
     }
     const diagnostics = [];
     const all = await runProviders(
-      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider),
+      NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === atsuBaseProvider(params.provider)),
       (p) => this.searchThenScrapeNovel(p, enriched),
       diagnostics,
       { timeoutMs: process.browser ? 6e4 : 3e4, maxRetries: 0, maxConcurrency: 10, retryDelayMs: 250 }
@@ -69597,7 +69831,7 @@ var TokoBundleClass = class {
   async getNovelSearch(params) {
     const query = String(params.query || "").trim().slice(0, 200);
     if (!query) return { results: [], providerStatus: [] };
-    const rows = await Promise.all(NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === params.provider).map(async (p) => {
+    const rows = await Promise.all(NOVEL_PROVIDERS.filter((p) => !params.provider || p.name === atsuBaseProvider(params.provider)).map(async (p) => {
       try {
         const matches = await withProviderTimeout(p.search ? p.search(query) : Promise.resolve([]), process.browser ? 6e4 : 25e3);
         return { results: matches.slice(0, 20).map((match2) => ({ ...match2, provider: p.name })), status: { provider: p.name, status: matches.length ? "ok" : "empty", resultCount: matches.length } };
@@ -69618,9 +69852,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider53 = NOVEL_PROVIDERS.find((p) => p.name === providerName);
-    if (!provider53) throw new ChapterNotFoundError(chapterKey);
-    const content = await provider53.getContent(chapterKey);
+    const provider55 = NOVEL_PROVIDERS.find((p) => p.name === atsuBaseProvider(providerName));
+    if (!provider55) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider55.getContent(chapterKey);
     if (!content) throw new ChapterNotFoundError(chapterKey);
     const paragraphs = normalizeNovelParagraphs(content.paragraphs);
     if (!paragraphs.length) throw new ChapterNotFoundError(chapterKey);

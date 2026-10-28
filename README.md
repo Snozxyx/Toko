@@ -22,6 +22,14 @@
 
 ## Release v4
 
+### Webnovels and Atsu sources in v4.5.8
+
+- Atsu exposes each available upstream separately (for example Asura, Alpha, Flame, and Dusk for manga, or System and NovelBuddy for novels). Shared chapter numbers keep every source; chapter zero and saved older reading links are supported.
+- Manta searches chapter novels separately from comics and volume editions. Only publicly free/open chapters are listed. Text is read through the site's normal browser reader, so the host must provide a browser (or the API server must have its browser runtime available). Toko does not unlock paid chapters, claim Free Passes, or decrypt EPUB downloads.
+- Scribble Hub provides original webnovels with a complete chapter catalog, including prologues and side stories. Site challenges may require the host's browser/native HTTP support.
+- Webnovel.com remains a named provider, now using its catalog page and actual chapter links. Webnovel and Royal Road are included in hosted browser discovery; restricted chapters and site challenges may still prevent reading from individual providers.
+
+
 ### Novel provider repairs in v4.5.3
 
 - NovelBuddy searches with `q`, loads the complete public chapter archive, refreshes stale Next.js build IDs, and uses published chapter numbers rather than sorting ordinals.
