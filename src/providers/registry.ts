@@ -161,6 +161,7 @@ import mangakatana from './manga/mangakatana.js';
 import weebcentral from './manga/weebcentral.js';
 import nelomanga from './manga/nelomanga.js';
 import atsu from './manga/atsu.js';
+import justmanga from './manga/justmanga.js';
 import webtoons from './manga/webtoons.js';
 import demonicscans from './manga/demonicscans.js';
 import toongod from './manga/toongod.js';
@@ -180,6 +181,7 @@ import leercapitulo from './manga/leercapitulo.js';
 import novelcool from './manga/novelcool.js';
 
 export const MANGA_PROVIDERS: MangaProvider[] = [
+  justmanga,
   mangadex,
   mangapill,
   mangakatana,

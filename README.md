@@ -53,7 +53,7 @@ The current registry contains **104 providers**:
 |:--|--:|:--|
 | **Streaming** | **82** | Anime, movies, and TV with HLS, MP4, embeds, captions, and language metadata |
 | **Torrent** | **6** | Magnet links, `.torrent` links, release metadata, file format, seeders, and leechers |
-| **Manga** | **16** | Chapter listing, page fetching, and scanlator metadata |
+| **Manga** | **17** | Chapter listing, page fetching, and scanlator metadata |
 | **Total** | **104** | Unified provider interface |
 
 ### Language support
@@ -79,7 +79,7 @@ Toko is the official unified extension for the [Tatakai](https://github.com/snoz
 |:--|:--:|:--|
 | **Stream** | 82 | Direct-stream sources across native anime, French, Latino, Hindi, and multi-dub providers |
 | **Torrent** | 6 | Magnet links and torrent files |
-| **Manga** | 16 | Chapters, pages, and scanlator metadata |
+| **Manga** | 17 | Chapters, pages, and scanlator metadata |
 
 ### Streaming
 
@@ -111,7 +111,7 @@ Every provider was checked against its live origin and repaired, kept, or remove
 
 ### Manga
 
-- 16 manga providers
+- 17 manga providers; JustManga is tried first through its AniList-keyed API, with Mochi and Akira kept as separate chapter sources.
 - Chapter listing and retrieval
 - Page fetching
 - Scanlator metadata

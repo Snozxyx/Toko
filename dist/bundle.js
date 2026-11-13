@@ -6224,10 +6224,10 @@ var require_util = __commonJS({
       }
       return obj;
     }
-    function errorRequest(client, request, err) {
+    function errorRequest(client, request2, err) {
       try {
-        request.onError(err);
-        assert(request.aborted);
+        request2.onError(err);
+        assert(request2.aborted);
       } catch (err2) {
         client.emit("error", err2);
       }
@@ -6918,7 +6918,7 @@ var require_request = __commonJS({
         return this;
       }
     };
-    function processHeader(request, key, val2) {
+    function processHeader(request2, key, val2) {
       if (val2 && (typeof val2 === "object" && !Array.isArray(val2))) {
         throw new InvalidArgumentError(`invalid ${key} header`);
       } else if (val2 === void 0) {
@@ -6965,24 +6965,24 @@ var require_request = __commonJS({
         }
       }
       if (headerName === "host") {
-        if (request.host !== null) {
+        if (request2.host !== null) {
           throw new InvalidArgumentError("duplicate host header");
         }
         if (typeof val2 !== "string") {
           throw new InvalidArgumentError("invalid host header");
         }
-        request.host = val2;
+        request2.host = val2;
       } else if (headerName === "content-length") {
-        if (request.contentLength !== null) {
+        if (request2.contentLength !== null) {
           throw new InvalidArgumentError("duplicate content-length header");
         }
         if (!isValidContentLengthHeaderValue(val2)) {
           throw new InvalidArgumentError("invalid content-length header");
         }
-        request.contentLength = parseInt(val2, 10);
-      } else if (request.contentType === null && headerName === "content-type") {
-        request.contentType = val2;
-        request.headers.push(key, val2);
+        request2.contentLength = parseInt(val2, 10);
+      } else if (request2.contentType === null && headerName === "content-type") {
+        request2.contentType = val2;
+        request2.headers.push(key, val2);
       } else if (headerName === "transfer-encoding" || headerName === "keep-alive" || headerName === "upgrade") {
         throw new InvalidArgumentError(`invalid ${headerName} header`);
       } else if (headerName === "connection") {
@@ -6996,13 +6996,13 @@ var require_request = __commonJS({
             throw new InvalidArgumentError("invalid connection header");
           }
           if (trimmed === "close") {
-            request.reset = true;
+            request2.reset = true;
           }
         }
       } else if (headerName === "expect") {
         throw new NotSupportedError("expect header not supported");
       } else {
-        request.headers.push(key, val2);
+        request2.headers.push(key, val2);
       }
     }
     module2.exports = Request;
@@ -9595,11 +9595,11 @@ var require_util2 = __commonJS({
     function normalizeBinaryStringToUtf8(value) {
       return Buffer.from(value, "binary").toString("utf8");
     }
-    function requestCurrentURL(request) {
-      return request.urlList[request.urlList.length - 1];
+    function requestCurrentURL(request2) {
+      return request2.urlList[request2.urlList.length - 1];
     }
-    function requestBadPort(request) {
-      const url = requestCurrentURL(request);
+    function requestBadPort(request2) {
+      const url = requestCurrentURL(request2);
       if (urlIsHttpHttpsScheme(url) && badPortsSet.has(url.port)) {
         return "blocked";
       }
@@ -9637,10 +9637,10 @@ var require_util2 = __commonJS({
       }
       return policy;
     }
-    function setRequestReferrerPolicyOnRedirect(request, actualResponse) {
+    function setRequestReferrerPolicyOnRedirect(request2, actualResponse) {
       const policy = parseReferrerPolicy(actualResponse);
       if (policy !== "") {
-        request.referrerPolicy = policy;
+        request2.referrerPolicy = policy;
       }
     }
     function crossOriginResourcePolicyCheck() {
@@ -9657,33 +9657,33 @@ var require_util2 = __commonJS({
       header = httpRequest.mode;
       httpRequest.headersList.set("sec-fetch-mode", header, true);
     }
-    function appendRequestOriginHeader(request) {
-      let serializedOrigin = request.origin;
+    function appendRequestOriginHeader(request2) {
+      let serializedOrigin = request2.origin;
       if (serializedOrigin === "client" || serializedOrigin === void 0) {
         return;
       }
-      if (request.responseTainting === "cors" || request.mode === "websocket") {
-        request.headersList.append("origin", serializedOrigin, true);
-      } else if (request.method !== "GET" && request.method !== "HEAD") {
-        switch (request.referrerPolicy) {
+      if (request2.responseTainting === "cors" || request2.mode === "websocket") {
+        request2.headersList.append("origin", serializedOrigin, true);
+      } else if (request2.method !== "GET" && request2.method !== "HEAD") {
+        switch (request2.referrerPolicy) {
           case "no-referrer":
             serializedOrigin = null;
             break;
           case "no-referrer-when-downgrade":
           case "strict-origin":
           case "strict-origin-when-cross-origin":
-            if (request.origin && urlHasHttpsScheme(request.origin) && !urlHasHttpsScheme(requestCurrentURL(request))) {
+            if (request2.origin && urlHasHttpsScheme(request2.origin) && !urlHasHttpsScheme(requestCurrentURL(request2))) {
               serializedOrigin = null;
             }
             break;
           case "same-origin":
-            if (!sameOrigin(request, requestCurrentURL(request))) {
+            if (!sameOrigin(request2, requestCurrentURL(request2))) {
               serializedOrigin = null;
             }
             break;
           default:
         }
-        request.headersList.append("origin", serializedOrigin, true);
+        request2.headersList.append("origin", serializedOrigin, true);
       }
     }
     function coarsenTime(timestamp, crossOriginIsolatedCapability) {
@@ -9737,18 +9737,18 @@ var require_util2 = __commonJS({
         referrerPolicy: policyContainer.referrerPolicy
       };
     }
-    function determineRequestsReferrer(request) {
-      const policy = request.referrerPolicy;
+    function determineRequestsReferrer(request2) {
+      const policy = request2.referrerPolicy;
       assert(policy);
       let referrerSource = null;
-      if (request.referrer === "client") {
+      if (request2.referrer === "client") {
         const globalOrigin = getGlobalOrigin();
         if (!globalOrigin || globalOrigin.origin === "null") {
           return "no-referrer";
         }
         referrerSource = new URL(globalOrigin);
-      } else if (webidl.is.URL(request.referrer)) {
-        referrerSource = request.referrer;
+      } else if (webidl.is.URL(request2.referrer)) {
+        referrerSource = request2.referrer;
       }
       let referrerURL = stripURLForReferrer(referrerSource);
       const referrerOrigin = stripURLForReferrer(referrerSource, true);
@@ -9766,14 +9766,14 @@ var require_util2 = __commonJS({
         case "unsafe-url":
           return referrerURL;
         case "strict-origin": {
-          const currentURL = requestCurrentURL(request);
+          const currentURL = requestCurrentURL(request2);
           if (isURLPotentiallyTrustworthy(referrerURL) && !isURLPotentiallyTrustworthy(currentURL)) {
             return "no-referrer";
           }
           return referrerOrigin;
         }
         case "strict-origin-when-cross-origin": {
-          const currentURL = requestCurrentURL(request);
+          const currentURL = requestCurrentURL(request2);
           if (sameOrigin(referrerURL, currentURL)) {
             return referrerURL;
           }
@@ -9783,17 +9783,17 @@ var require_util2 = __commonJS({
           return referrerOrigin;
         }
         case "same-origin":
-          if (sameOrigin(request, referrerURL)) {
+          if (sameOrigin(request2, referrerURL)) {
             return referrerURL;
           }
           return "no-referrer";
         case "origin-when-cross-origin":
-          if (sameOrigin(request, referrerURL)) {
+          if (sameOrigin(request2, referrerURL)) {
             return referrerURL;
           }
           return referrerOrigin;
         case "no-referrer-when-downgrade": {
-          const currentURL = requestCurrentURL(request);
+          const currentURL = requestCurrentURL(request2);
           if (isURLPotentiallyTrustworthy(referrerURL) && !isURLPotentiallyTrustworthy(currentURL)) {
             return "no-referrer";
           }
@@ -9860,7 +9860,7 @@ var require_util2 = __commonJS({
       if (url.protocol === "blob:") return true;
       return isOriginPotentiallyTrustworthy(url.origin);
     }
-    function tryUpgradeRequestToAPotentiallyTrustworthyURL(request) {
+    function tryUpgradeRequestToAPotentiallyTrustworthyURL(request2) {
     }
     function sameOrigin(A, B) {
       if (A.origin === B.origin && A.origin === "null") {
@@ -10239,7 +10239,7 @@ var require_util2 = __commonJS({
       }
       return gettingDecodingSplitting(value);
     }
-    function hasAuthenticationEntry(request) {
+    function hasAuthenticationEntry(request2) {
       return false;
     }
     function includesCredentials(url) {
@@ -11473,11 +11473,11 @@ var require_client_h1 = __commonJS({
           util.destroy(socket, new SocketError("bad response", util.getSocketInfo(socket)));
           return -1;
         }
-        const request = client[kQueue][client[kRunningIdx]];
-        if (!request) {
+        const request2 = client[kQueue][client[kRunningIdx]];
+        if (!request2) {
           return -1;
         }
-        request.onResponseStarted();
+        request2.onResponseStarted();
         return 0;
       }
       /**
@@ -11539,9 +11539,9 @@ var require_client_h1 = __commonJS({
         assert(!socket.destroyed);
         assert(!this.paused);
         assert((headers.length & 1) === 0);
-        const request = client[kQueue][client[kRunningIdx]];
-        assert(request);
-        assert(request.upgrade || request.method === "CONNECT");
+        const request2 = client[kQueue][client[kRunningIdx]];
+        assert(request2);
+        assert(request2.upgrade || request2.method === "CONNECT");
         this.statusCode = 0;
         this.statusText = "";
         this.shouldKeepAlive = false;
@@ -11558,9 +11558,9 @@ var require_client_h1 = __commonJS({
         client[kQueue][client[kRunningIdx]++] = null;
         client.emit("disconnect", client[kUrl], [client], new InformationalError("upgrade"));
         try {
-          request.onUpgrade(statusCode, headers, socket, statusText);
+          request2.onUpgrade(statusCode, headers, socket, statusText);
         } catch (err) {
-          util.errorRequest(client, request, err);
+          util.errorRequest(client, request2, err);
           util.destroy(socket, err);
         }
         client[kResume]();
@@ -11580,8 +11580,8 @@ var require_client_h1 = __commonJS({
           util.destroy(socket, new SocketError("bad response", util.getSocketInfo(socket)));
           return -1;
         }
-        const request = client[kQueue][client[kRunningIdx]];
-        if (!request) {
+        const request2 = client[kQueue][client[kRunningIdx]];
+        if (!request2) {
           return -1;
         }
         assert(!this.upgrade);
@@ -11590,23 +11590,23 @@ var require_client_h1 = __commonJS({
           util.destroy(socket, new SocketError("bad response", util.getSocketInfo(socket)));
           return -1;
         }
-        if (upgrade && !request.upgrade) {
+        if (upgrade && !request2.upgrade) {
           util.destroy(socket, new SocketError("bad upgrade", util.getSocketInfo(socket)));
           return -1;
         }
         assert(this.timeoutType === TIMEOUT_HEADERS);
         this.statusCode = statusCode;
         this.shouldKeepAlive = shouldKeepAlive || // Override llhttp value which does not allow keepAlive for HEAD.
-        request.method === "HEAD" && !socket[kReset] && this.connection.toLowerCase() === "keep-alive";
+        request2.method === "HEAD" && !socket[kReset] && this.connection.toLowerCase() === "keep-alive";
         if (this.statusCode >= 200) {
-          const bodyTimeout = request.bodyTimeout != null ? request.bodyTimeout : client[kBodyTimeout];
+          const bodyTimeout = request2.bodyTimeout != null ? request2.bodyTimeout : client[kBodyTimeout];
           this.setTimeout(bodyTimeout, TIMEOUT_BODY);
         } else if (this.timeout) {
           if (this.timeout.refresh) {
             this.timeout.refresh();
           }
         }
-        if (request.method === "CONNECT") {
+        if (request2.method === "CONNECT") {
           assert(client[kRunning] === 1);
           this.upgrade = true;
           return 2;
@@ -11637,11 +11637,11 @@ var require_client_h1 = __commonJS({
         } else {
           socket[kReset] = true;
         }
-        const pause = request.onHeaders(statusCode, headers, this.resume, statusText) === false;
-        if (request.aborted) {
+        const pause = request2.onHeaders(statusCode, headers, this.resume, statusText) === false;
+        if (request2.aborted) {
           return -1;
         }
-        if (request.method === "HEAD") {
+        if (request2.method === "HEAD") {
           return 1;
         }
         if (statusCode < 200) {
@@ -11662,8 +11662,8 @@ var require_client_h1 = __commonJS({
         if (socket.destroyed) {
           return -1;
         }
-        const request = client[kQueue][client[kRunningIdx]];
-        assert(request);
+        const request2 = client[kQueue][client[kRunningIdx]];
+        assert(request2);
         assert(this.timeoutType === TIMEOUT_BODY);
         if (this.timeout) {
           if (this.timeout.refresh) {
@@ -11676,7 +11676,7 @@ var require_client_h1 = __commonJS({
           return -1;
         }
         this.bytesRead += buf.length;
-        if (request.onData(buf) === false) {
+        if (request2.onData(buf) === false) {
           return constants2.ERROR.PAUSED;
         }
         return 0;
@@ -11694,8 +11694,8 @@ var require_client_h1 = __commonJS({
         }
         assert(statusCode >= 100);
         assert((this.headers.length & 1) === 0);
-        const request = client[kQueue][client[kRunningIdx]];
-        assert(request);
+        const request2 = client[kQueue][client[kRunningIdx]];
+        assert(request2);
         this.statusCode = 0;
         this.statusText = "";
         this.bytesRead = 0;
@@ -11707,11 +11707,11 @@ var require_client_h1 = __commonJS({
         if (statusCode < 200) {
           return 0;
         }
-        if (request.method !== "HEAD" && contentLength && bytesRead !== parseInt(contentLength, 10)) {
+        if (request2.method !== "HEAD" && contentLength && bytesRead !== parseInt(contentLength, 10)) {
           util.destroy(socket, new ResponseContentLengthMismatchError());
           return -1;
         }
-        request.onComplete(headers);
+        request2.onComplete(headers);
         client[kQueue][client[kRunningIdx]++] = null;
         socket[kSocketUsed] = client[kPending] === 0;
         if (socket[kWriting]) {
@@ -11780,8 +11780,8 @@ var require_client_h1 = __commonJS({
       return {
         version: "h1",
         defaultPipelining: 1,
-        write(request) {
-          return writeH1(client, request);
+        write(request2) {
+          return writeH1(client, request2);
         },
         resume() {
           resumeH1(client);
@@ -11808,18 +11808,18 @@ var require_client_h1 = __commonJS({
          * @param {import('../core/request.js')} request
          * @returns {boolean}
          */
-        busy(request) {
+        busy(request2) {
           if (socket[kWriting] || socket[kReset] || socket[kBlocking] || socket[kIdleSocketValidation] === 1) {
             return true;
           }
-          if (request) {
-            if (client[kRunning] > 0 && !request.idempotent) {
+          if (request2) {
+            if (client[kRunning] > 0 && !request2.idempotent) {
               return true;
             }
-            if (client[kRunning] > 0 && (request.upgrade || request.method === "CONNECT")) {
+            if (client[kRunning] > 0 && (request2.upgrade || request2.method === "CONNECT")) {
               return true;
             }
-            if (client[kRunning] > 0 && util.bodyLength(request.body) !== 0 && (util.isStream(request.body) || util.isAsyncIterable(request.body) || util.isFormDataLike(request.body))) {
+            if (client[kRunning] > 0 && util.bodyLength(request2.body) !== 0 && (util.isStream(request2.body) || util.isAsyncIterable(request2.body) || util.isFormDataLike(request2.body))) {
               return true;
             }
           }
@@ -11873,13 +11873,13 @@ var require_client_h1 = __commonJS({
         assert(client[kPending] === 0);
         const requests = client[kQueue].splice(client[kRunningIdx]);
         for (let i = 0; i < requests.length; i++) {
-          const request = requests[i];
-          util.errorRequest(client, request, err);
+          const request2 = requests[i];
+          util.errorRequest(client, request2, err);
         }
       } else if (client[kRunning] > 0 && err.code !== "UND_ERR_INFO") {
-        const request = client[kQueue][client[kRunningIdx]];
+        const request2 = client[kQueue][client[kRunningIdx]];
         client[kQueue][client[kRunningIdx]++] = null;
-        util.errorRequest(client, request, err);
+        util.errorRequest(client, request2, err);
       }
       client[kPendingIdx] = client[kRunningIdx];
       assert(client[kRunning] === 0);
@@ -11947,8 +11947,8 @@ var require_client_h1 = __commonJS({
           }
         } else if (client[kRunning] > 0 && socket[kParser].statusCode < 200) {
           if (socket[kParser].timeoutType !== TIMEOUT_HEADERS) {
-            const request = client[kQueue][client[kRunningIdx]];
-            const headersTimeout = request.headersTimeout != null ? request.headersTimeout : client[kHeadersTimeout];
+            const request2 = client[kQueue][client[kRunningIdx]];
+            const headersTimeout = request2.headersTimeout != null ? request2.headersTimeout : client[kHeadersTimeout];
             socket[kParser].setTimeout(headersTimeout, TIMEOUT_HEADERS);
           }
         }
@@ -11957,26 +11957,26 @@ var require_client_h1 = __commonJS({
     function shouldSendContentLength(method) {
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
-    function writeH1(client, request) {
-      const { method, path, host, upgrade, blocking, reset } = request;
-      let { body, headers, contentLength } = request;
+    function writeH1(client, request2) {
+      const { method, path, host, upgrade, blocking, reset } = request2;
+      let { body, headers, contentLength } = request2;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util.isFormDataLike(body)) {
         if (!extractBody) {
           extractBody = require_body().extractBody;
         }
         const [bodyStream, contentType] = extractBody(body);
-        if (request.contentType == null) {
+        if (request2.contentType == null) {
           headers.push("content-type", contentType);
         }
         body = bodyStream.stream;
         contentLength = bodyStream.length;
-      } else if (util.isBlobLike(body) && request.contentType == null) {
+      } else if (util.isBlobLike(body) && request2.contentType == null) {
         const contentType = body.type;
         if (contentType) {
           const contentTypeValue = `${contentType}`;
           if (!util.isValidHeaderValue(contentTypeValue)) {
-            util.errorRequest(client, request, new InvalidArgumentError("invalid content-type header"));
+            util.errorRequest(client, request2, new InvalidArgumentError("invalid content-type header"));
             return false;
           }
           headers.push("content-type", contentTypeValue);
@@ -11988,14 +11988,14 @@ var require_client_h1 = __commonJS({
       const bodyLength = util.bodyLength(body);
       contentLength = bodyLength ?? contentLength;
       if (contentLength === null) {
-        contentLength = request.contentLength;
+        contentLength = request2.contentLength;
       }
       if (contentLength === 0 && !expectsPayload) {
         contentLength = null;
       }
-      if (shouldSendContentLength(method) && contentLength > 0 && request.contentLength !== null && request.contentLength !== contentLength) {
+      if (shouldSendContentLength(method) && contentLength > 0 && request2.contentLength !== null && request2.contentLength !== contentLength) {
         if (client[kStrictContentLength]) {
-          util.errorRequest(client, request, new RequestContentLengthMismatchError());
+          util.errorRequest(client, request2, new RequestContentLengthMismatchError());
           return false;
         }
         process.emitWarning(new RequestContentLengthMismatchError());
@@ -12003,19 +12003,19 @@ var require_client_h1 = __commonJS({
       const socket = client[kSocket];
       clearIdleSocketValidation(socket);
       const abort = (err) => {
-        if (request.aborted || request.completed) {
+        if (request2.aborted || request2.completed) {
           return;
         }
-        util.errorRequest(client, request, err || new RequestAbortedError());
+        util.errorRequest(client, request2, err || new RequestAbortedError());
         util.destroy(body);
         util.destroy(socket, new InformationalError("aborted"));
       };
       try {
-        request.onConnect(abort);
+        request2.onConnect(abort);
       } catch (err) {
-        util.errorRequest(client, request, err);
+        util.errorRequest(client, request2, err);
       }
-      if (request.aborted) {
+      if (request2.aborted) {
         return false;
       }
       if (method === "HEAD") {
@@ -12034,7 +12034,7 @@ var require_client_h1 = __commonJS({
         socket[kBlocking] = true;
       }
       if (socket.setTypeOfService) {
-        socket.setTypeOfService(request.typeOfService);
+        socket.setTypeOfService(request2.typeOfService);
       }
       let header = `${method} ${path} HTTP/1.1\r
 `;
@@ -12069,31 +12069,31 @@ upgrade: ${upgrade}\r
         }
       }
       if (channels.sendHeaders.hasSubscribers) {
-        channels.sendHeaders.publish({ request, headers: header, socket });
+        channels.sendHeaders.publish({ request: request2, headers: header, socket });
       }
       if (!body || bodyLength === 0) {
-        writeBuffer(abort, null, client, request, socket, contentLength, header, expectsPayload);
+        writeBuffer(abort, null, client, request2, socket, contentLength, header, expectsPayload);
       } else if (util.isBuffer(body)) {
-        writeBuffer(abort, body, client, request, socket, contentLength, header, expectsPayload);
+        writeBuffer(abort, body, client, request2, socket, contentLength, header, expectsPayload);
       } else if (util.isBlobLike(body)) {
         if (typeof body.stream === "function") {
-          writeIterable(abort, body.stream(), client, request, socket, contentLength, header, expectsPayload);
+          writeIterable(abort, body.stream(), client, request2, socket, contentLength, header, expectsPayload);
         } else {
-          writeBlob(abort, body, client, request, socket, contentLength, header, expectsPayload);
+          writeBlob(abort, body, client, request2, socket, contentLength, header, expectsPayload);
         }
       } else if (util.isStream(body)) {
-        writeStream(abort, body, client, request, socket, contentLength, header, expectsPayload);
+        writeStream(abort, body, client, request2, socket, contentLength, header, expectsPayload);
       } else if (util.isIterable(body)) {
-        writeIterable(abort, body, client, request, socket, contentLength, header, expectsPayload);
+        writeIterable(abort, body, client, request2, socket, contentLength, header, expectsPayload);
       } else {
         assert(false);
       }
       return true;
     }
-    function writeStream(abort, body, client, request, socket, contentLength, header, expectsPayload) {
+    function writeStream(abort, body, client, request2, socket, contentLength, header, expectsPayload) {
       assert(contentLength !== 0 || client[kRunning] === 0, "stream body cannot be pipelined");
       let finished2 = false;
-      const writer = new AsyncWriter({ abort, socket, request, contentLength, client, expectsPayload, header });
+      const writer = new AsyncWriter({ abort, socket, request: request2, contentLength, client, expectsPayload, header });
       const onData = function(chunk) {
         if (finished2) {
           return;
@@ -12159,7 +12159,7 @@ upgrade: ${upgrade}\r
         setImmediate(onClose);
       }
     }
-    function writeBuffer(abort, body, client, request, socket, contentLength, header, expectsPayload) {
+    function writeBuffer(abort, body, client, request2, socket, contentLength, header, expectsPayload) {
       try {
         if (!body) {
           if (contentLength === 0) {
@@ -12179,18 +12179,18 @@ upgrade: ${upgrade}\r
 `, "latin1");
           socket.write(body);
           socket.uncork();
-          request.onBodySent(body);
-          if (!expectsPayload && request.reset !== false) {
+          request2.onBodySent(body);
+          if (!expectsPayload && request2.reset !== false) {
             socket[kReset] = true;
           }
         }
-        request.onRequestSent();
+        request2.onRequestSent();
         client[kResume]();
       } catch (err) {
         abort(err);
       }
     }
-    async function writeBlob(abort, body, client, request, socket, contentLength, header, expectsPayload) {
+    async function writeBlob(abort, body, client, request2, socket, contentLength, header, expectsPayload) {
       assert(contentLength === body.size, "blob body must have content length");
       try {
         if (contentLength != null && contentLength !== body.size) {
@@ -12203,9 +12203,9 @@ upgrade: ${upgrade}\r
 `, "latin1");
         socket.write(buffer);
         socket.uncork();
-        request.onBodySent(buffer);
-        request.onRequestSent();
-        if (!expectsPayload && request.reset !== false) {
+        request2.onBodySent(buffer);
+        request2.onRequestSent();
+        if (!expectsPayload && request2.reset !== false) {
           socket[kReset] = true;
         }
         client[kResume]();
@@ -12213,7 +12213,7 @@ upgrade: ${upgrade}\r
         abort(err);
       }
     }
-    async function writeIterable(abort, body, client, request, socket, contentLength, header, expectsPayload) {
+    async function writeIterable(abort, body, client, request2, socket, contentLength, header, expectsPayload) {
       assert(contentLength !== 0 || client[kRunning] === 0, "iterator body cannot be pipelined");
       let callback = null;
       function onDrain() {
@@ -12232,7 +12232,7 @@ upgrade: ${upgrade}\r
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
-      const writer = new AsyncWriter({ abort, socket, request, contentLength, client, expectsPayload, header });
+      const writer = new AsyncWriter({ abort, socket, request: request2, contentLength, client, expectsPayload, header });
       try {
         for await (const chunk of body) {
           if (socket[kError]) {
@@ -12261,9 +12261,9 @@ upgrade: ${upgrade}\r
        * @param {boolean} arg.expectsPayload
        * @param {string} arg.header
        */
-      constructor({ abort, socket, request, contentLength, client, expectsPayload, header }) {
+      constructor({ abort, socket, request: request2, contentLength, client, expectsPayload, header }) {
         this.socket = socket;
-        this.request = request;
+        this.request = request2;
         this.contentLength = contentLength;
         this.client = client;
         this.bytesWritten = 0;
@@ -12277,7 +12277,7 @@ upgrade: ${upgrade}\r
        * @returns
        */
       write(chunk) {
-        const { socket, request, contentLength, client, bytesWritten, expectsPayload, header } = this;
+        const { socket, request: request2, contentLength, client, bytesWritten, expectsPayload, header } = this;
         if (socket[kError]) {
           throw socket[kError];
         }
@@ -12296,7 +12296,7 @@ upgrade: ${upgrade}\r
         }
         socket.cork();
         if (bytesWritten === 0) {
-          if (!expectsPayload && request.reset !== false) {
+          if (!expectsPayload && request2.reset !== false) {
             socket[kReset] = true;
           }
           if (contentLength === null) {
@@ -12316,7 +12316,7 @@ ${len.toString(16)}\r
         this.bytesWritten += len;
         const ret = socket.write(chunk);
         socket.uncork();
-        request.onBodySent(chunk);
+        request2.onBodySent(chunk);
         if (!ret) {
           if (socket[kParser].timeout && socket[kParser].timeoutType === TIMEOUT_HEADERS) {
             if (socket[kParser].timeout.refresh) {
@@ -12330,8 +12330,8 @@ ${len.toString(16)}\r
        * @returns {void}
        */
       end() {
-        const { socket, contentLength, client, bytesWritten, expectsPayload, header, request } = this;
-        request.onRequestSent();
+        const { socket, contentLength, client, bytesWritten, expectsPayload, header, request: request2 } = this;
+        request2.onRequestSent();
         socket[kWriting] = false;
         if (socket[kError]) {
           throw socket[kError];
@@ -12511,8 +12511,8 @@ var require_client_h2 = __commonJS({
          * @param {import('../core/request.js')} request
          * @returns {boolean}
         */
-        write(request) {
-          return writeH2(client, request);
+        write(request2) {
+          return writeH2(client, request2);
         },
         /**
          * @returns {void}
@@ -12541,14 +12541,14 @@ var require_client_h2 = __commonJS({
          * @param {import('../core/request.js')} request
          * @returns {boolean}
         */
-        busy(request) {
-          if (request != null) {
+        busy(request2) {
+          if (request2 != null) {
             if (client[kRunning] > 0) {
-              if (request.idempotent === false) return true;
-              if ((request.upgrade === "websocket" || request.method === "CONNECT") && session[kRemoteSettings] === false) return true;
-              if (util.bodyLength(request.body) !== 0 && (util.isStream(request.body) || util.isAsyncIterable(request.body) || util.isFormDataLike(request.body))) return true;
+              if (request2.idempotent === false) return true;
+              if ((request2.upgrade === "websocket" || request2.method === "CONNECT") && session[kRemoteSettings] === false) return true;
+              if (util.bodyLength(request2.body) !== 0 && (util.isStream(request2.body) || util.isAsyncIterable(request2.body) || util.isFormDataLike(request2.body))) return true;
             } else {
-              return (request.upgrade === "websocket" || request.method === "CONNECT") && session[kRemoteSettings] === false;
+              return (request2.upgrade === "websocket" || request2.method === "CONNECT") && session[kRemoteSettings] === false;
             }
           }
           return false;
@@ -12624,15 +12624,15 @@ var require_client_h2 = __commonJS({
       this.destroy(err);
       util.destroy(this[kSocket], err);
     }
-    function completeRequest(client, request, resetPendingIdx = false) {
+    function completeRequest(client, request2, resetPendingIdx = false) {
       const queue = client[kQueue];
       const runningIdx = client[kRunningIdx];
-      if (runningIdx < client[kPendingIdx] && queue[runningIdx] === request) {
+      if (runningIdx < client[kPendingIdx] && queue[runningIdx] === request2) {
         queue[runningIdx] = null;
         client[kRunningIdx] = runningIdx + 1;
         return;
       }
-      const index2 = queue.indexOf(request, runningIdx);
+      const index2 = queue.indexOf(request2, runningIdx);
       if (index2 === -1 || index2 >= client[kPendingIdx]) {
         return;
       }
@@ -12651,10 +12651,10 @@ var require_client_h2 = __commonJS({
       this[kHTTP2Session] = null;
       util.destroy(this[kSocket], err);
       if (client[kRunningIdx] < client[kQueue].length) {
-        const request = client[kQueue][client[kRunningIdx]];
+        const request2 = client[kQueue][client[kRunningIdx]];
         client[kQueue][client[kRunningIdx]++] = null;
-        if (request != null) {
-          util.errorRequest(client, request, err);
+        if (request2 != null) {
+          util.errorRequest(client, request2, err);
         }
         client[kPendingIdx] = client[kRunningIdx];
       }
@@ -12677,9 +12677,9 @@ var require_client_h2 = __commonJS({
         assert(client[kPending] === 0);
         const requests = client[kQueue].splice(client[kRunningIdx]);
         for (let i = 0; i < requests.length; i++) {
-          const request = requests[i];
-          if (request != null) {
-            util.errorRequest(client, request, err);
+          const request2 = requests[i];
+          if (request2 != null) {
+            util.errorRequest(client, request2, err);
           }
         }
       }
@@ -12711,14 +12711,14 @@ var require_client_h2 = __commonJS({
     function shouldSendContentLength(method) {
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
-    function writeH2(client, request) {
-      const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
-      const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
+    function writeH2(client, request2) {
+      const headersTimeout = request2.headersTimeout ?? client[kHeadersTimeout];
+      const bodyTimeout = request2.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
-      let { body } = request;
+      const { method, path, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request2;
+      let { body } = request2;
       if (upgrade != null && upgrade !== "websocket") {
-        util.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
+        util.errorRequest(client, request2, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
         return false;
       }
       const headers = {};
@@ -12752,33 +12752,33 @@ var require_client_h2 = __commonJS({
       headers[HTTP2_HEADER_AUTHORITY] = host || `${hostname}${port ? `:${port}` : ""}`;
       headers[HTTP2_HEADER_METHOD] = method;
       const abort = (err) => {
-        if (request.aborted || request.completed) {
+        if (request2.aborted || request2.completed) {
           return;
         }
         err = err || new RequestAbortedError();
-        util.errorRequest(client, request, err);
+        util.errorRequest(client, request2, err);
         if (stream != null) {
           stream.removeAllListeners("data");
           stream.close();
           client[kOnError](err);
-          completeRequest(client, request);
+          completeRequest(client, request2);
           client[kResume]();
         }
         util.destroy(body, err);
       };
       try {
-        request.onConnect(abort);
+        request2.onConnect(abort);
       } catch (err) {
-        util.errorRequest(client, request, err);
+        util.errorRequest(client, request2, err);
       }
-      if (request.aborted) {
+      if (request2.aborted) {
         return false;
       }
       if (upgrade || method === "CONNECT") {
         session.ref();
         if (upgrade === "websocket") {
           if (session[kEnableConnectProtocol] === false) {
-            util.errorRequest(client, request, new InformationalError("HTTP/2: Extended CONNECT protocol not supported by server"));
+            util.errorRequest(client, request2, new InformationalError("HTTP/2: Extended CONNECT protocol not supported by server"));
             session.unref();
             return false;
           }
@@ -12796,12 +12796,12 @@ var require_client_h2 = __commonJS({
           stream.once("response", (headers2, _flags) => {
             const { [HTTP2_HEADER_STATUS]: statusCode, ...realHeaders } = headers2;
             try {
-              request.onUpgrade(statusCode, parseH2Headers(realHeaders), stream);
+              request2.onUpgrade(statusCode, parseH2Headers(realHeaders), stream);
             } catch (err) {
               abort(err);
               return;
             }
-            completeRequest(client, request);
+            completeRequest(client, request2);
           });
           stream.on("error", () => {
             if (stream.rstCode === NGHTTP2_REFUSED_STREAM || stream.rstCode === NGHTTP2_CANCEL) {
@@ -12821,12 +12821,12 @@ var require_client_h2 = __commonJS({
         stream.on("response", (headers2) => {
           const { [HTTP2_HEADER_STATUS]: statusCode, ...realHeaders } = headers2;
           try {
-            request.onUpgrade(statusCode, parseH2Headers(realHeaders), stream);
+            request2.onUpgrade(statusCode, parseH2Headers(realHeaders), stream);
           } catch (err) {
             abort(err);
             return;
           }
-          completeRequest(client, request);
+          completeRequest(client, request2);
         });
         stream.on("error", abort);
         stream.once("close", () => {
@@ -12851,14 +12851,14 @@ var require_client_h2 = __commonJS({
         contentLength = bodyStream.length;
       }
       if (contentLength == null) {
-        contentLength = request.contentLength;
+        contentLength = request2.contentLength;
       }
       if (!expectsPayload) {
         contentLength = null;
       }
-      if (shouldSendContentLength(method) && contentLength > 0 && request.contentLength != null && request.contentLength !== contentLength) {
+      if (shouldSendContentLength(method) && contentLength > 0 && request2.contentLength != null && request2.contentLength !== contentLength) {
         if (client[kStrictContentLength]) {
-          util.errorRequest(client, request, new RequestContentLengthMismatchError());
+          util.errorRequest(client, request2, new RequestContentLengthMismatchError());
           return false;
         }
         process.emitWarning(new RequestContentLengthMismatchError());
@@ -12874,7 +12874,7 @@ var require_client_h2 = __commonJS({
           header += `${key}: ${headers[key]}\r
 `;
         }
-        channels.sendHeaders.publish({ request, headers: header, socket: session[kSocket] });
+        channels.sendHeaders.publish({ request: request2, headers: header, socket: session[kSocket] });
       }
       const shouldEndStream = method === "GET" || method === "HEAD" || body === null;
       if (expectContinue) {
@@ -12895,21 +12895,21 @@ var require_client_h2 = __commonJS({
       let responseReceived = false;
       stream.once("response", (headers2) => {
         const { [HTTP2_HEADER_STATUS]: statusCode, ...realHeaders } = headers2;
-        request.onResponseStarted();
+        request2.onResponseStarted();
         responseReceived = true;
         stream.setTimeout(bodyTimeout);
-        if (request.aborted) {
+        if (request2.aborted) {
           stream.removeAllListeners("data");
           return;
         }
-        if (request.onHeaders(Number(statusCode), parseH2Headers(realHeaders), stream.resume.bind(stream), "") === false) {
+        if (request2.onHeaders(Number(statusCode), parseH2Headers(realHeaders), stream.resume.bind(stream), "") === false) {
           stream.pause();
         }
         stream.on("data", (chunk) => {
-          if (request.aborted || request.completed) {
+          if (request2.aborted || request2.completed) {
             return;
           }
-          if (request.onData(chunk) === false) {
+          if (request2.onData(chunk) === false) {
             stream.pause();
           }
         });
@@ -12917,14 +12917,14 @@ var require_client_h2 = __commonJS({
       stream.once("end", () => {
         stream.removeAllListeners("data");
         if (responseReceived) {
-          if (!request.aborted && !request.completed) {
-            request.onComplete({});
+          if (!request2.aborted && !request2.completed) {
+            request2.onComplete({});
           }
-          completeRequest(client, request);
+          completeRequest(client, request2);
           client[kResume]();
         } else {
           abort(new InformationalError("HTTP/2: stream half-closed (remote)"));
-          completeRequest(client, request, true);
+          completeRequest(client, request2, true);
           client[kResume]();
         }
       });
@@ -12934,7 +12934,7 @@ var require_client_h2 = __commonJS({
         if (session[kOpenStreams] === 0) {
           session.unref();
         }
-        if (!request.aborted && !request.completed) {
+        if (!request2.aborted && !request2.completed) {
           abort(new InformationalError("HTTP/2: stream closed before the response was complete"));
         }
       });
@@ -12959,11 +12959,11 @@ var require_client_h2 = __commonJS({
         abort(err);
       });
       stream.once("trailers", (trailers) => {
-        if (request.aborted || request.completed) {
+        if (request2.aborted || request2.completed) {
           return;
         }
         stream.removeAllListeners("data");
-        request.onComplete(trailers);
+        request2.onComplete(trailers);
       });
       return true;
       function writeBodyH2() {
@@ -12973,7 +12973,7 @@ var require_client_h2 = __commonJS({
             stream,
             null,
             client,
-            request,
+            request2,
             client[kSocket],
             contentLength,
             expectsPayload
@@ -12984,7 +12984,7 @@ var require_client_h2 = __commonJS({
             stream,
             body,
             client,
-            request,
+            request2,
             client[kSocket],
             contentLength,
             expectsPayload
@@ -12996,7 +12996,7 @@ var require_client_h2 = __commonJS({
               stream,
               body.stream(),
               client,
-              request,
+              request2,
               client[kSocket],
               contentLength,
               expectsPayload
@@ -13007,7 +13007,7 @@ var require_client_h2 = __commonJS({
               stream,
               body,
               client,
-              request,
+              request2,
               client[kSocket],
               contentLength,
               expectsPayload
@@ -13021,7 +13021,7 @@ var require_client_h2 = __commonJS({
             stream,
             body,
             client,
-            request,
+            request2,
             contentLength
           );
         } else if (util.isIterable(body)) {
@@ -13030,7 +13030,7 @@ var require_client_h2 = __commonJS({
             stream,
             body,
             client,
-            request,
+            request2,
             client[kSocket],
             contentLength,
             expectsPayload
@@ -13040,7 +13040,7 @@ var require_client_h2 = __commonJS({
         }
       }
     }
-    function writeBuffer(abort, h2stream, body, client, request, socket, contentLength, expectsPayload) {
+    function writeBuffer(abort, h2stream, body, client, request2, socket, contentLength, expectsPayload) {
       try {
         if (body != null && util.isBuffer(body)) {
           assert(contentLength === body.byteLength, "buffer body must have content length");
@@ -13048,18 +13048,18 @@ var require_client_h2 = __commonJS({
           h2stream.write(body);
           h2stream.uncork();
           h2stream.end();
-          request.onBodySent(body);
+          request2.onBodySent(body);
         }
         if (!expectsPayload) {
           socket[kReset] = true;
         }
-        request.onRequestSent();
+        request2.onRequestSent();
         client[kResume]();
       } catch (error) {
         abort(error);
       }
     }
-    function writeStream(abort, socket, expectsPayload, h2stream, body, client, request, contentLength) {
+    function writeStream(abort, socket, expectsPayload, h2stream, body, client, request2, contentLength) {
       assert(contentLength !== 0 || client[kRunning] === 0, "stream body cannot be pipelined");
       const pipe = pipeline(
         body,
@@ -13070,7 +13070,7 @@ var require_client_h2 = __commonJS({
             abort(err);
           } else {
             util.removeAllListeners(pipe);
-            request.onRequestSent();
+            request2.onRequestSent();
             if (!expectsPayload) {
               socket[kReset] = true;
             }
@@ -13080,10 +13080,10 @@ var require_client_h2 = __commonJS({
       );
       util.addListener(pipe, "data", onPipeData);
       function onPipeData(chunk) {
-        request.onBodySent(chunk);
+        request2.onBodySent(chunk);
       }
     }
-    async function writeBlob(abort, h2stream, body, client, request, socket, contentLength, expectsPayload) {
+    async function writeBlob(abort, h2stream, body, client, request2, socket, contentLength, expectsPayload) {
       assert(contentLength === body.size, "blob body must have content length");
       try {
         if (contentLength != null && contentLength !== body.size) {
@@ -13094,8 +13094,8 @@ var require_client_h2 = __commonJS({
         h2stream.write(buffer);
         h2stream.uncork();
         h2stream.end();
-        request.onBodySent(buffer);
-        request.onRequestSent();
+        request2.onBodySent(buffer);
+        request2.onRequestSent();
         if (!expectsPayload) {
           socket[kReset] = true;
         }
@@ -13104,7 +13104,7 @@ var require_client_h2 = __commonJS({
         abort(err);
       }
     }
-    async function writeIterable(abort, h2stream, body, client, request, socket, contentLength, expectsPayload) {
+    async function writeIterable(abort, h2stream, body, client, request2, socket, contentLength, expectsPayload) {
       assert(contentLength !== 0 || client[kRunning] === 0, "iterator body cannot be pipelined");
       let callback = null;
       function onDrain() {
@@ -13129,13 +13129,13 @@ var require_client_h2 = __commonJS({
             throw socket[kError];
           }
           const res = h2stream.write(chunk);
-          request.onBodySent(chunk);
+          request2.onBodySent(chunk);
           if (!res) {
             await waitForDrain();
           }
         }
         h2stream.end();
-        request.onRequestSent();
+        request2.onRequestSent();
         if (!expectsPayload) {
           socket[kReset] = true;
         }
@@ -13420,10 +13420,10 @@ var require_client = __commonJS({
         this.once("connect", cb);
       }
       [kDispatch](opts, handler) {
-        const request = new Request(this[kUrl].origin, opts, handler);
-        this[kQueue].push(request);
+        const request2 = new Request(this[kUrl].origin, opts, handler);
+        this[kQueue].push(request2);
         if (this[kResuming]) {
-        } else if (util.bodyLength(request.body) == null && util.isIterable(request.body)) {
+        } else if (util.bodyLength(request2.body) == null && util.isIterable(request2.body)) {
           this[kResuming] = 1;
           queueMicrotask(() => resume(this));
         } else {
@@ -13447,9 +13447,9 @@ var require_client = __commonJS({
         return new Promise((resolve2) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i = 0; i < requests.length; i++) {
-            const request = requests[i];
-            if (request != null) {
-              util.errorRequest(this, request, err);
+            const request2 = requests[i];
+            if (request2 != null) {
+              util.errorRequest(this, request2, err);
             }
           }
           const callback = () => {
@@ -13474,9 +13474,9 @@ var require_client = __commonJS({
         assert(client[kPendingIdx] === client[kRunningIdx]);
         const requests = client[kQueue].splice(client[kRunningIdx]);
         for (let i = 0; i < requests.length; i++) {
-          const request = requests[i];
-          if (request != null) {
-            util.errorRequest(client, request, err);
+          const request2 = requests[i];
+          if (request2 != null) {
+            util.errorRequest(client, request2, err);
           }
         }
         assert(client[kSize] === 0);
@@ -13587,8 +13587,8 @@ var require_client = __commonJS({
       if (err.code === "ERR_TLS_CERT_ALTNAME_INVALID") {
         assert(client[kRunning] === 0);
         while (client[kPending] > 0 && client[kQueue][client[kPendingIdx]].servername === client[kServerName]) {
-          const request = client[kQueue][client[kPendingIdx]++];
-          util.errorRequest(client, request, err);
+          const request2 = client[kQueue][client[kPendingIdx]++];
+          util.errorRequest(client, request2, err);
         }
       } else {
         onError(client, err);
@@ -13643,15 +13643,15 @@ var require_client = __commonJS({
         if (client[kRunning] >= (getPipelining(client) || 1)) {
           return;
         }
-        const request = client[kQueue][client[kPendingIdx]];
-        if (request === null) {
+        const request2 = client[kQueue][client[kPendingIdx]];
+        if (request2 === null) {
           return;
         }
-        if (client[kUrl].protocol === "https:" && client[kServerName] !== request.servername) {
+        if (client[kUrl].protocol === "https:" && client[kServerName] !== request2.servername) {
           if (client[kRunning] > 0) {
             return;
           }
-          client[kServerName] = request.servername;
+          client[kServerName] = request2.servername;
           client[kHTTPContext]?.destroy(new InformationalError("servername changed"), () => {
             client[kHTTPContext] = null;
             resume(client);
@@ -13667,10 +13667,10 @@ var require_client = __commonJS({
         if (client[kHTTPContext].destroyed) {
           return;
         }
-        if (client[kHTTPContext].busy(request)) {
+        if (client[kHTTPContext].busy(request2)) {
           return;
         }
-        if (!request.aborted && client[kHTTPContext].write(request)) {
+        if (!request2.aborted && client[kHTTPContext].write(request2)) {
           client[kPendingIdx]++;
         } else {
           client[kQueue].splice(client[kPendingIdx], 1);
@@ -14722,13 +14722,13 @@ var require_socks5_client = __commonJS({
         }
         debug("starting handshake with", this.authMethods.length, "auth methods");
         this.state = STATES.HANDSHAKING;
-        const request = Buffer2.alloc(2 + this.authMethods.length);
-        request[0] = SOCKS_VERSION;
-        request[1] = this.authMethods.length;
+        const request2 = Buffer2.alloc(2 + this.authMethods.length);
+        request2[0] = SOCKS_VERSION;
+        request2[1] = this.authMethods.length;
         this.authMethods.forEach((method, i) => {
-          request[2 + i] = method;
+          request2[2 + i] = method;
         });
-        this.socket.write(request);
+        this.socket.write(request2);
       }
       /**
        * Handle handshake response from server
@@ -14770,13 +14770,13 @@ var require_socks5_client = __commonJS({
         if (usernameBuffer.length > 255 || passwordBuffer.length > 255) {
           throw new InvalidArgumentError("Username or password too long");
         }
-        const request = Buffer2.alloc(3 + usernameBuffer.length + passwordBuffer.length);
-        request[0] = 1;
-        request[1] = usernameBuffer.length;
-        usernameBuffer.copy(request, 2);
-        request[2 + usernameBuffer.length] = passwordBuffer.length;
-        passwordBuffer.copy(request, 3 + usernameBuffer.length);
-        this.socket.write(request);
+        const request2 = Buffer2.alloc(3 + usernameBuffer.length + passwordBuffer.length);
+        request2[0] = 1;
+        request2[1] = usernameBuffer.length;
+        usernameBuffer.copy(request2, 2);
+        request2[2 + usernameBuffer.length] = passwordBuffer.length;
+        passwordBuffer.copy(request2, 3 + usernameBuffer.length);
+        this.socket.write(request2);
       }
       /**
        * Handle authentication response
@@ -14811,22 +14811,22 @@ var require_socks5_client = __commonJS({
         }
         debug("connecting to", address, port);
         this.state = STATES.CONNECTING;
-        const request = this.buildConnectRequest(COMMANDS.CONNECT, address, port);
-        this.socket.write(request);
+        const request2 = this.buildConnectRequest(COMMANDS.CONNECT, address, port);
+        this.socket.write(request2);
       }
       /**
        * Build a SOCKS5 request
        */
       buildConnectRequest(command, address, port) {
         const { type: addressType, buffer: addressBuffer } = parseAddress(address);
-        const request = Buffer2.alloc(4 + addressBuffer.length + 2);
-        request[0] = SOCKS_VERSION;
-        request[1] = command;
-        request[2] = 0;
-        request[3] = addressType;
-        addressBuffer.copy(request, 4);
-        request.writeUInt16BE(port, 4 + addressBuffer.length);
-        return request;
+        const request2 = Buffer2.alloc(4 + addressBuffer.length + 2);
+        request2[0] = SOCKS_VERSION;
+        request2[1] = command;
+        request2[2] = 0;
+        request2[3] = addressType;
+        addressBuffer.copy(request2, 4);
+        request2.writeUInt16BE(port, 4 + addressBuffer.length);
+        return request2;
       }
       /**
        * Handle CONNECT response
@@ -16546,10 +16546,10 @@ var require_api_request = __commonJS({
         }
       }
     };
-    function request(opts, callback) {
+    function request2(opts, callback) {
       if (callback === void 0) {
         return new Promise((resolve2, reject) => {
-          request.call(this, opts, (err, data2) => {
+          request2.call(this, opts, (err, data2) => {
             return err ? reject(err) : resolve2(data2);
           });
         });
@@ -16565,7 +16565,7 @@ var require_api_request = __commonJS({
         queueMicrotask(() => callback(err, { opaque }));
       }
     }
-    module2.exports = request;
+    module2.exports = request2;
     module2.exports.RequestHandler = RequestHandler;
   }
 });
@@ -18548,8 +18548,8 @@ var require_snapshot_recorder = __commonJS({
         if (this.isUrlExcluded(requestOpts)) {
           return;
         }
-        const request = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
-        const hash = createRequestHash(request);
+        const request2 = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
+        const hash = createRequestHash(request2);
         const normalizedHeaders = normalizeHeaders(response.headers);
         const responseData = {
           statusCode: response.statusCode,
@@ -18567,7 +18567,7 @@ var require_snapshot_recorder = __commonJS({
           existingSnapshot.timestamp = (/* @__PURE__ */ new Date()).toISOString();
         } else {
           this.#snapshots.set(hash, {
-            request,
+            request: request2,
             responses: [responseData],
             // Always store as array for consistency
             callCount: 0,
@@ -18601,8 +18601,8 @@ var require_snapshot_recorder = __commonJS({
         if (this.isUrlExcluded(requestOpts)) {
           return void 0;
         }
-        const request = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
-        const hash = createRequestHash(request);
+        const request2 = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
+        const hash = createRequestHash(request2);
         const snapshot = this.#snapshots.get(hash);
         if (!snapshot) return void 0;
         const currentCallCount = snapshot.callCount || 0;
@@ -18697,8 +18697,8 @@ var require_snapshot_recorder = __commonJS({
        * @returns {boolean} - True if snapshot was deleted, false if not found
        */
       deleteSnapshot(requestOpts) {
-        const request = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
-        const hash = createRequestHash(request);
+        const request2 = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
+        const hash = createRequestHash(request2);
         return this.#snapshots.delete(hash);
       }
       /**
@@ -18707,8 +18707,8 @@ var require_snapshot_recorder = __commonJS({
        * @returns {SnapshotInfo|null} - Snapshot information or null if not found
        */
       getSnapshotInfo(requestOpts) {
-        const request = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
-        const hash = createRequestHash(request);
+        const request2 = formatRequestKey(requestOpts, this.#headerFilters, this.matchOptions);
+        const hash = createRequestHash(request2);
         const snapshot = this.#snapshots.get(hash);
         if (!snapshot) return null;
         return {
@@ -18999,16 +18999,16 @@ var require_snapshot_agent = __commonJS({
        */
       #setupMockInterceptors() {
         for (const snapshot of this[kSnapshotRecorder].getSnapshots()) {
-          const { request, responses, response } = snapshot;
-          const url = new URL(request.url);
+          const { request: request2, responses, response } = snapshot;
+          const url = new URL(request2.url);
           const mockPool = this.get(url.origin);
           const responseData = responses ? responses[0] : response;
           if (!responseData) continue;
           mockPool.intercept({
             path: url.pathname + url.search,
-            method: request.method,
-            headers: request.headers,
-            body: request.body
+            method: request2.method,
+            headers: request2.headers,
+            body: request2.body
           }).reply(responseData.statusCode, responseData.body, {
             headers: responseData.headers,
             trailers: responseData.trailers
@@ -23568,13 +23568,13 @@ var require_headers = __commonJS({
         return headersList.sortedMap;
       }
       const headers = [];
-      const names = headersList.toSortedArray();
+      const names2 = headersList.toSortedArray();
       const cookies = headersList.cookies;
       if (cookies === null || cookies.length === 1) {
-        return headersList.sortedMap = names;
+        return headersList.sortedMap = names2;
       }
-      for (let i = 0; i < names.length; ++i) {
-        const { 0: name, 1: value } = names[i];
+      for (let i = 0; i < names2.length; ++i) {
+        const { 0: name, 1: value } = names2[i];
         if (name === "set-cookie") {
           for (let j = 0; j < cookies.length; ++j) {
             headers.push([name, cookies[j]]);
@@ -24456,7 +24456,7 @@ var require_request2 = __commonJS({
         webidl.argumentLengthCheck(arguments, 1, prefix);
         input = webidl.converters.RequestInfo(input);
         init = webidl.converters.RequestInit(init);
-        let request = null;
+        let request2 = null;
         let fallbackMode = null;
         const baseUrl = environmentSettingsObject.settingsObject.baseUrl;
         let signal = null;
@@ -24473,18 +24473,18 @@ var require_request2 = __commonJS({
               "Request cannot be constructed from a URL that includes credentials: " + input
             );
           }
-          request = makeRequest({ urlList: [parsedURL] });
+          request2 = makeRequest({ urlList: [parsedURL] });
           fallbackMode = "cors";
         } else {
           assert(webidl.is.Request(input));
-          request = input.#state;
+          request2 = input.#state;
           signal = input.#signal;
           this.#dispatcher = init.dispatcher || input.#dispatcher;
         }
         const origin = environmentSettingsObject.settingsObject.origin;
         let window = "client";
-        if (request.window?.constructor?.name === "EnvironmentSettingsObject" && sameOrigin(request.window, origin)) {
-          window = request.window;
+        if (request2.window?.constructor?.name === "EnvironmentSettingsObject" && sameOrigin(request2.window, origin)) {
+          window = request2.window;
         }
         if (init.window != null) {
           throw new TypeError(`'window' option '${window}' must be null`);
@@ -24492,66 +24492,66 @@ var require_request2 = __commonJS({
         if ("window" in init) {
           window = "no-window";
         }
-        request = makeRequest({
+        request2 = makeRequest({
           // URL request’s URL.
           // undici implementation note: this is set as the first item in request's urlList in makeRequest
           // method request’s method.
-          method: request.method,
+          method: request2.method,
           // header list A copy of request’s header list.
           // undici implementation note: headersList is cloned in makeRequest
-          headersList: request.headersList,
+          headersList: request2.headersList,
           // unsafe-request flag Set.
-          unsafeRequest: request.unsafeRequest,
+          unsafeRequest: request2.unsafeRequest,
           // client This’s relevant settings object.
           client: environmentSettingsObject.settingsObject,
           // window window.
           window,
           // priority request’s priority.
-          priority: request.priority,
+          priority: request2.priority,
           // origin request’s origin. The propagation of the origin is only significant for navigation requests
           // being handled by a service worker. In this scenario a request can have an origin that is different
           // from the current client.
-          origin: request.origin,
+          origin: request2.origin,
           // referrer request’s referrer.
-          referrer: request.referrer,
+          referrer: request2.referrer,
           // referrer policy request’s referrer policy.
-          referrerPolicy: request.referrerPolicy,
+          referrerPolicy: request2.referrerPolicy,
           // mode request’s mode.
-          mode: request.mode,
+          mode: request2.mode,
           // credentials mode request’s credentials mode.
-          credentials: request.credentials,
+          credentials: request2.credentials,
           // cache mode request’s cache mode.
-          cache: request.cache,
+          cache: request2.cache,
           // redirect mode request’s redirect mode.
-          redirect: request.redirect,
+          redirect: request2.redirect,
           // integrity metadata request’s integrity metadata.
-          integrity: request.integrity,
+          integrity: request2.integrity,
           // keepalive request’s keepalive.
-          keepalive: request.keepalive,
+          keepalive: request2.keepalive,
           // reload-navigation flag request’s reload-navigation flag.
-          reloadNavigation: request.reloadNavigation,
+          reloadNavigation: request2.reloadNavigation,
           // history-navigation flag request’s history-navigation flag.
-          historyNavigation: request.historyNavigation,
+          historyNavigation: request2.historyNavigation,
           // URL list A clone of request’s URL list.
-          urlList: [...request.urlList]
+          urlList: [...request2.urlList]
         });
         const initHasKey = Object.keys(init).length !== 0;
         if (initHasKey) {
-          if (request.mode === "navigate") {
-            request.mode = "same-origin";
+          if (request2.mode === "navigate") {
+            request2.mode = "same-origin";
           }
-          request.reloadNavigation = false;
-          request.historyNavigation = false;
-          request.origin = "client";
-          request.referrer = "client";
-          request.referrerPolicy = "";
-          request.url = request.urlList[request.urlList.length - 1];
-          request.urlList = [request.url];
+          request2.reloadNavigation = false;
+          request2.historyNavigation = false;
+          request2.origin = "client";
+          request2.referrer = "client";
+          request2.referrerPolicy = "";
+          request2.url = request2.urlList[request2.urlList.length - 1];
+          request2.urlList = [request2.url];
         }
         if (init.referrer !== void 0) {
           const referrer = init.referrer;
           if (referrer === "") {
-            request.referrer = "no-referrer";
+            request2.referrer = "no-referrer";
           } else {
             let parsedReferrer;
             try {
@@ -24560,14 +24560,14 @@ var require_request2 = __commonJS({
               throw new TypeError(`Referrer "${referrer}" is not a valid URL.`, { cause: err });
             }
             if (parsedReferrer.protocol === "about:" && parsedReferrer.hostname === "client" || origin && !sameOrigin(parsedReferrer, environmentSettingsObject.settingsObject.baseUrl)) {
-              request.referrer = "client";
+              request2.referrer = "client";
             } else {
-              request.referrer = parsedReferrer;
+              request2.referrer = parsedReferrer;
             }
           }
         }
         if (init.referrerPolicy !== void 0) {
-          request.referrerPolicy = init.referrerPolicy;
+          request2.referrerPolicy = init.referrerPolicy;
         }
         let mode;
         if (init.mode !== void 0) {
@@ -24582,33 +24582,33 @@ var require_request2 = __commonJS({
           });
         }
         if (mode != null) {
-          request.mode = mode;
+          request2.mode = mode;
         }
         if (init.credentials !== void 0) {
-          request.credentials = init.credentials;
+          request2.credentials = init.credentials;
         }
         if (init.cache !== void 0) {
-          request.cache = init.cache;
+          request2.cache = init.cache;
         }
-        if (request.cache === "only-if-cached" && request.mode !== "same-origin") {
+        if (request2.cache === "only-if-cached" && request2.mode !== "same-origin") {
           throw new TypeError(
             "'only-if-cached' can be set only with 'same-origin' mode"
           );
         }
         if (init.redirect !== void 0) {
-          request.redirect = init.redirect;
+          request2.redirect = init.redirect;
         }
         if (init.integrity != null) {
-          request.integrity = String(init.integrity);
+          request2.integrity = String(init.integrity);
         }
         if (init.keepalive !== void 0) {
-          request.keepalive = Boolean(init.keepalive);
+          request2.keepalive = Boolean(init.keepalive);
         }
         if (init.method !== void 0) {
           let method = init.method;
           const mayBeNormalized = normalizedMethodRecords[method];
           if (mayBeNormalized !== void 0) {
-            request.method = mayBeNormalized;
+            request2.method = mayBeNormalized;
           } else {
             if (!isValidHTTPToken(method)) {
               throw new TypeError(`'${method}' is not a valid HTTP method.`);
@@ -24618,9 +24618,9 @@ var require_request2 = __commonJS({
               throw new TypeError(`'${method}' HTTP method is unsupported.`);
             }
             method = normalizedMethodRecordsBase[upperCase] ?? method;
-            request.method = method;
+            request2.method = method;
           }
-          if (!patchMethodWarning && request.method === "patch") {
+          if (!patchMethodWarning && request2.method === "patch") {
             process.emitWarning("Using `patch` is highly likely to result in a `405 Method Not Allowed`. `PATCH` is much more likely to succeed.", {
               code: "UNDICI-FETCH-patch"
             });
@@ -24630,7 +24630,7 @@ var require_request2 = __commonJS({
         if (init.signal !== void 0) {
           signal = init.signal;
         }
-        this.#state = request;
+        this.#state = request2;
         const ac = new AbortController();
         this.#signal = ac.signal;
         if (signal != null) {
@@ -24648,12 +24648,12 @@ var require_request2 = __commonJS({
           }
         }
         this.#headers = new Headers2(kConstruct);
-        setHeadersList(this.#headers, request.headersList);
+        setHeadersList(this.#headers, request2.headersList);
         setHeadersGuard(this.#headers, "request");
         if (mode === "no-cors") {
-          if (!corsSafeListedMethodsSet.has(request.method)) {
+          if (!corsSafeListedMethodsSet.has(request2.method)) {
             throw new TypeError(
-              `'${request.method} is unsupported in no-cors mode.`
+              `'${request2.method} is unsupported in no-cors mode.`
             );
           }
           setHeadersGuard(this.#headers, "request-no-cors");
@@ -24672,14 +24672,14 @@ var require_request2 = __commonJS({
           }
         }
         const inputBody = webidl.is.Request(input) ? input.#state.body : null;
-        if ((init.body != null || inputBody != null) && (request.method === "GET" || request.method === "HEAD")) {
+        if ((init.body != null || inputBody != null) && (request2.method === "GET" || request2.method === "HEAD")) {
           throw new TypeError("Request with GET/HEAD method cannot have body.");
         }
         let initBody = null;
         if (init.body != null) {
           const [extractedBody, contentType] = extractBody(
             init.body,
-            request.keepalive
+            request2.keepalive
           );
           initBody = extractedBody;
           if (contentType && !getHeadersList(this.#headers).contains("content-type", true)) {
@@ -24691,12 +24691,12 @@ var require_request2 = __commonJS({
           if (initBody != null && init.duplex == null) {
             throw new TypeError("RequestInit: duplex option is required when sending a body.");
           }
-          if (request.mode !== "same-origin" && request.mode !== "cors") {
+          if (request2.mode !== "same-origin" && request2.mode !== "cors") {
             throw new TypeError(
               'If request is made from ReadableStream, mode should be "same-origin" or "cors"'
             );
           }
-          request.useCORSPreflightFlag = true;
+          request2.useCORSPreflightFlag = true;
         }
         let finalBody = inputOrInitBody;
         if (initBody == null && inputBody != null) {
@@ -24886,42 +24886,42 @@ var require_request2 = __commonJS({
        * @param {Request} request
        * @param {AbortSignal} newSignal
        */
-      static setRequestSignal(request, newSignal) {
-        request.#signal = newSignal;
-        return request;
+      static setRequestSignal(request2, newSignal) {
+        request2.#signal = newSignal;
+        return request2;
       }
       /**
        * @param {Request} request
        */
-      static getRequestDispatcher(request) {
-        return request.#dispatcher;
+      static getRequestDispatcher(request2) {
+        return request2.#dispatcher;
       }
       /**
        * @param {Request} request
        * @param {import('../../dispatcher/dispatcher')} newDispatcher
        */
-      static setRequestDispatcher(request, newDispatcher) {
-        request.#dispatcher = newDispatcher;
+      static setRequestDispatcher(request2, newDispatcher) {
+        request2.#dispatcher = newDispatcher;
       }
       /**
        * @param {Request} request
        * @param {Headers} newHeaders
        */
-      static setRequestHeaders(request, newHeaders) {
-        request.#headers = newHeaders;
+      static setRequestHeaders(request2, newHeaders) {
+        request2.#headers = newHeaders;
       }
       /**
        * @param {Request} request
        */
-      static getRequestState(request) {
-        return request.#state;
+      static getRequestState(request2) {
+        return request2.#state;
       }
       /**
        * @param {Request} request
        * @param {any} newState
        */
-      static setRequestState(request, newState) {
-        request.#state = newState;
+      static setRequestState(request2, newState) {
+        request2.#state = newState;
       }
     };
     var { setRequestSignal, getRequestDispatcher, setRequestDispatcher, setRequestHeaders, getRequestState, setRequestState } = Request;
@@ -24976,23 +24976,23 @@ var require_request2 = __commonJS({
         headersList: init.headersList ? new HeadersList(init.headersList) : new HeadersList()
       };
     }
-    function cloneRequest(request) {
-      const newRequest = makeRequest({ ...request, body: null });
-      if (request.body != null) {
-        newRequest.body = cloneBody(request.body);
+    function cloneRequest(request2) {
+      const newRequest = makeRequest({ ...request2, body: null });
+      if (request2.body != null) {
+        newRequest.body = cloneBody(request2.body);
       }
       return newRequest;
     }
     function fromInnerRequest(innerRequest, dispatcher, signal, guard) {
-      const request = new Request(kConstruct);
-      setRequestState(request, innerRequest);
-      setRequestDispatcher(request, dispatcher);
-      setRequestSignal(request, signal);
+      const request2 = new Request(kConstruct);
+      setRequestState(request2, innerRequest);
+      setRequestDispatcher(request2, dispatcher);
+      setRequestSignal(request2, signal);
       const headers = new Headers2(kConstruct);
-      setRequestHeaders(request, headers);
+      setRequestHeaders(request2, headers);
       setHeadersList(headers, innerRequest.headersList);
       setHeadersGuard(headers, guard);
-      return request;
+      return request2;
     }
     Object.defineProperties(Request.prototype, {
       method: kEnumerableProperty,
@@ -25384,14 +25384,14 @@ var require_fetch = __commonJS({
         p.reject(e);
         return p.promise;
       }
-      const request = getRequestState(requestObject);
+      const request2 = getRequestState(requestObject);
       if (requestObject.signal.aborted) {
-        abortFetch(p, request, null, requestObject.signal.reason, null);
+        abortFetch(p, request2, null, requestObject.signal.reason, null);
         return p.promise;
       }
-      const globalObject = request.client.globalObject;
+      const globalObject = request2.client.globalObject;
       if (globalObject?.constructor?.name === "ServiceWorkerGlobalScope") {
-        request.serviceWorkers = "none";
+        request2.serviceWorkers = "none";
       }
       let responseObject = null;
       let locallyAborted = false;
@@ -25403,7 +25403,7 @@ var require_fetch = __commonJS({
           assert(controller != null);
           controller.abort(requestObject.signal.reason);
           const realResponse = responseObject?.deref();
-          abortFetch(p, request, realResponse, requestObject.signal.reason, controller.controller);
+          abortFetch(p, request2, realResponse, requestObject.signal.reason, controller.controller);
         }
       );
       const processResponse = (response) => {
@@ -25411,7 +25411,7 @@ var require_fetch = __commonJS({
           return;
         }
         if (response.aborted) {
-          abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller);
+          abortFetch(p, request2, responseObject, controller.serializedAbortReason, controller.controller);
           return;
         }
         if (response.type === "error") {
@@ -25423,7 +25423,7 @@ var require_fetch = __commonJS({
         p = null;
       };
       controller = fetching({
-        request,
+        request: request2,
         processResponseEndOfBody: handleFetchDone,
         processResponse,
         dispatcher: getRequestDispatcher(requestObject),
@@ -25470,12 +25470,12 @@ var require_fetch = __commonJS({
       );
     }
     var markResourceTiming = performance.markResourceTiming;
-    function abortFetch(p, request, responseObject, error, controller) {
+    function abortFetch(p, request2, responseObject, error, controller) {
       if (p) {
         p.reject(error);
       }
-      if (request.body?.stream != null && isReadable(request.body.stream)) {
-        request.body.stream.cancel(error).catch((err) => {
+      if (request2.body?.stream != null && isReadable(request2.body.stream)) {
+        request2.body.stream.cancel(error).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -25491,7 +25491,7 @@ var require_fetch = __commonJS({
       }
     }
     function fetching({
-      request,
+      request: request2,
       processRequestBodyChunkLength,
       processRequestEndOfBody,
       processResponse,
@@ -25506,9 +25506,9 @@ var require_fetch = __commonJS({
       assert(dispatcher);
       let taskDestination = null;
       let crossOriginIsolatedCapability = false;
-      if (request.client != null) {
-        taskDestination = request.client.globalObject;
-        crossOriginIsolatedCapability = request.client.crossOriginIsolatedCapability;
+      if (request2.client != null) {
+        taskDestination = request2.client.globalObject;
+        crossOriginIsolatedCapability = request2.client.crossOriginIsolatedCapability;
       }
       const currentTime = coarsenedSharedCurrentTime(crossOriginIsolatedCapability);
       const timingInfo = createOpaqueTimingInfo({
@@ -25516,7 +25516,7 @@ var require_fetch = __commonJS({
       });
       const fetchParams = {
         controller: new Fetch(dispatcher),
-        request,
+        request: request2,
         timingInfo,
         processRequestBodyChunkLength,
         processRequestEndOfBody,
@@ -25528,79 +25528,79 @@ var require_fetch = __commonJS({
         // Keep requestObject alive to prevent its AbortController from being GC'd
         requestObject
       };
-      assert(!request.body || request.body.stream);
-      if (request.window === "client") {
-        request.window = request.client?.globalObject?.constructor?.name === "Window" ? request.client : "no-window";
+      assert(!request2.body || request2.body.stream);
+      if (request2.window === "client") {
+        request2.window = request2.client?.globalObject?.constructor?.name === "Window" ? request2.client : "no-window";
       }
-      if (request.origin === "client") {
-        request.origin = request.client.origin;
+      if (request2.origin === "client") {
+        request2.origin = request2.client.origin;
       }
-      if (request.policyContainer === "client") {
-        if (request.client != null) {
-          request.policyContainer = clonePolicyContainer(
-            request.client.policyContainer
+      if (request2.policyContainer === "client") {
+        if (request2.client != null) {
+          request2.policyContainer = clonePolicyContainer(
+            request2.client.policyContainer
           );
         } else {
-          request.policyContainer = makePolicyContainer();
+          request2.policyContainer = makePolicyContainer();
         }
       }
-      if (!request.headersList.contains("accept", true)) {
+      if (!request2.headersList.contains("accept", true)) {
         const value = "*/*";
-        request.headersList.append("accept", value, true);
+        request2.headersList.append("accept", value, true);
       }
-      if (!request.headersList.contains("accept-language", true)) {
-        request.headersList.append("accept-language", "*", true);
+      if (!request2.headersList.contains("accept-language", true)) {
+        request2.headersList.append("accept-language", "*", true);
       }
-      if (request.priority === null) {
+      if (request2.priority === null) {
       }
-      if (subresourceSet.has(request.destination)) {
+      if (subresourceSet.has(request2.destination)) {
       }
       mainFetch(fetchParams, false);
       return fetchParams.controller;
     }
     async function mainFetch(fetchParams, recursive) {
       try {
-        const request = fetchParams.request;
+        const request2 = fetchParams.request;
         let response = null;
-        if (request.localURLsOnly && !urlIsLocal(requestCurrentURL(request))) {
+        if (request2.localURLsOnly && !urlIsLocal(requestCurrentURL(request2))) {
           response = makeNetworkError("local URLs only");
         }
-        tryUpgradeRequestToAPotentiallyTrustworthyURL(request);
-        if (requestBadPort(request) === "blocked") {
+        tryUpgradeRequestToAPotentiallyTrustworthyURL(request2);
+        if (requestBadPort(request2) === "blocked") {
           response = makeNetworkError("bad port");
         }
-        if (request.referrerPolicy === "") {
-          request.referrerPolicy = request.policyContainer.referrerPolicy;
+        if (request2.referrerPolicy === "") {
+          request2.referrerPolicy = request2.policyContainer.referrerPolicy;
         }
-        if (request.referrer !== "no-referrer") {
-          request.referrer = determineRequestsReferrer(request);
+        if (request2.referrer !== "no-referrer") {
+          request2.referrer = determineRequestsReferrer(request2);
         }
         if (response === null) {
-          const currentURL = requestCurrentURL(request);
+          const currentURL = requestCurrentURL(request2);
           if (
             // - request’s current URL’s origin is same origin with request’s origin,
             //   and request’s response tainting is "basic"
-            sameOrigin(currentURL, request.url) && request.responseTainting === "basic" || // request’s current URL’s scheme is "data"
+            sameOrigin(currentURL, request2.url) && request2.responseTainting === "basic" || // request’s current URL’s scheme is "data"
             currentURL.protocol === "data:" || // - request’s mode is "navigate" or "websocket"
-            (request.mode === "navigate" || request.mode === "websocket")
+            (request2.mode === "navigate" || request2.mode === "websocket")
           ) {
-            request.responseTainting = "basic";
+            request2.responseTainting = "basic";
             response = await schemeFetch(fetchParams);
-          } else if (request.mode === "same-origin") {
+          } else if (request2.mode === "same-origin") {
             response = makeNetworkError('request mode cannot be "same-origin"');
-          } else if (request.mode === "no-cors") {
-            if (request.redirect !== "follow") {
+          } else if (request2.mode === "no-cors") {
+            if (request2.redirect !== "follow") {
               response = makeNetworkError(
                 'redirect mode cannot be "follow" for "no-cors" request'
               );
             } else {
-              request.responseTainting = "opaque";
+              request2.responseTainting = "opaque";
               response = await schemeFetch(fetchParams);
             }
-          } else if (!urlIsHttpHttpsScheme(requestCurrentURL(request))) {
+          } else if (!urlIsHttpHttpsScheme(requestCurrentURL(request2))) {
             response = makeNetworkError("URL scheme must be a HTTP(S) scheme");
           } else {
-            request.responseTainting = "cors";
+            request2.responseTainting = "cors";
             response = await httpFetch(fetchParams);
           }
         }
@@ -25608,13 +25608,13 @@ var require_fetch = __commonJS({
           return response;
         }
         if (response.status !== 0 && !response.internalResponse) {
-          if (request.responseTainting === "cors") {
+          if (request2.responseTainting === "cors") {
           }
-          if (request.responseTainting === "basic") {
+          if (request2.responseTainting === "basic") {
             response = filterResponse(response, "basic");
-          } else if (request.responseTainting === "cors") {
+          } else if (request2.responseTainting === "cors") {
             response = filterResponse(response, "cors");
-          } else if (request.responseTainting === "opaque") {
+          } else if (request2.responseTainting === "opaque") {
             response = filterResponse(response, "opaque");
           } else {
             assert(false);
@@ -25622,26 +25622,26 @@ var require_fetch = __commonJS({
         }
         let internalResponse = response.status === 0 ? response : response.internalResponse;
         if (internalResponse.urlList.length === 0) {
-          internalResponse.urlList.push(...request.urlList);
+          internalResponse.urlList.push(...request2.urlList);
         }
-        if (!request.timingAllowFailed) {
+        if (!request2.timingAllowFailed) {
           response.timingAllowPassed = true;
         }
-        if (response.type === "opaque" && internalResponse.status === 206 && internalResponse.rangeRequested && !request.headers.contains("range", true)) {
+        if (response.type === "opaque" && internalResponse.status === 206 && internalResponse.rangeRequested && !request2.headers.contains("range", true)) {
           response = internalResponse = makeNetworkError();
         }
-        if (response.status !== 0 && (request.method === "HEAD" || request.method === "CONNECT" || nullBodyStatus.includes(internalResponse.status))) {
+        if (response.status !== 0 && (request2.method === "HEAD" || request2.method === "CONNECT" || nullBodyStatus.includes(internalResponse.status))) {
           internalResponse.body = null;
           fetchParams.controller.dump = true;
         }
-        if (request.integrity) {
+        if (request2.integrity) {
           const processBodyError = (reason) => fetchFinale(fetchParams, makeNetworkError(reason));
-          if (request.responseTainting === "opaque" || response.body == null) {
+          if (request2.responseTainting === "opaque" || response.body == null) {
             processBodyError(response.error);
             return;
           }
           const processBody = (bytes) => {
-            if (!bytesMatch(bytes, request.integrity)) {
+            if (!bytesMatch(bytes, request2.integrity)) {
               processBodyError("integrity mismatch");
               return;
             }
@@ -25660,8 +25660,8 @@ var require_fetch = __commonJS({
       if (isCancelled(fetchParams) && fetchParams.request.redirectCount === 0) {
         return Promise.resolve(makeAppropriateNetworkError(fetchParams));
       }
-      const { request } = fetchParams;
-      const { protocol: scheme } = requestCurrentURL(request);
+      const { request: request2 } = fetchParams;
+      const { protocol: scheme } = requestCurrentURL(request2);
       switch (scheme) {
         case "about:": {
           return Promise.resolve(makeNetworkError("about scheme is not supported"));
@@ -25670,19 +25670,19 @@ var require_fetch = __commonJS({
           if (!resolveObjectURL) {
             resolveObjectURL = require("node:buffer").resolveObjectURL;
           }
-          const blobURLEntry = requestCurrentURL(request);
+          const blobURLEntry = requestCurrentURL(request2);
           if (blobURLEntry.search.length !== 0) {
             return Promise.resolve(makeNetworkError("NetworkError when attempting to fetch resource."));
           }
           const blob = resolveObjectURL(blobURLEntry.toString());
-          if (request.method !== "GET" || !webidl.is.Blob(blob)) {
+          if (request2.method !== "GET" || !webidl.is.Blob(blob)) {
             return Promise.resolve(makeNetworkError("invalid method"));
           }
           const response = makeResponse();
           const fullLength = blob.size;
           const serializedFullLength = isomorphicEncode(`${fullLength}`);
           const type = blob.type;
-          if (!request.headersList.contains("range", true)) {
+          if (!request2.headersList.contains("range", true)) {
             const bodyWithType = extractBody(blob);
             response.statusText = "OK";
             response.body = bodyWithType[0];
@@ -25690,7 +25690,7 @@ var require_fetch = __commonJS({
             response.headersList.set("content-type", type, true);
           } else {
             response.rangeRequested = true;
-            const rangeHeader = request.headersList.get("range", true);
+            const rangeHeader = request2.headersList.get("range", true);
             const rangeValue = simpleRangeHeaderValue(rangeHeader, true);
             if (rangeValue === "failure") {
               return Promise.resolve(makeNetworkError("failed to fetch the data URL"));
@@ -25721,7 +25721,7 @@ var require_fetch = __commonJS({
           return Promise.resolve(response);
         }
         case "data:": {
-          const currentURL = requestCurrentURL(request);
+          const currentURL = requestCurrentURL(request2);
           const dataURLStruct = dataURLProcessor(currentURL);
           if (dataURLStruct === "failure") {
             return Promise.resolve(makeNetworkError("failed to fetch the data URL"));
@@ -25810,41 +25810,41 @@ var require_fetch = __commonJS({
       }
     }
     async function httpFetch(fetchParams) {
-      const request = fetchParams.request;
+      const request2 = fetchParams.request;
       let response = null;
       let actualResponse = null;
       const timingInfo = fetchParams.timingInfo;
-      if (request.serviceWorkers === "all") {
+      if (request2.serviceWorkers === "all") {
       }
       if (response === null) {
-        if (request.redirect === "follow") {
-          request.serviceWorkers = "none";
+        if (request2.redirect === "follow") {
+          request2.serviceWorkers = "none";
         }
         actualResponse = response = await httpNetworkOrCacheFetch(fetchParams);
-        if (request.responseTainting === "cors" && corsCheck(request, response) === "failure") {
+        if (request2.responseTainting === "cors" && corsCheck(request2, response) === "failure") {
           return makeNetworkError("cors failure");
         }
-        if (TAOCheck(request, response) === "failure") {
-          request.timingAllowFailed = true;
+        if (TAOCheck(request2, response) === "failure") {
+          request2.timingAllowFailed = true;
         }
       }
-      if ((request.responseTainting === "opaque" || response.type === "opaque") && crossOriginResourcePolicyCheck(
-        request.origin,
-        request.client,
-        request.destination,
+      if ((request2.responseTainting === "opaque" || response.type === "opaque") && crossOriginResourcePolicyCheck(
+        request2.origin,
+        request2.client,
+        request2.destination,
         actualResponse
       ) === "blocked") {
         return makeNetworkError("blocked");
       }
       if (redirectStatusSet.has(actualResponse.status)) {
-        if (request.redirect !== "manual") {
+        if (request2.redirect !== "manual") {
           fetchParams.controller.connection.destroy(void 0, false);
         }
-        if (request.redirect === "error") {
+        if (request2.redirect === "error") {
           response = makeNetworkError("unexpected redirect");
-        } else if (request.redirect === "manual") {
+        } else if (request2.redirect === "manual") {
           response = actualResponse;
-        } else if (request.redirect === "follow") {
+        } else if (request2.redirect === "follow") {
           response = await httpRedirectFetch(fetchParams, response);
         } else {
           assert(false);
@@ -25854,13 +25854,13 @@ var require_fetch = __commonJS({
       return response;
     }
     function httpRedirectFetch(fetchParams, response) {
-      const request = fetchParams.request;
+      const request2 = fetchParams.request;
       const actualResponse = response.internalResponse ? response.internalResponse : response;
       let locationURL;
       try {
         locationURL = responseLocationURL(
           actualResponse,
-          requestCurrentURL(request).hash
+          requestCurrentURL(request2).hash
         );
         if (locationURL == null) {
           return response;
@@ -25871,63 +25871,63 @@ var require_fetch = __commonJS({
       if (!urlIsHttpHttpsScheme(locationURL)) {
         return Promise.resolve(makeNetworkError("URL scheme must be a HTTP(S) scheme"));
       }
-      if (request.redirectCount === 20) {
+      if (request2.redirectCount === 20) {
         return Promise.resolve(makeNetworkError("redirect count exceeded"));
       }
-      request.redirectCount += 1;
-      if (request.mode === "cors" && (locationURL.username || locationURL.password) && !sameOrigin(request, locationURL)) {
+      request2.redirectCount += 1;
+      if (request2.mode === "cors" && (locationURL.username || locationURL.password) && !sameOrigin(request2, locationURL)) {
         return Promise.resolve(makeNetworkError('cross origin not allowed for request mode "cors"'));
       }
-      if (request.responseTainting === "cors" && (locationURL.username || locationURL.password)) {
+      if (request2.responseTainting === "cors" && (locationURL.username || locationURL.password)) {
         return Promise.resolve(makeNetworkError(
           'URL cannot contain credentials for request mode "cors"'
         ));
       }
-      if (actualResponse.status !== 303 && request.body != null && request.body.source == null) {
+      if (actualResponse.status !== 303 && request2.body != null && request2.body.source == null) {
         return Promise.resolve(makeNetworkError());
       }
-      if ([301, 302].includes(actualResponse.status) && request.method === "POST" || actualResponse.status === 303 && !GET_OR_HEAD.includes(request.method)) {
-        request.method = "GET";
-        request.body = null;
+      if ([301, 302].includes(actualResponse.status) && request2.method === "POST" || actualResponse.status === 303 && !GET_OR_HEAD.includes(request2.method)) {
+        request2.method = "GET";
+        request2.body = null;
         for (const headerName of requestBodyHeader) {
-          request.headersList.delete(headerName);
+          request2.headersList.delete(headerName);
         }
       }
-      if (!sameOrigin(requestCurrentURL(request), locationURL)) {
-        request.headersList.delete("authorization", true);
-        request.headersList.delete("proxy-authorization", true);
-        request.headersList.delete("cookie", true);
-        request.headersList.delete("host", true);
+      if (!sameOrigin(requestCurrentURL(request2), locationURL)) {
+        request2.headersList.delete("authorization", true);
+        request2.headersList.delete("proxy-authorization", true);
+        request2.headersList.delete("cookie", true);
+        request2.headersList.delete("host", true);
       }
-      if (request.body != null) {
-        assert(request.body.source != null);
-        request.body = safelyExtractBody(request.body.source)[0];
+      if (request2.body != null) {
+        assert(request2.body.source != null);
+        request2.body = safelyExtractBody(request2.body.source)[0];
       }
       const timingInfo = fetchParams.timingInfo;
       timingInfo.redirectEndTime = timingInfo.postRedirectStartTime = coarsenedSharedCurrentTime(fetchParams.crossOriginIsolatedCapability);
       if (timingInfo.redirectStartTime === 0) {
         timingInfo.redirectStartTime = timingInfo.startTime;
       }
-      request.urlList.push(locationURL);
-      setRequestReferrerPolicyOnRedirect(request, actualResponse);
+      request2.urlList.push(locationURL);
+      setRequestReferrerPolicyOnRedirect(request2, actualResponse);
       return mainFetch(fetchParams, true);
     }
     async function httpNetworkOrCacheFetch(fetchParams, isAuthenticationFetch = false, isNewConnectionFetch = false) {
-      const request = fetchParams.request;
+      const request2 = fetchParams.request;
       let httpFetchParams = null;
       let httpRequest = null;
       let response = null;
       const httpCache = null;
       const revalidatingFlag = false;
-      if (request.window === "no-window" && request.redirect === "error") {
+      if (request2.window === "no-window" && request2.redirect === "error") {
         httpFetchParams = fetchParams;
-        httpRequest = request;
+        httpRequest = request2;
       } else {
-        httpRequest = cloneRequest(request);
+        httpRequest = cloneRequest(request2);
         httpFetchParams = { ...fetchParams };
         httpFetchParams.request = httpRequest;
       }
-      const includeCredentials = request.credentials === "include" || request.credentials === "same-origin" && request.responseTainting === "basic";
+      const includeCredentials = request2.credentials === "include" || request2.credentials === "same-origin" && request2.responseTainting === "basic";
       const contentLength = httpRequest.body ? httpRequest.body.length : null;
       let contentLengthHeaderValue = null;
       if (httpRequest.body == null && ["POST", "PUT"].includes(httpRequest.method)) {
@@ -26014,14 +26014,14 @@ var require_fetch = __commonJS({
         response.rangeRequested = true;
       }
       response.requestIncludesCredentials = includeCredentials;
-      if (response.status === 401 && httpRequest.responseTainting !== "cors" && includeCredentials && (request.useURLCredentials !== void 0 || isTraversableNavigable(request.traversableForUserPrompts))) {
-        if (request.body != null) {
-          if (request.body.source == null) {
+      if (response.status === 401 && httpRequest.responseTainting !== "cors" && includeCredentials && (request2.useURLCredentials !== void 0 || isTraversableNavigable(request2.traversableForUserPrompts))) {
+        if (request2.body != null) {
+          if (request2.body.source == null) {
             return response;
           }
-          request.body = safelyExtractBody(request.body.source)[0];
+          request2.body = safelyExtractBody(request2.body.source)[0];
         }
-        if (request.useURLCredentials === void 0 || isAuthenticationFetch) {
+        if (request2.useURLCredentials === void 0 || isAuthenticationFetch) {
           if (isCancelled(fetchParams)) {
             return makeAppropriateNetworkError(fetchParams);
           }
@@ -26031,7 +26031,7 @@ var require_fetch = __commonJS({
         response = await httpNetworkOrCacheFetch(fetchParams, true);
       }
       if (response.status === 407) {
-        if (request.window === "no-window") {
+        if (request2.window === "no-window") {
           return makeNetworkError();
         }
         if (isCancelled(fetchParams)) {
@@ -26043,7 +26043,7 @@ var require_fetch = __commonJS({
         // response’s status is 421
         response.status === 421 && // isNewConnectionFetch is false
         !isNewConnectionFetch && // request’s body is null, or request’s body is non-null and request’s body’s source is non-null
-        (request.body == null || request.body.source != null)
+        (request2.body == null || request2.body.source != null)
       ) {
         if (isCancelled(fetchParams)) {
           return makeAppropriateNetworkError(fetchParams);
@@ -26073,21 +26073,21 @@ var require_fetch = __commonJS({
           }
         }
       };
-      const request = fetchParams.request;
+      const request2 = fetchParams.request;
       let response = null;
       const timingInfo = fetchParams.timingInfo;
       const httpCache = null;
       if (httpCache == null) {
-        request.cache = "no-store";
+        request2.cache = "no-store";
       }
       const newConnection = forceNewConnection ? "yes" : "no";
-      if (request.mode === "websocket") {
+      if (request2.mode === "websocket") {
       } else {
       }
       let requestBody = null;
-      if (request.body == null && fetchParams.processRequestEndOfBody) {
+      if (request2.body == null && fetchParams.processRequestEndOfBody) {
         queueMicrotask(() => fetchParams.processRequestEndOfBody());
-      } else if (request.body != null) {
+      } else if (request2.body != null) {
         const processBodyChunk = async function* (bytes) {
           if (isCancelled(fetchParams)) {
             return;
@@ -26115,7 +26115,7 @@ var require_fetch = __commonJS({
         };
         requestBody = (async function* () {
           try {
-            for await (const bytes of request.body.stream) {
+            for await (const bytes of request2.body.stream) {
               yield* processBodyChunk(bytes);
             }
             processEndOfBody();
@@ -26222,7 +26222,7 @@ var require_fetch = __commonJS({
       }
       return response;
       function dispatch({ body }) {
-        const url = requestCurrentURL(request);
+        const url = requestCurrentURL(request2);
         const agent = fetchParams.controller.dispatcher;
         const path = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
@@ -26230,11 +26230,11 @@ var require_fetch = __commonJS({
           {
             path: hasTrailingQuestionMark ? `${path}?` : path,
             origin: url.origin,
-            method: request.method,
-            body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
-            headers: request.headersList.entries,
+            method: request2.method,
+            body: agent.isMockActive ? request2.body && (request2.body.source || request2.body.stream) : body,
+            headers: request2.headersList.entries,
             maxRedirections: 0,
-            upgrade: request.mode === "websocket" ? "websocket" : void 0
+            upgrade: request2.mode === "websocket" ? "websocket" : void 0
           },
           {
             body: null,
@@ -26271,9 +26271,9 @@ var require_fetch = __commonJS({
               }
               const location = headersList.get("location", true);
               this.body = new Readable({ read: resume });
-              const willFollow = location && request.redirect === "follow" && redirectStatusSet.has(status);
+              const willFollow = location && request2.redirect === "follow" && redirectStatusSet.has(status);
               const decoders = [];
-              if (request.method !== "HEAD" && request.method !== "CONNECT" && !nullBodyStatus.includes(status) && !willFollow) {
+              if (request2.method !== "HEAD" && request2.method !== "CONNECT" && !nullBodyStatus.includes(status) && !willFollow) {
                 const contentEncoding = headersList.get("content-encoding", true);
                 const codings = contentEncoding ? contentEncoding.toLowerCase().split(",") : [];
                 const maxContentEncodings = 5;
@@ -26469,31 +26469,31 @@ var require_cache3 = __commonJS({
         webidl.util.markAsUncloneable(this);
         this.#relevantRequestResponseList = arguments[1];
       }
-      async match(request, options = {}) {
+      async match(request2, options = {}) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.match";
         webidl.argumentLengthCheck(arguments, 1, prefix);
-        request = webidl.converters.RequestInfo(request);
+        request2 = webidl.converters.RequestInfo(request2);
         options = webidl.converters.CacheQueryOptions(options, prefix, "options");
-        const p = this.#internalMatchAll(request, options, 1);
+        const p = this.#internalMatchAll(request2, options, 1);
         if (p.length === 0) {
           return;
         }
         return p[0];
       }
-      async matchAll(request = void 0, options = {}) {
+      async matchAll(request2 = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.matchAll";
-        if (request !== void 0) request = webidl.converters.RequestInfo(request);
+        if (request2 !== void 0) request2 = webidl.converters.RequestInfo(request2);
         options = webidl.converters.CacheQueryOptions(options, prefix, "options");
-        return this.#internalMatchAll(request, options);
+        return this.#internalMatchAll(request2, options);
       }
-      async add(request) {
+      async add(request2) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.add";
         webidl.argumentLengthCheck(arguments, 1, prefix);
-        request = webidl.converters.RequestInfo(request);
-        const requests = [request];
+        request2 = webidl.converters.RequestInfo(request2);
+        const requests = [request2];
         const responseArrayPromise = this.addAll(requests);
         return await responseArrayPromise;
       }
@@ -26503,19 +26503,19 @@ var require_cache3 = __commonJS({
         webidl.argumentLengthCheck(arguments, 1, prefix);
         const responsePromises = [];
         const requestList = [];
-        for (let request of requests) {
-          if (request === void 0) {
+        for (let request2 of requests) {
+          if (request2 === void 0) {
             throw webidl.errors.conversionFailed({
               prefix,
               argument: "Argument 1",
               types: ["undefined is not allowed"]
             });
           }
-          request = webidl.converters.RequestInfo(request);
-          if (typeof request === "string") {
+          request2 = webidl.converters.RequestInfo(request2);
+          if (typeof request2 === "string") {
             continue;
           }
-          const r = getRequestState(request);
+          const r = getRequestState(request2);
           if (!urlIsHttpHttpsScheme(r.url) || r.method !== "GET") {
             throw webidl.errors.exception({
               header: prefix,
@@ -26524,8 +26524,8 @@ var require_cache3 = __commonJS({
           }
         }
         const fetchControllers = [];
-        for (const request of requests) {
-          const r = getRequestState(new Request(request));
+        for (const request2 of requests) {
+          const r = getRequestState(new Request(request2));
           if (!urlIsHttpHttpsScheme(r.url)) {
             throw webidl.errors.exception({
               header: prefix,
@@ -26602,17 +26602,17 @@ var require_cache3 = __commonJS({
         });
         return cacheJobPromise.promise;
       }
-      async put(request, response) {
+      async put(request2, response) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.put";
         webidl.argumentLengthCheck(arguments, 2, prefix);
-        request = webidl.converters.RequestInfo(request);
+        request2 = webidl.converters.RequestInfo(request2);
         response = webidl.converters.Response(response, prefix, "response");
         let innerRequest = null;
-        if (webidl.is.Request(request)) {
-          innerRequest = getRequestState(request);
+        if (webidl.is.Request(request2)) {
+          innerRequest = getRequestState(request2);
         } else {
-          innerRequest = getRequestState(new Request(request));
+          innerRequest = getRequestState(new Request(request2));
         }
         if (!urlIsHttpHttpsScheme(innerRequest.url) || innerRequest.method !== "GET") {
           throw webidl.errors.exception({
@@ -26683,21 +26683,21 @@ var require_cache3 = __commonJS({
         });
         return cacheJobPromise.promise;
       }
-      async delete(request, options = {}) {
+      async delete(request2, options = {}) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.delete";
         webidl.argumentLengthCheck(arguments, 1, prefix);
-        request = webidl.converters.RequestInfo(request);
+        request2 = webidl.converters.RequestInfo(request2);
         options = webidl.converters.CacheQueryOptions(options, prefix, "options");
         let r = null;
-        if (webidl.is.Request(request)) {
-          r = getRequestState(request);
+        if (webidl.is.Request(request2)) {
+          r = getRequestState(request2);
           if (r.method !== "GET" && !options.ignoreMethod) {
             return false;
           }
         } else {
-          assert(typeof request === "string");
-          r = getRequestState(new Request(request));
+          assert(typeof request2 === "string");
+          r = getRequestState(new Request(request2));
         }
         const operations = [];
         const operation = {
@@ -26729,25 +26729,25 @@ var require_cache3 = __commonJS({
        * @param {import('../../../types/cache').CacheQueryOptions} options
        * @returns {Promise<readonly Request[]>}
        */
-      async keys(request = void 0, options = {}) {
+      async keys(request2 = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
         const prefix = "Cache.keys";
-        if (request !== void 0) request = webidl.converters.RequestInfo(request);
+        if (request2 !== void 0) request2 = webidl.converters.RequestInfo(request2);
         options = webidl.converters.CacheQueryOptions(options, prefix, "options");
         let r = null;
-        if (request !== void 0) {
-          if (webidl.is.Request(request)) {
-            r = getRequestState(request);
+        if (request2 !== void 0) {
+          if (webidl.is.Request(request2)) {
+            r = getRequestState(request2);
             if (r.method !== "GET" && !options.ignoreMethod) {
               return [];
             }
-          } else if (typeof request === "string") {
-            r = getRequestState(new Request(request));
+          } else if (typeof request2 === "string") {
+            r = getRequestState(new Request(request2));
           }
         }
         const promise = createDeferredPromise();
         const requests = [];
-        if (request === void 0) {
+        if (request2 === void 0) {
           for (const requestResponse of this.#relevantRequestResponseList) {
             requests.push(requestResponse[0]);
           }
@@ -26759,9 +26759,9 @@ var require_cache3 = __commonJS({
         }
         queueMicrotask(() => {
           const requestList = [];
-          for (const request2 of requests) {
+          for (const request3 of requests) {
             const requestObject = fromInnerRequest(
-              request2,
+              request3,
               void 0,
               new AbortController().signal,
               "immutable"
@@ -26880,9 +26880,9 @@ var require_cache3 = __commonJS({
        * @param {import('../../../types/cache').CacheQueryOptions | undefined} options
        * @returns {boolean}
        */
-      #requestMatchesCachedItem(requestQuery, request, response = null, options) {
+      #requestMatchesCachedItem(requestQuery, request2, response = null, options) {
         const queryURL = new URL(requestQuery.url);
-        const cachedURL = new URL(request.url);
+        const cachedURL = new URL(request2.url);
         if (options?.ignoreSearch) {
           cachedURL.search = "";
           queryURL.search = "";
@@ -26898,7 +26898,7 @@ var require_cache3 = __commonJS({
           if (fieldValue === "*") {
             return false;
           }
-          const requestValue = request.headersList.get(fieldValue);
+          const requestValue = request2.headersList.get(fieldValue);
           const queryValue = requestQuery.headersList.get(fieldValue);
           if (requestValue !== queryValue) {
             return false;
@@ -26906,20 +26906,20 @@ var require_cache3 = __commonJS({
         }
         return true;
       }
-      #internalMatchAll(request, options, maxResponses = Infinity) {
+      #internalMatchAll(request2, options, maxResponses = Infinity) {
         let r = null;
-        if (request !== void 0) {
-          if (webidl.is.Request(request)) {
-            r = getRequestState(request);
+        if (request2 !== void 0) {
+          if (webidl.is.Request(request2)) {
+            r = getRequestState(request2);
             if (r.method !== "GET" && !options.ignoreMethod) {
               return [];
             }
-          } else if (typeof request === "string") {
-            r = getRequestState(new Request(request));
+          } else if (typeof request2 === "string") {
+            r = getRequestState(new Request(request2));
           }
         }
         const responses = [];
-        if (request === void 0) {
+        if (request2 === void 0) {
           for (const requestResponse of this.#relevantRequestResponseList) {
             responses.push(requestResponse[1]);
           }
@@ -27011,21 +27011,21 @@ var require_cachestorage = __commonJS({
         }
         webidl.util.markAsUncloneable(this);
       }
-      async match(request, options = {}) {
+      async match(request2, options = {}) {
         webidl.brandCheck(this, _CacheStorage);
         webidl.argumentLengthCheck(arguments, 1, "CacheStorage.match");
-        request = webidl.converters.RequestInfo(request);
+        request2 = webidl.converters.RequestInfo(request2);
         options = webidl.converters.MultiCacheQueryOptions(options);
         if (options.cacheName != null) {
           if (this.#caches.has(options.cacheName)) {
             const cacheList = this.#caches.get(options.cacheName);
             const cache3 = new Cache(kConstruct, cacheList);
-            return await cache3.match(request, options);
+            return await cache3.match(request2, options);
           }
         } else {
           for (const cacheList of this.#caches.values()) {
             const cache3 = new Cache(kConstruct, cacheList);
-            const response = await cache3.match(request, options);
+            const response = await cache3.match(request2, options);
             if (response !== void 0) {
               return response;
             }
@@ -28217,7 +28217,7 @@ var require_connection = __commonJS({
     function establishWebSocketConnection(url, protocols, client, handler, options) {
       const requestURL = url;
       requestURL.protocol = url.protocol === "ws:" ? "http:" : "https:";
-      const request = makeRequest({
+      const request2 = makeRequest({
         urlList: [requestURL],
         client,
         serviceWorkers: "none",
@@ -28230,18 +28230,18 @@ var require_connection = __commonJS({
       });
       if (options.headers) {
         const headersList = getHeadersList(new Headers2(options.headers));
-        request.headersList = headersList;
+        request2.headersList = headersList;
       }
       const keyValue = crypto2.randomBytes(16).toString("base64");
-      request.headersList.append("sec-websocket-key", keyValue, true);
-      request.headersList.append("sec-websocket-version", "13", true);
+      request2.headersList.append("sec-websocket-key", keyValue, true);
+      request2.headersList.append("sec-websocket-version", "13", true);
       for (const protocol of protocols) {
-        request.headersList.append("sec-websocket-protocol", protocol, true);
+        request2.headersList.append("sec-websocket-protocol", protocol, true);
       }
       const permessageDeflate = "permessage-deflate; client_max_window_bits";
-      request.headersList.append("sec-websocket-extensions", permessageDeflate, true);
+      request2.headersList.append("sec-websocket-extensions", permessageDeflate, true);
       const controller = fetching({
-        request,
+        request: request2,
         useParallelQueue: true,
         dispatcher: options.dispatcher,
         processResponse(response) {
@@ -28288,7 +28288,7 @@ var require_connection = __commonJS({
           }
           const secProtocol = response.headersList.get("Sec-WebSocket-Protocol");
           if (secProtocol !== null) {
-            const requestProtocols = getDecodeSplit("sec-websocket-protocol", request.headersList);
+            const requestProtocols = getDecodeSplit("sec-websocket-protocol", request2.headersList);
             if (requestProtocols === null || !requestProtocols.includes(secProtocol)) {
               failHandshake(handler, response, 1002, "Protocol was not set in the opening handshake.");
               return;
@@ -34820,8 +34820,8 @@ function removeAttribute(elem, name) {
     return;
   delete elem.attribs[name];
 }
-function splitNames(names) {
-  return names ? names.trim().split(rspace) : [];
+function splitNames(names2) {
+  return names2 ? names2.trim().split(rspace) : [];
 }
 function removeAttr(name) {
   const attrNames = splitNames(name);
@@ -45548,12 +45548,12 @@ async function getAtsuCatalog(id) {
 function atsuSource(base, seriesId2, chapter, scanlators) {
   const groupId = chapter.scanlationMangaId;
   const group = scanlators.find((row) => row.id === groupId);
-  const provider55 = groupId && /^[\w-]+$/.test(groupId) ? `${base}@${groupId}` : base;
+  const provider56 = groupId && /^[\w-]+$/.test(groupId) ? `${base}@${groupId}` : base;
   const name = group?.name || groupId || null;
   return {
-    provider: provider55,
+    provider: provider56,
     providerName: name ? `Atsu \xB7 ${name}` : "Atsu",
-    chapterKey: `${provider55}:${seriesId2}|${chapter.id}`,
+    chapterKey: `${provider56}:${seriesId2}|${chapter.id}`,
     providerChapterId: chapter.id,
     language: chapter.language || group?.language || "en",
     releaseDate: chapter.createdAt && Number.isFinite(new Date(chapter.createdAt).getTime()) ? new Date(chapter.createdAt).toISOString() : null,
@@ -45674,7 +45674,7 @@ function isNovelFormat(value) {
     "textnovel"
   ].includes(format);
 }
-function isNovelMangaCandidate(candidate, names) {
+function isNovelMangaCandidate(candidate, names2) {
   const record = candidate && typeof candidate === "object" ? candidate : {};
   if (record.isNovel === true || record.is_novel === true) return true;
   const formats = [
@@ -45685,7 +45685,7 @@ function isNovelMangaCandidate(candidate, names) {
     record.contentType
   ];
   if (formats.some(isNovelFormat)) return true;
-  if (names.some(
+  if (names2.some(
     (name) => /[([]\s*(?:novel|light[\s-]*novel|web[\s-]*novel|ln|wn)\s*[)\]]\s*$/i.test(
       name
     ) || /^\s*[([]\s*(?:novel|light[\s-]*novel|web[\s-]*novel|ln|wn)\s*[)\]]/i.test(
@@ -45766,9 +45766,9 @@ function pickBestMangaCandidate(titles, candidates, getNames, threshold = 0.6) {
   for (const candidate of candidates) {
     const rawNames = getNames(candidate).filter((n) => Boolean(n && n.trim()));
     if (isNovelMangaCandidate(candidate, rawNames)) continue;
-    const names = rawNames.map((n) => normalizeTitle(n));
+    const names2 = rawNames.map((n) => normalizeTitle(n));
     let score = 0;
-    for (const name of names) {
+    for (const name of names2) {
       for (const target of targets) {
         score = Math.max(score, scoreMatch(target, name));
       }
@@ -46333,15 +46333,15 @@ async function fetchNovelSearchHtml(url, options = {}) {
   if (hit && Date.now() - hit.at < ttl) return hit.html;
   const running = cacheable ? pending.get(key) : void 0;
   if (running) return running;
-  const request = fetchPage(url, { ...options, headers }).then((html3) => {
+  const request2 = fetchPage(url, { ...options, headers }).then((html3) => {
     if (cacheable && html3.length < 2 * 1024 * 1024) {
       pages.set(key, { at: Date.now(), html: html3 });
       if (pages.size > 40) pages.delete(pages.keys().next().value);
     }
     return html3;
   }).finally(() => pending.delete(key));
-  if (cacheable) pending.set(key, request);
-  return request;
+  if (cacheable) pending.set(key, request2);
+  return request2;
 }
 async function fetchPage(url, options) {
   const timeoutMs = process.browser ? 55e3 : options.timeoutMs ?? 12e3;
@@ -46400,19 +46400,19 @@ function resolveProviderRunOptions(opts) {
   };
 }
 var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-async function runProviderWithRetry(provider55, fn, options) {
+async function runProviderWithRetry(provider56, fn, options) {
   const startedAt = Date.now();
   let lastError;
   for (let attempt2 = 0; attempt2 <= options.maxRetries; attempt2++) {
     try {
       const results = await withProviderTimeout(
-        Promise.resolve().then(() => fn(provider55)),
+        Promise.resolve().then(() => fn(provider56)),
         options.timeoutMs
       );
       return {
         results,
         diagnostic: {
-          provider: provider55.name,
+          provider: provider56.name,
           status: results.length > 0 ? "ok" : "empty",
           durationMs: Date.now() - startedAt,
           resultCount: results.length,
@@ -46425,7 +46425,7 @@ async function runProviderWithRetry(provider55, fn, options) {
         return {
           results: [],
           diagnostic: {
-            provider: provider55.name,
+            provider: provider56.name,
             status: "timeout",
             durationMs: Date.now() - startedAt,
             resultCount: 0,
@@ -46443,7 +46443,7 @@ async function runProviderWithRetry(provider55, fn, options) {
   return {
     results: [],
     diagnostic: {
-      provider: provider55.name,
+      provider: provider56.name,
       status: message ? /timed out/i.test(message) ? "timeout" : "error" : "empty",
       durationMs: Date.now() - startedAt,
       resultCount: 0,
@@ -46519,15 +46519,15 @@ async function runProvidersProgressive(providers, fn, onChunk, options = DEFAULT
     while (true) {
       const index2 = cursor++;
       if (index2 >= providers.length) return;
-      const provider55 = providers[index2];
-      const attempt2 = await runProviderWithRetry(provider55, fn, options);
+      const provider56 = providers[index2];
+      const attempt2 = await runProviderWithRetry(provider56, fn, options);
       emit(
         {
-          provider: provider55.name,
+          provider: provider56.name,
           results: attempt2.results,
           diagnostic: attempt2.diagnostic
         },
-        leadNames.has(provider55.name.toLowerCase())
+        leadNames.has(provider56.name.toLowerCase())
       );
       allResults.push(...attempt2.results);
     }
@@ -50838,8 +50838,8 @@ async function fetchHtml3(url, base) {
 async function searchAnime2(titles) {
   for (const query of buildSearchQueries(titles)) {
     const settled = await Promise.allSettled(
-      BASES2.map(async (BASE35) => {
-        const html3 = await fetchHtml3(`${BASE35}/?s=${encodeURIComponent(query)}`, BASE35);
+      BASES2.map(async (BASE36) => {
+        const html3 = await fetchHtml3(`${BASE36}/?s=${encodeURIComponent(query)}`, BASE36);
         if (!html3) throw new Error("no html");
         const $2 = loadHtml(html3);
         const hits = [];
@@ -50850,9 +50850,9 @@ async function searchAnime2(titles) {
           const m = href.match(/\/anime\/([^/?#]+)\/?(?:[?#].*)?$/);
           if (!m) return;
           hits.push({
-            url: href.startsWith("http") ? href : `${BASE35}${href}`,
+            url: href.startsWith("http") ? href : `${BASE36}${href}`,
             title: title2,
-            base: BASE35,
+            base: BASE36,
             slug: m[1],
             score: scoreMatch(query, title2)
           });
@@ -53242,8 +53242,8 @@ async function findSlug(titles, timeoutMs) {
     let best = null;
     for (const a of list) {
       if (!a?.slug) continue;
-      const names = [a.title || "", ...(a.alternateTitles || "").split(",")].map((s) => s.trim());
-      const score = Math.max(...names.map((n) => n ? scoreMatch(query, n) : 0), 0);
+      const names2 = [a.title || "", ...(a.alternateTitles || "").split(",")].map((s) => s.trim());
+      const score = Math.max(...names2.map((n) => n ? scoreMatch(query, n) : 0), 0);
       if (!best || score > best.score) best = { slug: a.slug, score };
     }
     if (best) return best.slug;
@@ -54253,19 +54253,19 @@ function createNuvioProvider(config) {
       clearTimeout(timer);
     }
   }
-  const provider55 = {
+  const provider56 = {
     name: config.name,
     sites: config.sites,
     single: (opts) => run(opts, "tv")
   };
   if (config.supportsMovie) {
-    provider55.movie = (opts) => run(opts, "movie");
+    provider56.movie = (opts) => run(opts, "movie");
   }
   if (config.languages && config.languages.length > 0) {
     const languages = config.languages;
-    provider55.getLanguages = async () => languages;
+    provider56.getLanguages = async () => languages;
   }
-  return provider55;
+  return provider56;
 }
 
 // src/providers/stream/nuvio/shared.ts
@@ -58483,7 +58483,7 @@ function asItems(value) {
     (item) => !!item && typeof item === "object"
   );
 }
-function pushCandidate(out, provider55, server, lang, item) {
+function pushCandidate(out, provider56, server, lang, item) {
   const url = item.url;
   if (!url || typeof url !== "string") return;
   if (isPlaceholderUrl(url)) return;
@@ -58491,22 +58491,22 @@ function pushCandidate(out, provider55, server, lang, item) {
     url,
     language: normalizeLangTag(lang),
     quality: item.quality || "HD",
-    server: `${provider55} \xB7 ${server || "Player"}`
+    server: `${provider56} \xB7 ${server || "Player"}`
   });
 }
-function parseCandidates(data2, provider55, isMovie, episodeNum) {
+function parseCandidates(data2, provider56, isMovie, episodeNum) {
   const out = [];
   if (data2.players && typeof data2.players === "object") {
     for (const lang of Object.keys(data2.players)) {
       for (const item of asItems(data2.players[lang])) {
-        pushCandidate(out, provider55, item.player || item.name, lang, item);
+        pushCandidate(out, provider56, item.player || item.name, lang, item);
       }
     }
   }
   if (data2.links && typeof data2.links === "object") {
     for (const lang of Object.keys(data2.links)) {
       for (const item of asItems(data2.links[lang])) {
-        pushCandidate(out, provider55, item.name || item.player, lang, item);
+        pushCandidate(out, provider56, item.name || item.player, lang, item);
       }
     }
   }
@@ -58519,20 +58519,20 @@ function parseCandidates(data2, provider55, isMovie, episodeNum) {
         const byLang = languages;
         for (const lang of Object.keys(byLang)) {
           for (const item of asItems(byLang[lang])) {
-            pushCandidate(out, provider55, item.player, lang, item);
+            pushCandidate(out, provider56, item.player, lang, item);
           }
         }
       }
       for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ", "VOSTFR", "Default"]) {
         for (const item of asItems(episode[lang])) {
-          pushCandidate(out, provider55, item.name || item.player, lang, item);
+          pushCandidate(out, provider56, item.name || item.player, lang, item);
         }
       }
     }
   }
   for (const lang of ["vf", "vostfr", "vo", "VFF", "VFQ"]) {
     for (const item of asItems(data2[lang])) {
-      pushCandidate(out, provider55, item.player || item.name, lang, item);
+      pushCandidate(out, provider56, item.player || item.name, lang, item);
     }
   }
   return out;
@@ -65961,10 +65961,10 @@ var provider28 = {
     for (const release of releases) {
       const id = Number(release?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
-      const names = [release.name?.english, release.name?.main].filter((v) => Boolean(v?.trim()));
-      if (names.length === 0) continue;
-      const score = Math.max(...names.map((n) => scoreTitleMatch(title2, n)));
-      const label = names.join(" / ");
+      const names2 = [release.name?.english, release.name?.main].filter((v) => Boolean(v?.trim()));
+      if (names2.length === 0) continue;
+      const score = Math.max(...names2.map((n) => scoreTitleMatch(title2, n)));
+      const label = names2.join(" / ");
       if (!best || score > best.score) best = { id, label, score };
     }
     if (!best) return [];
@@ -66014,13 +66014,13 @@ function orderSources(a, b) {
   return r !== 0 ? r : a.language.localeCompare(b.language);
 }
 function allNames(m) {
-  const names = [];
+  const names2 = [];
   const title2 = m.attributes?.title ?? {};
-  for (const v of Object.values(title2)) if (v) names.push(v);
+  for (const v of Object.values(title2)) if (v) names2.push(v);
   for (const alt of m.attributes?.altTitles ?? []) {
-    for (const v of Object.values(alt)) if (v) names.push(v);
+    for (const v of Object.values(alt)) if (v) names2.push(v);
   }
-  return names;
+  return names2;
 }
 async function resolveMangaId(params) {
   const titles = await resolveMangaTitles(params);
@@ -66154,8 +66154,8 @@ async function ckJson(path, timeoutMs = 12e3) {
   return null;
 }
 function candidateNames(it) {
-  const names = [it.title, ...(it.md_titles ?? []).map((t) => t.title)];
-  return names.filter((n) => Boolean(n && n.trim()));
+  const names2 = [it.title, ...(it.md_titles ?? []).map((t) => t.title)];
+  return names2.filter((n) => Boolean(n && n.trim()));
 }
 function orderSources2(a, b) {
   const rank = (l) => l === "en" ? 0 : 1;
@@ -66682,10 +66682,10 @@ var BASE16 = "https://atsu.moe";
 var CDN2 = "https://cdn.atsu.moe";
 var PROVIDER_NAME7 = "atsu";
 function docNames(d) {
-  const names = [];
-  if (d.title) names.push(d.title);
-  for (const n of d.otherNames ?? []) if (n) names.push(n);
-  return names;
+  const names2 = [];
+  if (d.title) names2.push(d.title);
+  for (const n of d.otherNames ?? []) if (n) names2.push(n);
+  return names2;
 }
 async function search6(query) {
   const url = `${BASE16}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`;
@@ -66763,15 +66763,104 @@ var provider35 = {
 };
 var atsu_default = provider35;
 
+// src/providers/manga/justmanga.ts
+var BASE17 = "https://justmanga.cc";
+var API4 = "https://core.justmanga.cc/api";
+var HEADERS10 = { Referer: BASE17 + "/", Origin: BASE17 };
+async function request(path) {
+  const response = await fetchResponse(API4 + path, { headers: HEADERS10, timeoutMs: 5e3 });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`JustManga HTTP ${response.status}`);
+  return response.json();
+}
+var names = (manga) => [manga.title, ...manga.altTitles || []].filter(Boolean);
+async function resolveManga(params) {
+  const id = Number(params.anilistId);
+  if (Number.isSafeInteger(id) && id > 0) {
+    const manga = await request(`/manga/${id}`);
+    return manga && !isNovelMangaCandidate(manga, names(manga)) ? manga : null;
+  }
+  const titles = await resolveMangaTitles(params);
+  const candidates = [];
+  for (const title2 of titles.slice(0, 2)) {
+    const results = await request(`/search/suggestions?q=${encodeURIComponent(title2)}&limit=10`);
+    candidates.push(...(Array.isArray(results) ? results : []).filter((row) => row?.id && !isNovelMangaCandidate(row, names(row))));
+    const best = pickBestMangaCandidate(titles, candidates, names, 0.8);
+    if (best?.score === 1) return best.candidate;
+  }
+  return pickBestMangaCandidate(titles, candidates, names, 0.8)?.candidate || null;
+}
+var provider36 = {
+  name: "justmanga",
+  sites: [BASE17],
+  async getChapters(params) {
+    const manga = await resolveManga(params);
+    if (!manga) return [];
+    const servers = await request(`/manga/${encodeURIComponent(manga.id)}/servers?lang=en`);
+    if (!Array.isArray(servers)) return [];
+    const results = await Promise.allSettled(servers.filter((server) => /^[\w-]+$/.test(server.source)).map(async (server) => {
+      const result = await request(`/manga/${encodeURIComponent(manga.id)}/chapters?source=${encodeURIComponent(server.source)}&lang=en`);
+      const rows = [], seen = /* @__PURE__ */ new Set();
+      for (const chapter of result?.chapters || []) {
+        const number = Number(chapter.number), language = chapter.lang || "en";
+        if (chapter.key == null || !Number.isFinite(number) || number < 0) continue;
+        const detail = [manga.id, String(chapter.key), language].map(encodeURIComponent).join("|");
+        if (seen.has(detail)) continue;
+        seen.add(detail);
+        const source = `justmanga@${server.source}`;
+        rows.push({ number, title: chapter.title || null, volume: chapter.volume == null ? null : String(chapter.volume), sources: [{
+          provider: source,
+          providerName: `JustManga \xB7 ${server.name}`,
+          chapterKey: `${source}:${detail}`,
+          providerChapterId: chapter.id || String(chapter.key),
+          language,
+          scanlator: chapter.group || null,
+          releaseDate: chapter.releasedAt || null
+        }] });
+      }
+      return rows;
+    }));
+    const answered = results.filter((result) => result.status === "fulfilled");
+    if (!answered.length && results.length) throw results[0].reason;
+    const byNumber = /* @__PURE__ */ new Map();
+    for (const result of answered) {
+      if (result.status !== "fulfilled") continue;
+      for (const row of result.value) {
+        const prior = byNumber.get(row.number);
+        if (prior) prior.sources.push(...row.sources);
+        else byNumber.set(row.number, row);
+      }
+    }
+    return [...byNumber.values()].sort((a, b) => a.number - b.number);
+  },
+  async getPages(chapterKey) {
+    const match2 = /^justmanga@([\w-]+):([^|]+)\|([^|]+)\|([^|]+)$/.exec(chapterKey);
+    if (!match2) return [];
+    let mangaId, key, language;
+    try {
+      [mangaId, key, language] = match2.slice(2).map(decodeURIComponent);
+    } catch {
+      return [];
+    }
+    const result = await request(`/manga/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(key)}/pages?source=${encodeURIComponent(match2[1])}&lang=${encodeURIComponent(language)}`);
+    return [...result?.pages || []].sort((a, b) => a.index - b.index).flatMap((page, index2) => {
+      const imageUrl = page.proxy ? `${API4}/image?${page.proxy}` : page.url;
+      if (!/^https?:\/\//i.test(imageUrl || "")) return [];
+      return [{ pageNumber: index2 + 1, imageUrl, headers: HEADERS10, width: page.width ?? null, height: page.height ?? null }];
+    });
+  }
+};
+var justmanga_default = provider36;
+
 // src/providers/manga/webtoons.ts
-var BASE17 = "https://www.webtoons.com";
+var BASE18 = "https://www.webtoons.com";
 var MOBILE = "https://m.webtoons.com";
 var PROVIDER_NAME8 = "webtoons";
-var IMAGE_HEADERS6 = { Referer: `${BASE17}/` };
+var IMAGE_HEADERS6 = { Referer: `${BASE18}/` };
 var PAGE_SIZE = 30;
 var MAX_EPISODES = 3e3;
 async function search7(query) {
-  const html3 = await fetchText(`${BASE17}/en/search?keyword=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+  const html3 = await fetchText(`${BASE18}/en/search?keyword=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byNo = /* @__PURE__ */ new Map();
@@ -66820,9 +66909,9 @@ async function fetchAllEpisodes(titleNo) {
   }
   return out;
 }
-var provider36 = {
+var provider37 = {
   name: PROVIDER_NAME8,
-  sites: [BASE17],
+  sites: [BASE18],
   async getChapters(params) {
     try {
       const titleNo = await resolveTitleNo(params);
@@ -66859,7 +66948,7 @@ var provider36 = {
       const colonIdx = chapterKey.indexOf(":");
       const path = colonIdx >= 0 ? chapterKey.slice(colonIdx + 1) : chapterKey;
       if (!path) return [];
-      const url = path.startsWith("http") ? path : `${BASE17}${path}`;
+      const url = path.startsWith("http") ? path : `${BASE18}${path}`;
       const html3 = await fetchText(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
@@ -66876,13 +66965,13 @@ var provider36 = {
     }
   }
 };
-var webtoons_default = provider36;
+var webtoons_default = provider37;
 
 // src/providers/manga/demonicscans.ts
-var BASE18 = "https://demonicscans.org";
+var BASE19 = "https://demonicscans.org";
 var PROVIDER_NAME9 = "demonicscans";
 async function search8(query) {
-  const html3 = await fetchText(`${BASE18}/search.php?manga=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+  const html3 = await fetchText(`${BASE19}/search.php?manga=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byHref = /* @__PURE__ */ new Map();
@@ -66911,14 +67000,14 @@ async function resolveDetailHref2(params) {
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.href : null;
 }
-var provider37 = {
+var provider38 = {
   name: PROVIDER_NAME9,
-  sites: [BASE18],
+  sites: [BASE19],
   async getChapters(params) {
     try {
       const href = await resolveDetailHref2(params);
       if (!href) return [];
-      const html3 = await fetchText(`${BASE18}${href}`, { timeoutMs: 12e3 });
+      const html3 = await fetchText(`${BASE19}${href}`, { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       const byNumber = /* @__PURE__ */ new Map();
@@ -66947,7 +67036,7 @@ var provider37 = {
       const colonIdx = chapterKey.indexOf(":");
       const path = colonIdx >= 0 ? chapterKey.slice(colonIdx + 1) : chapterKey;
       if (!path) return [];
-      const url = path.startsWith("http") ? path : `${BASE18}${path}`;
+      const url = path.startsWith("http") ? path : `${BASE19}${path}`;
       const html3 = await fetchText(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
@@ -66963,12 +67052,12 @@ var provider37 = {
     }
   }
 };
-var demonicscans_default = provider37;
+var demonicscans_default = provider38;
 
 // src/providers/manga/toongod.ts
-var BASE19 = "https://toongod.org";
+var BASE20 = "https://toongod.org";
 var PROVIDER_NAME10 = "toongod";
-var IMAGE_HEADERS7 = { Referer: `${BASE19}/` };
+var IMAGE_HEADERS7 = { Referer: `${BASE20}/` };
 var FORM_HEADERS = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" };
 function chapterNumber3(href, text3) {
   const fromHref = href.match(/chapter[-_ ]?([\d.]+)/i);
@@ -66985,7 +67074,7 @@ function chapterNumber3(href, text3) {
 }
 async function searchApi(query) {
   const body = `action=wp-manga-search-manga&title=${encodeURIComponent(query)}`;
-  const text3 = await fetchTextWithBypass(`${BASE19}/wp-admin/admin-ajax.php`, {
+  const text3 = await fetchTextWithBypass(`${BASE20}/wp-admin/admin-ajax.php`, {
     method: "POST",
     body,
     headers: FORM_HEADERS,
@@ -67006,7 +67095,7 @@ async function searchApi(query) {
 }
 async function searchHtml(query) {
   const html3 = await fetchTextWithBypass(
-    `${BASE19}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
+    `${BASE20}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
     { timeoutMs: 15e3 }
   );
   if (!html3) return [];
@@ -67038,9 +67127,9 @@ async function resolveDetailUrl(params) {
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.url : null;
 }
-var provider38 = {
+var provider39 = {
   name: PROVIDER_NAME10,
-  sites: [BASE19],
+  sites: [BASE20],
   async getChapters(params) {
     try {
       const detailUrl = await resolveDetailUrl(params);
@@ -67100,12 +67189,12 @@ var provider38 = {
     }
   }
 };
-var toongod_default = provider38;
+var toongod_default = provider39;
 
 // src/providers/manga/toonily.ts
-var BASE20 = "https://toonily.com";
+var BASE21 = "https://toonily.com";
 var PROVIDER_NAME11 = "toonily";
-var IMAGE_HEADERS8 = { Referer: `${BASE20}/` };
+var IMAGE_HEADERS8 = { Referer: `${BASE21}/` };
 var FORM_HEADERS2 = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" };
 function chapterNumber4(href, text3) {
   const fromHref = href.match(/chapter[-_ ]?([\d.]+)/i);
@@ -67122,7 +67211,7 @@ function chapterNumber4(href, text3) {
 }
 async function searchApi2(query) {
   const body = `action=wp-manga-search-manga&title=${encodeURIComponent(query)}`;
-  const text3 = await fetchTextWithBypass(`${BASE20}/wp-admin/admin-ajax.php`, {
+  const text3 = await fetchTextWithBypass(`${BASE21}/wp-admin/admin-ajax.php`, {
     method: "POST",
     body,
     headers: FORM_HEADERS2,
@@ -67143,7 +67232,7 @@ async function searchApi2(query) {
 }
 async function searchHtml2(query) {
   const html3 = await fetchTextWithBypass(
-    `${BASE20}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
+    `${BASE21}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
     { timeoutMs: 15e3 }
   );
   if (!html3) return [];
@@ -67175,9 +67264,9 @@ async function resolveDetailUrl2(params) {
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.url : null;
 }
-var provider39 = {
+var provider40 = {
   name: PROVIDER_NAME11,
-  sites: [BASE20],
+  sites: [BASE21],
   async getChapters(params) {
     try {
       const detailUrl = await resolveDetailUrl2(params);
@@ -67237,12 +67326,12 @@ var provider39 = {
     }
   }
 };
-var toonily_default = provider39;
+var toonily_default = provider40;
 
 // src/providers/manga/onisaga.ts
-var BASE21 = "https://onisaga.com";
+var BASE22 = "https://onisaga.com";
 var PROVIDER_NAME12 = "onisaga";
-var IMAGE_HEADERS9 = { Referer: `${BASE21}/` };
+var IMAGE_HEADERS9 = { Referer: `${BASE22}/` };
 var FORM_HEADERS3 = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" };
 function chapterNumber5(href, text3) {
   const fromHref = href.match(/chapter[-_ ]?([\d.]+)/i);
@@ -67259,7 +67348,7 @@ function chapterNumber5(href, text3) {
 }
 async function searchApi3(query) {
   const body = `action=wp-manga-search-manga&title=${encodeURIComponent(query)}`;
-  const text3 = await fetchTextWithBypass(`${BASE21}/wp-admin/admin-ajax.php`, {
+  const text3 = await fetchTextWithBypass(`${BASE22}/wp-admin/admin-ajax.php`, {
     method: "POST",
     body,
     headers: FORM_HEADERS3,
@@ -67280,7 +67369,7 @@ async function searchApi3(query) {
 }
 async function searchHtml3(query) {
   const html3 = await fetchTextWithBypass(
-    `${BASE21}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
+    `${BASE22}/?s=${encodeURIComponent(query)}&post_type=wp-manga`,
     { timeoutMs: 15e3 }
   );
   if (!html3) return [];
@@ -67312,9 +67401,9 @@ async function resolveDetailUrl3(params) {
   const best = pickBestMangaCandidate(titles, pool, (c) => [c.name], 0.6);
   return best ? best.candidate.url : null;
 }
-var provider40 = {
+var provider41 = {
   name: PROVIDER_NAME12,
-  sites: [BASE21],
+  sites: [BASE22],
   async getChapters(params) {
     try {
       const detailUrl = await resolveDetailUrl3(params);
@@ -67374,14 +67463,14 @@ var provider40 = {
     }
   }
 };
-var onisaga_default = provider40;
+var onisaga_default = provider41;
 
 // src/providers/manga/mgeko.ts
-var BASE22 = "https://www.mgeko.cc";
+var BASE23 = "https://www.mgeko.cc";
 var PROVIDER_NAME13 = "mgeko";
-var IMAGE_HEADERS10 = { Referer: `${BASE22}/` };
+var IMAGE_HEADERS10 = { Referer: `${BASE23}/` };
 async function search9(query) {
-  const html3 = await fetchTextWithBypass(`${BASE22}/search/?search=${encodeURIComponent(query)}`, {
+  const html3 = await fetchTextWithBypass(`${BASE23}/search/?search=${encodeURIComponent(query)}`, {
     timeoutMs: 12e3
   });
   if (!html3) return [];
@@ -67419,7 +67508,7 @@ function chapterNumberFromHref(href) {
   }
   return NaN;
 }
-var provider41 = {
+var provider42 = {
   name: PROVIDER_NAME13,
   sites: ["https://www.mgeko.cc", "https://mgeko.cc"],
   async getChapters(params) {
@@ -67427,7 +67516,7 @@ var provider41 = {
       const href = await resolveSeriesHref(params);
       if (!href) return [];
       const seriesPath = href.endsWith("/") ? href : `${href}/`;
-      const html3 = await fetchTextWithBypass(`${BASE22}${seriesPath}all-chapters/`, { timeoutMs: 15e3 });
+      const html3 = await fetchTextWithBypass(`${BASE23}${seriesPath}all-chapters/`, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       const byNumber = /* @__PURE__ */ new Map();
@@ -67456,7 +67545,7 @@ var provider41 = {
       const colonIdx = chapterKey.indexOf(":");
       const path = colonIdx >= 0 ? chapterKey.slice(colonIdx + 1) : chapterKey;
       if (!path) return [];
-      const url = path.startsWith("http") ? path : `${BASE22}${path.startsWith("/") ? "" : "/"}${path}`;
+      const url = path.startsWith("http") ? path : `${BASE23}${path.startsWith("/") ? "" : "/"}${path}`;
       const html3 = await fetchTextWithBypass(url, { timeoutMs: 15e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
@@ -67476,7 +67565,7 @@ var provider41 = {
     }
   }
 };
-var mgeko_default = provider41;
+var mgeko_default = provider42;
 
 // src/providers/manga/scansgg.ts
 var API_BASE4 = "https://api.scans.gg";
@@ -67493,8 +67582,8 @@ async function sgGet(path, timeoutMs = 12e3) {
   return res.data ?? null;
 }
 function seriesNames(s) {
-  const names = [s.title, ...(s.alternative_titles ?? []).map((a) => a?.title)];
-  return names.filter((n) => Boolean(n && n.trim()));
+  const names2 = [s.title, ...(s.alternative_titles ?? []).map((a) => a?.title)];
+  return names2.filter((n) => Boolean(n && n.trim()));
 }
 async function resolveSeriesId(params) {
   const titles = await resolveMangaTitles(params);
@@ -67512,7 +67601,7 @@ async function resolveSeriesId(params) {
   const best = pickBestMangaCandidate(titles, pool, seriesNames, 0.6);
   return best?.candidate.id ?? null;
 }
-var provider42 = {
+var provider43 = {
   name: PROVIDER_NAME14,
   sites: ["https://scans.gg"],
   async getChapters(params) {
@@ -67575,16 +67664,16 @@ var provider42 = {
     }
   }
 };
-var scansgg_default = provider42;
+var scansgg_default = provider43;
 
 // src/providers/manga/leercapitulo.ts
-var BASE23 = "https://www.leercapitulo.co";
+var BASE24 = "https://www.leercapitulo.co";
 var PROVIDER_NAME15 = "leercapitulo";
 function toUrl(href) {
-  return href.startsWith("http") ? href : `${BASE23}${href.startsWith("/") ? "" : "/"}${href}`;
+  return href.startsWith("http") ? href : `${BASE24}${href.startsWith("/") ? "" : "/"}${href}`;
 }
 async function search10(query) {
-  const html3 = await fetchText(`${BASE23}/manga/?q=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+  const html3 = await fetchText(`${BASE24}/manga/?q=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byHref = /* @__PURE__ */ new Map();
@@ -67627,9 +67716,9 @@ function chapterNumberFromHref2(href) {
   const n = parseFloat(last2 || "");
   return Number.isFinite(n) ? n : NaN;
 }
-var provider43 = {
+var provider44 = {
   name: PROVIDER_NAME15,
-  sites: [BASE23, "https://leercapitulo.co"],
+  sites: [BASE24, "https://leercapitulo.co"],
   async getChapters(params) {
     try {
       const href = await resolveDetailHref3(params);
@@ -67685,17 +67774,17 @@ var provider43 = {
     }
   }
 };
-var leercapitulo_default = provider43;
+var leercapitulo_default = provider44;
 
 // src/providers/manga/novelcool.ts
-var BASE24 = "https://www.novelcool.com";
+var BASE25 = "https://www.novelcool.com";
 var PROVIDER_NAME16 = "novelcool";
 var MAX_SUBPAGES = 120;
 function toUrl2(href) {
-  return href.startsWith("http") ? href : `${BASE24}${href.startsWith("/") ? "" : "/"}${href}`;
+  return href.startsWith("http") ? href : `${BASE25}${href.startsWith("/") ? "" : "/"}${href}`;
 }
 async function search11(query) {
-  const html3 = await fetchText(`${BASE24}/search/?name=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+  const html3 = await fetchText(`${BASE25}/search/?name=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byHref = /* @__PURE__ */ new Map();
@@ -67772,7 +67861,7 @@ function collectPanels($2, out, seenPaths) {
     out.push(raw);
   });
 }
-var provider44 = {
+var provider45 = {
   name: PROVIDER_NAME16,
   sites: ["https://novelcool.com", "https://www.novelcool.com", "https://img.novelcool.com"],
   async getChapters(params) {
@@ -67825,7 +67914,7 @@ var provider44 = {
       $2("select.sl-page option").each((_, el) => {
         const v = ($2(el).attr("value") || "").trim();
         if (!v) return;
-        const u = v.startsWith("http") ? v : v.startsWith("/") ? `${BASE24}${v}` : "";
+        const u = v.startsWith("http") ? v : v.startsWith("/") ? `${BASE25}${v}` : "";
         if (u && !subUrls.includes(u)) subUrls.push(u);
       });
       if (subUrls.length <= 1) {
@@ -67849,17 +67938,17 @@ var provider44 = {
     }
   }
 };
-var novelcool_default = provider44;
+var novelcool_default = provider45;
 
 // src/providers/novel/webnovel.ts
-var BASE25 = "https://www.webnovel.com";
+var BASE26 = "https://www.webnovel.com";
 var PROVIDER_NAME17 = "webnovel";
 var chapterUrls = /* @__PURE__ */ new Map();
 function bookUrl(bookId) {
-  return `${BASE25}/book/${bookId}`;
+  return `${BASE26}/book/${bookId}`;
 }
 async function searchBooks(query) {
-  const html3 = await fetchNovelSearchHtml(`${BASE25}/search?keywords=${encodeURIComponent(query)}`);
+  const html3 = await fetchNovelSearchHtml(`${BASE26}/search?keywords=${encodeURIComponent(query)}`);
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byId = /* @__PURE__ */ new Map();
@@ -67933,7 +68022,7 @@ function cleanParagraphs($2) {
   }
   return out;
 }
-var provider45 = {
+var provider46 = {
   name: PROVIDER_NAME17,
   sites: ["https://www.webnovel.com", "https://webnovel.com"],
   async search(query) {
@@ -68005,11 +68094,11 @@ var provider45 = {
         if (byNumber.has(n)) return;
         let target;
         try {
-          target = new URL(href, BASE25);
+          target = new URL(href, BASE26);
         } catch {
           return;
         }
-        if (target.origin !== BASE25 || target.username || target.password || !target.pathname.includes(bookId)) return;
+        if (target.origin !== BASE26 || target.username || target.password || !target.pathname.includes(bookId)) return;
         const idMatch = target.pathname.match(/(\d{6,})(?:\/)?$/);
         if (!idMatch) return;
         const chapterId = idMatch[1];
@@ -68035,7 +68124,7 @@ var provider45 = {
       const match2 = chapterKey.match(/^webnovel:(\d+):(\d+)$/);
       if (!match2) return null;
       const [, bookId, chapterId] = match2;
-      const html3 = await fetchNovelSearchHtml(chapterUrls.get(`${bookId}:${chapterId}`) || `${BASE25}/book/${bookId}/chapter_${chapterId}`, { timeoutMs: 15e3 });
+      const html3 = await fetchNovelSearchHtml(chapterUrls.get(`${bookId}:${chapterId}`) || `${BASE26}/book/${bookId}/chapter_${chapterId}`, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
       const title2 = $2('h1.chapter-title, .chapter-title h1, [class*="cha-tit"]').first().text().trim() || $2("title").first().text().trim() || null;
@@ -68052,7 +68141,7 @@ var provider45 = {
     }
   }
 };
-var webnovel_default = provider45;
+var webnovel_default = provider46;
 
 // src/providers/novel/wuxia-rpc.ts
 var encoder = new TextEncoder();
@@ -68154,10 +68243,10 @@ async function wuxiaRpc(service, method, payload) {
 }
 
 // src/providers/novel/wuxiaworld.ts
-var BASE26 = "https://www.wuxiaworld.com";
+var BASE27 = "https://www.wuxiaworld.com";
 async function search12(query) {
   const response = await wuxiaRpc("Novels", "SearchNovels", concat(pbBytes(1, pbString(1, query)), pbInt(7, 20)));
-  return pbMessages(response, 1).map((row) => ({ id: pbText(row, 3), title: pbText(row, 2), url: BASE26 + "/novel/" + pbText(row, 3) })).filter((row) => row.id && row.title);
+  return pbMessages(response, 1).map((row) => ({ id: pbText(row, 3), title: pbText(row, 2), url: BASE27 + "/novel/" + pbText(row, 3) })).filter((row) => row.id && row.title);
 }
 async function match(params) {
   if (params.seriesId) return params.seriesId;
@@ -68165,9 +68254,9 @@ async function match(params) {
   const candidates = (await Promise.all(titles.slice(0, 2).map(search12))).flat();
   return pickBestNovelProviderCandidate(titles, candidates, (row) => [row.title], 0.6)?.candidate.id;
 }
-var provider46 = {
+var provider47 = {
   name: "wuxiaworld",
-  sites: [BASE26, "https://api2.wuxiaworld.com"],
+  sites: [BASE27, "https://api2.wuxiaworld.com"],
   search: search12,
   async getChapters(params) {
     const slug2 = await match(params);
@@ -68212,18 +68301,18 @@ var provider46 = {
     return { provider: "wuxiaworld", title: pbText(item, 2), number: pbNumber(item, 4) || null, paragraphs: texts.map((text3, index2) => ({ index: index2, text: text3 })) };
   }
 };
-var wuxiaworld_default = provider46;
+var wuxiaworld_default = provider47;
 
 // src/providers/novel/justlightnovels.ts
-var BASE27 = "https://www.justlightnovels.com";
+var BASE28 = "https://www.justlightnovels.com";
 var PROVIDER_NAME18 = "justlightnovels";
 function toUrl3(href) {
-  return href.startsWith("http") ? href : `${BASE27}${href.startsWith("/") ? "" : "/"}${href}`;
+  return href.startsWith("http") ? href : `${BASE28}${href.startsWith("/") ? "" : "/"}${href}`;
 }
 async function searchSeries(query) {
   const urls = [
-    `${BASE27}/?s=${encodeURIComponent(query)}`,
-    `${BASE27}/search/${encodeURIComponent(query)}`
+    `${BASE28}/?s=${encodeURIComponent(query)}`,
+    `${BASE28}/search/${encodeURIComponent(query)}`
   ];
   const byHref = /* @__PURE__ */ new Map();
   let lastSearchError = null;
@@ -68240,7 +68329,7 @@ async function searchSeries(query) {
     $2("article a[href], .post a[href], .search-results a[href], a.post-title[href]").each((_, el) => {
       const a = $2(el);
       const href = (a.attr("href") || "").trim();
-      if (!href || !href.startsWith(BASE27) && !href.startsWith("/")) return;
+      if (!href || !href.startsWith(BASE28) && !href.startsWith("/")) return;
       if (/chapter|episode|page/i.test(href)) return;
       const name = (a.attr("title") || a.text()).trim().replace(/\s+/g, " ");
       if (!name || name.length < 2 || byHref.has(href)) return;
@@ -68303,7 +68392,7 @@ function extractParagraphs($2) {
   }
   return [];
 }
-var provider47 = {
+var provider48 = {
   name: PROVIDER_NAME18,
   sites: ["https://www.justlightnovels.com", "https://justlightnovels.com"],
   async search(query) {
@@ -68313,7 +68402,7 @@ var provider47 = {
     try {
       const href = params.seriesId || await resolveSeriesHref3(params);
       if (!href) return [];
-      if (new URL(toUrl3(href)).origin !== BASE27) throw new Error("Invalid JustLightNovels title URL");
+      if (new URL(toUrl3(href)).origin !== BASE28) throw new Error("Invalid JustLightNovels title URL");
       const html3 = await fetchNovelSearchHtml(toUrl3(href), { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
@@ -68349,7 +68438,7 @@ var provider47 = {
     try {
       const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
       const url = decodeURIComponent(rest);
-      if (!url || new URL(toUrl3(url)).origin !== BASE27) return null;
+      if (!url || new URL(toUrl3(url)).origin !== BASE28) return null;
       const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl3(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
@@ -68367,18 +68456,18 @@ var provider47 = {
     }
   }
 };
-var justlightnovels_default = provider47;
+var justlightnovels_default = provider48;
 
 // src/providers/novel/lightnovelto.ts
-var BASE28 = "https://lightnovel.to";
+var BASE29 = "https://lightnovel.to";
 var PROVIDER_NAME19 = "lightnovelto";
 function toUrl4(href) {
-  return href.startsWith("http") ? href : `${BASE28}${href.startsWith("/") ? "" : "/"}${href}`;
+  return href.startsWith("http") ? href : `${BASE29}${href.startsWith("/") ? "" : "/"}${href}`;
 }
 async function searchSeries2(query) {
   const urls = [
-    `${BASE28}/search?q=${encodeURIComponent(query)}`,
-    `${BASE28}/search/${encodeURIComponent(query)}`
+    `${BASE29}/search?q=${encodeURIComponent(query)}`,
+    `${BASE29}/search/${encodeURIComponent(query)}`
   ];
   const byHref = /* @__PURE__ */ new Map();
   let lastSearchError = null;
@@ -68458,7 +68547,7 @@ function extractParagraphs2($2) {
   }
   return [];
 }
-var provider48 = {
+var provider49 = {
   name: PROVIDER_NAME19,
   sites: ["https://lightnovel.to", "https://www.lightnovel.to"],
   async search(query) {
@@ -68468,17 +68557,17 @@ var provider48 = {
     try {
       const href = params.seriesId || await resolveSeriesHref4(params);
       if (!href) return [];
-      if (new URL(toUrl4(href)).origin !== BASE28) throw new Error("Invalid LightNovel.to title URL");
+      if (new URL(toUrl4(href)).origin !== BASE29) throw new Error("Invalid LightNovel.to title URL");
       const html3 = await fetchNovelSearchHtml(toUrl4(href), { timeoutMs: 12e3 });
       if (!html3) return [];
       const $2 = loadHtml(html3);
       const byNumber = /* @__PURE__ */ new Map();
       const slug2 = new URL(toUrl4(href)).pathname.split("/").filter(Boolean)[1];
-      const catalog = await fetchJson(`${BASE28}/api/novel-chapters?slug=${encodeURIComponent(slug2)}`, { timeoutMs: 15e3 });
+      const catalog = await fetchJson(`${BASE29}/api/novel-chapters?slug=${encodeURIComponent(slug2)}`, { timeoutMs: 15e3 });
       const chapterRows = Array.isArray(catalog) ? catalog : catalog?.chapters || [];
       for (const row of chapterRows) {
         if (!row.slug || !Number.isFinite(Number(row.number)) || !/^chapter-[\w.-]+$/.test(row.slug)) continue;
-        const full = `${BASE28}/novel/${encodeURIComponent(slug2)}/${row.slug}`;
+        const full = `${BASE29}/novel/${encodeURIComponent(slug2)}/${row.slug}`;
         byNumber.set(Number(row.number), { number: Number(row.number), title: row.title || `Chapter ${row.number}`, volume: null, sources: [{ provider: PROVIDER_NAME19, chapterKey: `${PROVIDER_NAME19}:${encodeURIComponent(full)}`, providerChapterId: full, language: "en", translator: null, releaseDate: row.createdAt || null }] });
       }
       let order = 0;
@@ -68513,7 +68602,7 @@ var provider48 = {
     try {
       const rest = chapterKey.includes(":") ? chapterKey.slice(chapterKey.indexOf(":") + 1) : chapterKey;
       const url = decodeURIComponent(rest);
-      if (!url || new URL(toUrl4(url)).origin !== BASE28) return null;
+      if (!url || new URL(toUrl4(url)).origin !== BASE29) return null;
       const html3 = await fetchNovelSearchHtml(url.startsWith("http") ? url : toUrl4(url), { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
@@ -68531,16 +68620,16 @@ var provider48 = {
     }
   }
 };
-var lightnovelto_default = provider48;
+var lightnovelto_default = provider49;
 
 // src/providers/novel/divinedaolibrary.ts
-var BASE29 = "https://www.divinedaolibrary.com";
+var BASE30 = "https://www.divinedaolibrary.com";
 var PROVIDER_NAME20 = "divinedaolibrary";
 function toUrl5(href) {
-  return href.startsWith("http") ? href : `${BASE29}${href.startsWith("/") ? "" : "/"}${href}`;
+  return href.startsWith("http") ? href : `${BASE30}${href.startsWith("/") ? "" : "/"}${href}`;
 }
 async function searchSeries3(query) {
-  const html3 = await fetchNovelSearchHtml(`${BASE29}/?s=${encodeURIComponent(query)}`);
+  const html3 = await fetchNovelSearchHtml(`${BASE30}/?s=${encodeURIComponent(query)}`);
   if (!html3) return [];
   const $2 = loadHtml(html3);
   const byHref = /* @__PURE__ */ new Map();
@@ -68598,7 +68687,7 @@ async function getChapters(params) {
     const href = params.seriesId || await resolveSeriesHref5(params);
     if (!href) return [];
     const url = toUrl5(href);
-    if (new URL(url).origin !== BASE29 || !/^\/story\/[^/]+\/$/.test(new URL(url).pathname)) {
+    if (new URL(url).origin !== BASE30 || !/^\/story\/[^/]+\/$/.test(new URL(url).pathname)) {
       throw new Error("Invalid DivineDaoLibrary title URL");
     }
     const html3 = await fetchNovelSearchHtml(url, { timeoutMs: 15e3 });
@@ -68606,7 +68695,7 @@ async function getChapters(params) {
     const $2 = loadHtml(html3);
     const byNumber = /* @__PURE__ */ new Map();
     const push = (full, label, date) => {
-      if (!full.startsWith(`${BASE29}/story/`)) return;
+      if (!full.startsWith(`${BASE30}/story/`)) return;
       const num = parseChapterNumber5(label, full);
       if (!Number.isFinite(num) || num <= 0 || byNumber.has(num)) return;
       const source = {
@@ -68640,7 +68729,7 @@ async function getChapters(params) {
       let m;
       while ((m = re.exec(html3)) !== null) {
         const full = m[2].replace(/\\\//g, "/");
-        if (!full.startsWith(`${BASE29}/story/`)) continue;
+        if (!full.startsWith(`${BASE30}/story/`)) continue;
         const tail = full.split("/").filter(Boolean).pop() || "";
         const title2 = tail.replace(new RegExp(`^${slug2}-chapter-[\\d.]+-?`, "i"), "").replace(/-/g, " ").trim();
         push(full, `Chapter ${m[1]}${title2 ? `, ${title2}` : ""}`, null);
@@ -68663,9 +68752,9 @@ function extractParagraphs3($2) {
   });
   return out;
 }
-var provider49 = {
+var provider50 = {
   name: PROVIDER_NAME20,
-  sites: [BASE29],
+  sites: [BASE30],
   async search(query) {
     return (await searchSeries3(query)).map((row) => ({ id: row.href, title: row.name, url: toUrl5(row.href) }));
   },
@@ -68675,7 +68764,7 @@ var provider49 = {
       const prefix = `${PROVIDER_NAME20}:`;
       if (!chapterKey.startsWith(prefix)) return null;
       const url = decodeURIComponent(chapterKey.slice(prefix.length));
-      if (!url.startsWith(BASE29) || !/\/story\/[^/]+\/[^/]+\//.test(new URL(url).pathname)) return null;
+      if (!url.startsWith(BASE30) || !/\/story\/[^/]+\/[^/]+\//.test(new URL(url).pathname)) return null;
       const html3 = await fetchNovelSearchHtml(url, { timeoutMs: 15e3 });
       if (!html3) return null;
       const $2 = loadHtml(html3);
@@ -68693,17 +68782,17 @@ var provider49 = {
     }
   }
 };
-var divinedaolibrary_default = provider49;
+var divinedaolibrary_default = provider50;
 
 // src/providers/novel/novelbuddy.ts
-var BASE30 = "https://novelbuddy.me";
+var BASE31 = "https://novelbuddy.me";
 var PROVIDER_NAME21 = "novelbuddy";
-var KNOWN_ORIGINS = /* @__PURE__ */ new Set([BASE30, "https://www.novelbuddy.me", "https://novelbuddy.com", "https://www.novelbuddy.com"]);
+var KNOWN_ORIGINS = /* @__PURE__ */ new Set([BASE31, "https://www.novelbuddy.me", "https://novelbuddy.com", "https://www.novelbuddy.com"]);
 var cachedBuildId = null;
 async function pageData(path) {
   for (let attempt2 = 0; attempt2 < 2; attempt2++) {
     const buildId = await getBuildId();
-    const response = await fetchResponse(`${BASE30}/_next/data/${buildId}/${path}`, { timeoutMs: 12e3, headers: { Accept: "application/json" } });
+    const response = await fetchResponse(`${BASE31}/_next/data/${buildId}/${path}`, { timeoutMs: 12e3, headers: { Accept: "application/json" } });
     if (response.status === 404 && attempt2 === 0) {
       cachedBuildId = null;
       continue;
@@ -68716,7 +68805,7 @@ async function pageData(path) {
 }
 async function getBuildId() {
   if (cachedBuildId) return cachedBuildId;
-  const html3 = await fetchNovelSearchHtml(`${BASE30}/search`);
+  const html3 = await fetchNovelSearchHtml(`${BASE31}/search`);
   const match2 = html3.match(/\/_next\/static\/([A-Za-z0-9_-]+)\/_buildManifest\.js/);
   if (!match2) throw new Error("novelbuddy search is unavailable (site layout changed)");
   cachedBuildId = match2[1];
@@ -68765,7 +68854,7 @@ async function resolveSeriesSlug(params) {
 function seriesSlugFrom(params, resolved) {
   if (params.seriesId) {
     try {
-      const u = new URL(params.seriesId.startsWith("http") ? params.seriesId : `${BASE30}${params.seriesId.startsWith("/") ? "" : "/"}${params.seriesId}`);
+      const u = new URL(params.seriesId.startsWith("http") ? params.seriesId : `${BASE31}${params.seriesId.startsWith("/") ? "" : "/"}${params.seriesId}`);
       if (!KNOWN_ORIGINS.has(u.origin)) throw new Error("Invalid novelbuddy title URL");
       const segments = u.pathname.split("/").filter(Boolean);
       const slug2 = segments[0] === "novel" ? segments[1] || "" : segments[0] || "";
@@ -68777,11 +68866,11 @@ function seriesSlugFrom(params, resolved) {
   }
   return resolved;
 }
-var provider50 = {
+var provider51 = {
   name: PROVIDER_NAME21,
-  sites: [BASE30],
+  sites: [BASE31],
   async search(query) {
-    return (await searchSeries4(query)).map((row) => ({ id: row.href, title: row.name, url: `${BASE30}${row.href}` }));
+    return (await searchSeries4(query)).map((row) => ({ id: row.href, title: row.name, url: `${BASE31}${row.href}` }));
   },
   async getChapters(params) {
     try {
@@ -68802,8 +68891,8 @@ var provider50 = {
         const labelNumber = /\b(?:vol(?:ume)?\.?|part)\s*\d/i.test(String(r.name || "")) ? void 0 : String(r.name || "").match(/chapter\s*(\d+(?:\.\d+)?)/i)?.[1];
         const number = Number(labelNumber ?? r.number);
         if (!Number.isFinite(number) || number <= 0 || seen.has(number)) continue;
-        const chapterUrl = new URL(String(r.url || ""), BASE30).href;
-        if (!r.url || new URL(chapterUrl).origin !== BASE30) continue;
+        const chapterUrl = new URL(String(r.url || ""), BASE31).href;
+        if (!r.url || new URL(chapterUrl).origin !== BASE31) continue;
         seen.add(number);
         const source = {
           provider: PROVIDER_NAME21,
@@ -68855,7 +68944,7 @@ var provider50 = {
     }
   }
 };
-var novelbuddy_default = provider50;
+var novelbuddy_default = provider51;
 
 // src/providers/novel/scraper-sites.ts
 var clean = (text3) => text3.replace(/\s+/g, " ").trim();
@@ -69052,21 +69141,21 @@ var scraperNovelProviders = [
 ].map((site) => createHtmlNovelProvider(site));
 
 // src/providers/novel/syosetu.ts
-var BASE31 = "https://ncode.syosetu.com";
+var BASE32 = "https://ncode.syosetu.com";
 var SERIES = "n4830bu";
 var START = 461;
 var END = 677;
 var partFive = (query) => /(?:part\s*5\b|dai\s*5\s*[- ]?bu\b|第五部|avatar of a goddess)/i.test(query);
 var bookworm = (query) => /ascendance of a bookworm|honzuki no gekokujou|本好きの下剋上/i.test(query) && !/fanfic|hannelore|mother and daughter|side stor/i.test(query);
-var provider51 = {
+var provider52 = {
   name: "syosetu",
-  sites: [BASE31],
+  sites: [BASE32],
   async search(query) {
-    return bookworm(query) && partFive(query) ? [{ id: `${SERIES}:5`, title: query, url: `${BASE31}/${SERIES}/461/` }] : [];
+    return bookworm(query) && partFive(query) ? [{ id: `${SERIES}:5`, title: query, url: `${BASE32}/${SERIES}/461/` }] : [];
   },
   async getChapters(params) {
     if (params.seriesId !== `${SERIES}:5`) return [];
-    const catalogs2 = await Promise.all([5, 6, 7].map((page) => fetchNovelSearchHtml(`${BASE31}/${SERIES}/?p=${page}`)));
+    const catalogs2 = await Promise.all([5, 6, 7].map((page) => fetchNovelSearchHtml(`${BASE32}/${SERIES}/?p=${page}`)));
     const chapters = /* @__PURE__ */ new Map();
     for (const html3 of catalogs2) {
       const $2 = loadHtml(html3);
@@ -69095,7 +69184,7 @@ var provider51 = {
     if (!match2) return null;
     const originalNumber = Number(match2[1]);
     if (originalNumber < START || originalNumber > END) return null;
-    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE31}/${SERIES}/${originalNumber}/`));
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE32}/${SERIES}/${originalNumber}/`));
     const body = $2(".p-novel__text").not(".p-novel__text--preface,.p-novel__text--afterword").first();
     body.find("script,style,rt,rp").remove();
     const texts = [];
@@ -69106,19 +69195,19 @@ var provider51 = {
     return texts.length ? { provider: "syosetu", title: $2(".p-novel__title--rensai").text().trim() || null, number: originalNumber - START + 1, paragraphs: texts.map((text3, index2) => ({ text: text3, index: index2 })) } : null;
   }
 };
-var syosetu_default = provider51;
+var syosetu_default = provider52;
 
 // src/providers/novel/atsu.ts
-var BASE32 = "https://atsu.moe";
+var BASE33 = "https://atsu.moe";
 async function search13(query) {
-  const result = await fetchJson(`${BASE32}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`, { timeoutMs: 12e3 });
+  const result = await fetchJson(`${BASE33}/api/search/manga?q=${encodeURIComponent(query)}&query_by=title`, { timeoutMs: 12e3 });
   return (result?.hits || []).map((hit) => hit.document).filter((doc) => doc?.id && isNovelFormat(doc.medium));
 }
-var provider52 = {
+var provider53 = {
   name: "atsu-novel",
-  sites: [BASE32],
+  sites: [BASE33],
   async search(query) {
-    return (await search13(query)).map((doc) => ({ id: doc.id, title: doc.title, url: `${BASE32}/manga/${doc.id}` }));
+    return (await search13(query)).map((doc) => ({ id: doc.id, title: doc.title, url: `${BASE33}/manga/${doc.id}` }));
   },
   async getChapters(params) {
     let seriesId2 = params.seriesId;
@@ -69149,31 +69238,31 @@ var provider52 = {
   async getContent(key) {
     const match2 = key.match(/^atsu-novel(?:@[\w-]+)?:([\w-]+)\|([\w-]+)$/);
     if (!match2) return null;
-    const result = await fetchJson(`${BASE32}/api/read/novelChapter?mangaId=${encodeURIComponent(match2[1])}&chapterId=${encodeURIComponent(match2[2])}`, { timeoutMs: 15e3 });
+    const result = await fetchJson(`${BASE33}/api/read/novelChapter?mangaId=${encodeURIComponent(match2[1])}&chapterId=${encodeURIComponent(match2[2])}`, { timeoutMs: 15e3 });
     const chapter = result?.readNovelChapter;
     const paragraphs = (chapter?.paragraphs || []).filter((text3) => typeof text3 === "string" && text3.trim()).map((text3, index2) => ({ text: text3.trim(), index: index2 }));
     return paragraphs.length ? { provider: key.slice(0, key.indexOf(":")), title: chapter?.title || null, number: chapter?.number ?? null, paragraphs } : null;
   }
 };
-var atsu_default2 = provider52;
+var atsu_default2 = provider53;
 
 // src/providers/novel/manta.ts
-var BASE33 = "https://manta.net";
+var BASE34 = "https://manta.net";
 var novelTypes = /* @__PURE__ */ new Set([20, 40, 120]);
 var readableStates = /* @__PURE__ */ new Set([100, 110]);
 var title = (row) => typeof row?.data?.title === "string" ? row.data.title : row?.data?.title?.en || "";
-var seriesUrl = (id) => `${BASE33}/en/series/novel?seriesId=${id}`;
-var provider53 = {
+var seriesUrl = (id) => `${BASE34}/en/series/novel?seriesId=${id}`;
+var provider54 = {
   name: "manta",
-  sites: [BASE33],
+  sites: [BASE34],
   async search(query) {
-    const result = await fetchJson(`${BASE33}/manta/v1/search/series?lang=en&q=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
+    const result = await fetchJson(`${BASE34}/manta/v1/search/series?lang=en&q=${encodeURIComponent(query)}`, { timeoutMs: 12e3 });
     return (result?.data || []).filter((row) => novelTypes.has(row.type) && title(row) && /^\d+$/.test(String(row.id))).map((row) => ({ id: String(row.id), title: title(row), url: seriesUrl(String(row.id)) }));
   },
   async getChapters(params) {
     const id = params.seriesId;
     if (!id || !/^\d+$/.test(id)) return [];
-    const seriesResult = await fetchJson(`${BASE33}/front/v1/series/${id}?lang=en`, { timeoutMs: 12e3 });
+    const seriesResult = await fetchJson(`${BASE34}/front/v1/series/${id}?lang=en`, { timeoutMs: 12e3 });
     const series = seriesResult?.data;
     if (!novelTypes.has(series?.type)) return [];
     return (series.episodes || []).filter((episode) => readableStates.has(episode.lockData?.state) && /^\d+$/.test(String(episode.id)) && Number(episode.ord) > 0).map((episode) => ({
@@ -69194,11 +69283,11 @@ var provider53 = {
   async getContent(key) {
     const match2 = key.match(/^manta:(\d+)\|(\d+)$/);
     if (!match2) return null;
-    const episodeResult = await fetchJson(`${BASE33}/front/v1/episodes/${match2[2]}?lang=en`, { timeoutMs: 12e3 });
+    const episodeResult = await fetchJson(`${BASE34}/front/v1/episodes/${match2[2]}?lang=en`, { timeoutMs: 12e3 });
     const episode = episodeResult?.data;
     if (String(episode?.seriesId) !== match2[1] || !novelTypes.has(episode?.series?.type)) return null;
     if (!readableStates.has(episode.lockData?.state)) throw new Error("This Manta chapter requires access on Manta. Only public free chapters are supported.");
-    const paragraphs = await readPublicNovelText(seriesUrl(match2[1]), `${BASE33}/en/series/novel/episodes/chapter?episodeId=${match2[2]}`);
+    const paragraphs = await readPublicNovelText(seriesUrl(match2[1]), `${BASE34}/en/series/novel/episodes/chapter?episodeId=${match2[2]}`);
     return {
       provider: "manta",
       title: title(episode) || null,
@@ -69207,21 +69296,21 @@ var provider53 = {
     };
   }
 };
-var manta_default = provider53;
+var manta_default = provider54;
 
 // src/providers/novel/scribblehub.ts
-var BASE34 = "https://www.scribblehub.com";
+var BASE35 = "https://www.scribblehub.com";
 var clean2 = (value) => value.replace(/\s+/g, " ").trim();
 function safeUrl(value) {
-  const url = new URL(value, BASE34);
-  if (url.origin !== BASE34 || url.username || url.password || url.hash) throw new Error("Invalid Scribble Hub URL");
+  const url = new URL(value, BASE35);
+  if (url.origin !== BASE35 || url.username || url.password || url.hash) throw new Error("Invalid Scribble Hub URL");
   return url;
 }
-var provider54 = {
+var provider55 = {
   name: "scribblehub",
-  sites: [BASE34],
+  sites: [BASE35],
   async search(query) {
-    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE34}/?s=${encodeURIComponent(query)}&post_type=fictionposts`));
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE35}/?s=${encodeURIComponent(query)}&post_type=fictionposts`));
     const found = /* @__PURE__ */ new Map();
     $2(".search_title > a[href]").each((_, node) => {
       let url;
@@ -69242,7 +69331,7 @@ var provider54 = {
     const match2 = series.pathname.match(/^\/series\/(\d+)\/[^/]+\/?$/);
     if (!match2) return [];
     const body = new URLSearchParams({ action: "wi_getreleases_pagination", pagenum: "-1", mypostid: match2[1] });
-    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE34}/wp-admin/admin-ajax.php`, {
+    const $2 = loadHtml(await fetchNovelSearchHtml(`${BASE35}/wp-admin/admin-ajax.php`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Referer: series.href },
       body: body.toString()
@@ -69297,7 +69386,7 @@ var provider54 = {
     } : null;
   }
 };
-var scribblehub_default = provider54;
+var scribblehub_default = provider55;
 
 // src/providers/registry.ts
 var STREAM_PROVIDERS = [
@@ -69345,6 +69434,7 @@ var TORRENT_PROVIDERS = [
   aniliberty_default
 ];
 var MANGA_PROVIDERS = [
+  justmanga_default,
   mangadex_default,
   mangapill_default,
   mangakatana_default,
@@ -69700,9 +69790,10 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider55 = MANGA_PROVIDERS.find((p) => p.name === atsuBaseProvider(providerName));
-    if (!provider55) throw new ChapterNotFoundError(chapterKey);
-    const pages2 = await provider55.getPages(chapterKey);
+    const baseProvider = /^justmanga@[\w-]+$/.test(providerName || "") ? "justmanga" : atsuBaseProvider(providerName);
+    const provider56 = MANGA_PROVIDERS.find((p) => p.name === baseProvider);
+    if (!provider56) throw new ChapterNotFoundError(chapterKey);
+    const pages2 = await provider56.getPages(chapterKey);
     if (pages2.length === 0) throw new ChapterNotFoundError(chapterKey);
     return pages2;
   }
@@ -69717,10 +69808,10 @@ var TokoBundleClass = class {
       return params.title ? { ...params, titles: [params.title] } : params;
     }
   }
-  async searchThenScrapeNovel(provider55, params, deadline) {
-    const blocked = this.blockedNovelProviders.get(provider55.name);
+  async searchThenScrapeNovel(provider56, params, deadline) {
+    const blocked = this.blockedNovelProviders.get(provider56.name);
     if (!params.provider && !params.fullScan && blocked && Date.now() - blocked.at < 6e4) throw blocked.error;
-    if (params.seriesId || !provider55.search) return provider55.getChapters(params);
+    if (params.seriesId || !provider56.search) return provider56.getChapters(params);
     const titles = params.titles?.length ? params.titles : params.title ? [params.title] : [];
     const queries = buildNovelSearchQueries(titles).slice(0, params.fullScan ? 4 : 2);
     const candidates = [];
@@ -69729,23 +69820,23 @@ var TokoBundleClass = class {
     for (const query of queries) {
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
       try {
-        candidates.push(...await provider55.search(query));
+        candidates.push(...await provider56.search(query));
         answered = true;
       } catch (error) {
         lastError = error;
         if (/HTTP (?:403|429|502|503)|access blocked/i.test(String(error?.message))) {
-          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider55.name, { at: Date.now(), error });
+          if (/HTTP 403|access blocked/i.test(String(error?.message))) this.blockedNovelProviders.set(provider56.name, { at: Date.now(), error });
           throw error;
         }
         continue;
       }
       const match3 = pickBestNovelCandidate(titles, candidates);
       if (deadline && Date.now() >= deadline) throw new Error("Novel discovery budget exhausted");
-      if (match3?.score === 1) return provider55.getChapters({ ...params, provider: params.provider || provider55.name, seriesId: match3.candidate.id });
+      if (match3?.score === 1) return provider56.getChapters({ ...params, provider: params.provider || provider56.name, seriesId: match3.candidate.id });
     }
     const match2 = pickBestNovelCandidate(titles, candidates);
     if (!answered && lastError) throw lastError;
-    return match2 ? provider55.getChapters({ ...params, provider: params.provider || provider55.name, seriesId: match2.candidate.id }) : [];
+    return match2 ? provider56.getChapters({ ...params, provider: params.provider || provider56.name, seriesId: match2.candidate.id }) : [];
   }
   /**
    * Returns novel chapters merged by chapter number.
@@ -69852,9 +69943,9 @@ var TokoBundleClass = class {
       const colonIdx = chapterKey.indexOf(":");
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
-    const provider55 = NOVEL_PROVIDERS.find((p) => p.name === atsuBaseProvider(providerName));
-    if (!provider55) throw new ChapterNotFoundError(chapterKey);
-    const content = await provider55.getContent(chapterKey);
+    const provider56 = NOVEL_PROVIDERS.find((p) => p.name === atsuBaseProvider(providerName));
+    if (!provider56) throw new ChapterNotFoundError(chapterKey);
+    const content = await provider56.getContent(chapterKey);
     if (!content) throw new ChapterNotFoundError(chapterKey);
     const paragraphs = normalizeNovelParagraphs(content.paragraphs);
     if (!paragraphs.length) throw new ChapterNotFoundError(chapterKey);

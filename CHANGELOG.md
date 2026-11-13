@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.5.9 - 2026-11-13
+
+- Add JustManga as the first automatic manga provider, using its browser API and exact AniList title mapping.
+- Keep Mochi and Akira chapter sources selectable and read their ordered pages through JustManga's signed image URLs.
+
 ## 4.5.8 - 2026-10-28
 
 - Preserve every Atsu upstream for each manga, novel, and webnovel chapter, with readable source labels and stable selections. Existing reading links remain supported.

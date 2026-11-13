@@ -426,7 +426,8 @@ export class TokoBundleClass {
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
 
-    const provider = MANGA_PROVIDERS.find(p => p.name === atsuBaseProvider(providerName));
+    const baseProvider = /^justmanga@[\w-]+$/.test(providerName || '') ? 'justmanga' : atsuBaseProvider(providerName);
+    const provider = MANGA_PROVIDERS.find(p => p.name === baseProvider);
     if (!provider) throw new ChapterNotFoundError(chapterKey);
 
     const pages = await provider.getPages(chapterKey);

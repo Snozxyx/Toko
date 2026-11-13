@@ -2,7 +2,7 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "4.5.8",
+  "version": "4.5.9",
   "browserDomains": [
     "webnovel.com",
     "novelfull.com",
@@ -119,6 +119,8 @@
     "network:domain:nelomanga.net",
     "network:domain:www.nelomanga.net",
     "network:domain:atsu.moe",
+    "network:domain:justmanga.cc",
+    "network:domain:core.justmanga.cc",
     "network:domain:cdn.atsu.moe",
     "network:domain:www.webtoons.com",
     "network:domain:m.webtoons.com",
