@@ -440,6 +440,7 @@ export function createNuvioProvider(
     opts: SourceOptions,
     kind: 'tv' | 'movie'
   ): Promise<SourceResult[]> {
+    if (!opts.anilistId) return [];
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 

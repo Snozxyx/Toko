@@ -1,3 +1,6 @@
+import hentaidb from './stream/hentaidb.js';
+import hstream from './stream/hstream.js';
+import pornhwareader from './manga/pornhwareader.js';
 /**
  * Central provider registry for the Toko extension.
  * Import provider lists from here to keep index.ts focused on runtime logic.
@@ -62,6 +65,7 @@ import { HINDI_PROVIDERS }  from './stream/nuvio/hindi/index.js';
 import { MULTIDUB_PROVIDERS } from './stream/nuvio/multidub/index.js';
 
 export const STREAM_PROVIDERS: StreamProvider[] = [
+  hentaidb, hstream,
   nebula,
   animepahe,
   animeya,
@@ -181,6 +185,7 @@ import leercapitulo from './manga/leercapitulo.js';
 import novelcool from './manga/novelcool.js';
 
 export const MANGA_PROVIDERS: MangaProvider[] = [
+  pornhwareader,
   justmanga,
   mangadex,
   mangapill,

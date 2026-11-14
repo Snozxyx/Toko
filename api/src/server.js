@@ -97,6 +97,7 @@ function cacheKey(type, opts) {
   const providerOptions = opts.providerOptions || {};
   return [
     type,
+    opts.contentMode, opts.tatakaiId, JSON.stringify(opts.sourceIds || {}),
     opts.anilistId,
     opts.episode,
     opts.resolution,
@@ -372,7 +373,10 @@ async function optionsFromReq(req, overrides = {}) {
   }
 
   return {
-    anilistId: safeAnilistId,
+    ...(safeAnilistId ? { anilistId: safeAnilistId } : {}),
+    contentMode: req.query.contentMode === 'adult' ? 'adult' : 'sfw',
+    tatakaiId: req.query.tatakaiId || undefined,
+    sourceIds: parseSourceIds(req.query.sourceIds),
     titles,
     episode: overrides.episode != null
       ? Number(overrides.episode)
@@ -572,11 +576,15 @@ function buildDownloadResponse(sources, opts, requestedLanguage, requestedType, 
 // volume, language, scanlator), pages carry imageUrl + replay headers.
 
 /** Build MangaChapterParams from the request query. */
+function parseSourceIds(raw) { try { const value = typeof raw === 'string' ? JSON.parse(raw) : raw; return value && typeof value === 'object' && !Array.isArray(value) ? Object.fromEntries(Object.entries(value).filter(([k,v])=>/^[a-z0-9_-]+$/.test(k)&&typeof v==='string')) : undefined; } catch { return undefined; } }
 function mangaParamsFromReq(req) {
   const anilistId = Number(req.query.anilistId);
   const malId = Number(req.query.malId);
   const titles = parseTitles(req.query).filter(Boolean);
   return {
+    contentMode: req.query.contentMode === 'adult' ? 'adult' : 'sfw',
+    tatakaiId: req.query.tatakaiId || undefined,
+    sourceIds: parseSourceIds(req.query.sourceIds),
     ...(Number.isFinite(anilistId) && anilistId > 0 ? { anilistId } : {}),
     ...(Number.isFinite(malId) && malId > 0 ? { malId } : {}),
     ...(req.query.title ? { title: String(req.query.title) } : {}),
@@ -974,7 +982,7 @@ async function handleMangaChapters(req, res) {
   if (!t || typeof t.getMangaChapters !== 'function') return res.json(empty);
 
   const params = mangaParamsFromReq(req);
-  const key = `manga-chapters:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
+  const key = `manga-chapters:${params.contentMode}:${params.tatakaiId || ''}:${JSON.stringify(params.sourceIds || {})}:${params.anilistId ?? ''}:${params.malId ?? ''}:${params.title ?? ''}:${(params.titles || []).join('|')}`;
 
   const hit = cacheGet(key);
   if (hit) return res.json({ ...hit, cached: true });
@@ -1021,11 +1029,12 @@ async function handleMangaPages(req, res) {
   const anilistId = Number(req.query.anilistId);
   const params = {
     chapterKey,
+    contentMode: req.query.contentMode === 'adult' ? 'adult' : 'sfw',
     ...(req.query.provider ? { provider: String(req.query.provider) } : {}),
     ...(req.query.providerChapterId ? { providerChapterId: String(req.query.providerChapterId) } : {}),
     ...(Number.isFinite(anilistId) && anilistId > 0 ? { anilistId } : {}),
   };
-  const key = `manga-pages:${chapterKey}`;
+  const key = `manga-pages:${params.contentMode}:${chapterKey}`;
 
   const hit = cacheGet(key);
   if (hit) return res.json({ ...hit, cached: true });

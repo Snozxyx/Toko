@@ -45,6 +45,9 @@ export interface NovelContentEntry {
 }
 
 export interface NovelChapterParams {
+  contentMode?: 'sfw' | 'adult';
+  sourceIds?: Record<string,string>;
+  tatakaiId?: string;
   /** Explicit diagnostics can wait for every provider; normal reading returns early. */
   fullScan?: boolean;
   /** Explicit provider match chosen by the user; skips fuzzy mapping. */

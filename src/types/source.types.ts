@@ -19,12 +19,14 @@ export interface ProviderRunOptions {
 }
 
 export interface SourceOptions {
-  anilistId: number;
+  contentMode?: 'sfw' | 'adult';
+  sourceIds?: Record<string,string>;
+  tatakaiId?: string;
+  anilistId?: number;
   titles: string[];
   episode?: number;
   episodeCount?: number;
   resolution: string;
-  tatakaiId?: string;
   countryCode?: string;
   exclusions?: string[];
   preferredLanguage?: string;

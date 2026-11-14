@@ -29,6 +29,7 @@ import type {
  * Optional: a provider with no `sites` reports as unchecked, not as down.
  */
 export interface ProviderSites {
+  adultOnly?: boolean;
   sites?: string[];
 }
 

@@ -1,0 +1,15 @@
+import { load } from 'cheerio';
+import type { MangaProvider, MangaChapterEntry } from '../../types/index.js';
+import { fetchResponse } from '../../utils/http/fetch.js';
+import { flightRecords, findReaderPages } from '../adult/reader-flight.js';
+const BASE='https://pornhwareader.com';
+const normalize=(s:string)=>s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
+const provider:MangaProvider={name:'pornhwareader',adultOnly:true,sites:[BASE],async getChapters(params){
+ if(params.contentMode!=='adult')return [];
+ let route=params.sourceIds?.pornhwareader;
+ if(!route){const wanted=new Set([params.title,...(params.titles||[])].filter((s):s is string=>!!s).map(normalize));const response=await fetchResponse(BASE+'/api/search?q='+encodeURIComponent(params.title||params.titles?.[0]||''));if(!response.ok)throw new Error('PornhwaReader search unavailable');const data=await response.json() as any;const rows=(data.groups||[]).filter((g:any)=>g.kind==='series'||g.kind==='pornhwa').flatMap((g:any)=>g.items||[]);const match=rows.find((r:any)=>wanted.has(normalize(r.title))||(r.alias&&wanted.has(normalize(r.alias))));if(!match)return [];route=String(match.publicId)+'/'+match.urlSlug;}
+ const chapters:MangaChapterEntry[]=[];let hasUncensored=false;
+ for(const edition of ['standard','uncensored'] as const){if(edition==='uncensored'&&!hasUncensored)continue;const url=BASE+'/series/'+route+(edition==='uncensored'?'?edition=uncensored':'');const response=await fetchResponse(url);if(!response.ok){if(edition==='uncensored'&&response.status===404)continue;throw new Error('PornhwaReader '+edition+' edition unavailable ('+response.status+')');}const html=await response.text();if(edition==='standard')hasUncensored=/>Uncensored(?:<|\s)/.test(html)||/\"uncensored\":\s*[1-9]/.test(html);const $=load(html);const seen=new Set<string>();$('a[href*="/chapter-"]').each((_,a)=>{const href=$(a).attr('href')||'';const match=href.match(/\/chapter-(\d+(?:\.\d+)?)(-uncensored)?$/);if(!match||(match[2]?'uncensored':'standard')!==edition||seen.has(href))return;seen.add(href);chapters.push({number:Number(match[1]),title:$(a).text().trim()||null,volume:null,sources:[{provider:'pornhwareader@'+edition,providerName:'PornhwaReader · '+(edition==='uncensored'?'Uncensored':'Standard / censored'),chapterKey:'pornhwareader@'+edition+':'+href,providerChapterId:href,language:'en',scanlator:null,releaseDate:null}]});});}
+ return chapters.sort((a,b)=>b.number-a.number);
+},async getPages(chapterKey){const route=chapterKey.slice(chapterKey.indexOf(':')+1);if(!/^\/series\/\d+\/[a-z0-9-]+\/chapter-\d+(?:\.\d+)?(?:-uncensored)?$/.test(route))throw new Error('Invalid PornhwaReader chapter');const response=await fetchResponse(BASE+route);if(!response.ok)throw new Error('PornhwaReader chapter unavailable');const pages=findReaderPages(flightRecords(await response.text()));if(!pages.length)throw new Error('PornhwaReader page payload missing');return pages.map((p,i)=>({pageNumber:i+1,imageUrl:p.url,width:p.width,height:p.height,headers:{Referer:BASE+'/'}}));}};
+export default provider;

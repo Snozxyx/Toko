@@ -121,7 +121,7 @@ export class TokoBundleClass {
    */
   async single(opts: SourceOptions): Promise<SourceResult[]> {
     const results = await runProviders(
-      STREAM_PROVIDERS,
+      STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
       async p => stampPriority(await p.single(opts), p.name),
       undefined,
       resolveProviderRunOptions(opts.providerOptions)
@@ -135,7 +135,7 @@ export class TokoBundleClass {
   async debugSingle(opts: SourceOptions): Promise<DebugProviderResult<SourceResult>> {
     const diagnostics: ProviderDiagnostic[] = [];
     const results = await runProviders(
-      STREAM_PROVIDERS,
+      STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
       async p => stampPriority(await p.single(opts), p.name),
       diagnostics,
       resolveProviderRunOptions(opts.providerOptions)
@@ -153,7 +153,7 @@ export class TokoBundleClass {
   ): Promise<SourceResult[]> {
     const options = resolveProviderRunOptions(opts.providerOptions);
     return runProvidersProgressive(
-      STREAM_PROVIDERS,
+      STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
       async p => stampPriority(annotateResults(await p.single(opts)), p.name),
       onChunk,
       options,
@@ -170,7 +170,7 @@ export class TokoBundleClass {
   async batch(opts: SourceOptions): Promise<SourceResult[]> {
     const options = resolveProviderRunOptions(opts.providerOptions);
     const [stream, torrent] = await Promise.all([
-      runProviders(STREAM_PROVIDERS, async p => stampPriority(await p.single(opts), p.name), undefined, options),
+      runProviders(STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'), async p => stampPriority(await p.single(opts), p.name), undefined, options),
       runProviders(TORRENT_PROVIDERS, async p => stampPriority(await p.batch(opts), p.name), undefined, options),
     ]);
     return annotateResults([...stream, ...torrent]);
@@ -183,7 +183,7 @@ export class TokoBundleClass {
     const diagnostics: ProviderDiagnostic[] = [];
     const options = resolveProviderRunOptions(opts.providerOptions);
     const [stream, torrent] = await Promise.all([
-      runProviders(STREAM_PROVIDERS, async p => stampPriority(await p.single(opts), p.name), diagnostics, options),
+      runProviders(STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'), async p => stampPriority(await p.single(opts), p.name), diagnostics, options),
       runProviders(TORRENT_PROVIDERS, async p => stampPriority(await p.batch(opts), p.name), diagnostics, options),
     ]);
     return { results: annotateResults([...stream, ...torrent]), diagnostics };
@@ -216,7 +216,7 @@ export class TokoBundleClass {
     const options = resolveProviderRunOptions(opts.providerOptions);
     const [streamResults, torrentResults] = await Promise.all([
       runProvidersProgressive(
-        STREAM_PROVIDERS,
+        STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
         async p => stampPriority(annotateResults(await p.single(opts)), p.name),
         onChunk,
         options,
@@ -325,7 +325,7 @@ export class TokoBundleClass {
    */
   async movie(opts: SourceOptions): Promise<SourceResult[]> {
     const results = await runProviders(
-      STREAM_PROVIDERS,
+      STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
       p => (p.movie ? p.movie(opts) : p.single(opts)),
       undefined,
       resolveProviderRunOptions(opts.providerOptions)
@@ -340,7 +340,7 @@ export class TokoBundleClass {
    */
   async getLanguages(opts: SourceOptions): Promise<LanguageCapability[]> {
     const results = await runProviders(
-      STREAM_PROVIDERS,
+      STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
       async p => {
         if (p.getLanguages) return p.getLanguages(opts);
         return [];
@@ -380,7 +380,7 @@ export class TokoBundleClass {
   async streamMangaChapters(params: MangaChapterParams, publish: (rows: MangaChapterEntry[]) => void): Promise<MangaChapterEntry[]> {
     const enriched = await this.enrichMangaParams(params);
     const deadline = Date.now() + 8000;
-    const all = await runProvidersProgressive(MANGA_PROVIDERS, p => {
+    const all = await runProvidersProgressive(MANGA_PROVIDERS.filter(p => !p.adultOnly || params.contentMode === 'adult'), p => {
       const remaining = deadline - Date.now();
       if (remaining <= 0) return Promise.reject(new Error('Manga discovery budget exhausted'));
       return withProviderTimeout(p.getChapters(enriched), remaining);
@@ -399,7 +399,7 @@ export class TokoBundleClass {
     const diagnostics: ProviderDiagnostic[] = [];
     const deadline = Date.now() + 8000;
     const all = await runProviders(
-      MANGA_PROVIDERS,
+      MANGA_PROVIDERS.filter(p => !p.adultOnly || params.contentMode === 'adult'),
       p => withProviderTimeout(p.getChapters(enriched), Math.max(1, deadline - Date.now())),
       diagnostics,
       resolveProviderRunOptions({ timeoutMs: 8000, maxRetries: 0, maxConcurrency: 6 })
@@ -413,6 +413,7 @@ export class TokoBundleClass {
    */
   async getMangaPages(params: {
     chapterKey: string;
+    contentMode?: 'sfw' | 'adult';
     provider?: string;
     providerChapterId?: string;
     anilistId?: number;
@@ -426,9 +427,9 @@ export class TokoBundleClass {
       providerName = colonIdx >= 0 ? chapterKey.slice(0, colonIdx) : chapterKey;
     }
 
-    const baseProvider = /^justmanga@[\w-]+$/.test(providerName || '') ? 'justmanga' : atsuBaseProvider(providerName);
+    const baseProvider = /^pornhwareader@(standard|uncensored)$/.test(providerName || '') ? 'pornhwareader' : /^justmanga@[\w-]+$/.test(providerName || '') ? 'justmanga' : atsuBaseProvider(providerName);
     const provider = MANGA_PROVIDERS.find(p => p.name === baseProvider);
-    if (!provider) throw new ChapterNotFoundError(chapterKey);
+    if (!provider || (provider.adultOnly && params.contentMode !== 'adult')) throw new ChapterNotFoundError(chapterKey);
 
     const pages = await provider.getPages(chapterKey);
     if (pages.length === 0) throw new ChapterNotFoundError(chapterKey);
@@ -620,7 +621,7 @@ export class TokoBundleClass {
       };
 
       const results = await runProviders(
-        STREAM_PROVIDERS,
+        STREAM_PROVIDERS.filter(p => !p.adultOnly || opts.contentMode === 'adult'),
         p => p.single(opts)
       ) as SourceResult[];
 

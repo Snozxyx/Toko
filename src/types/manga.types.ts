@@ -37,6 +37,9 @@ export interface MangaPageEntry {
 }
 
 export interface MangaChapterParams {
+  contentMode?: 'sfw' | 'adult';
+  sourceIds?: Record<string,string>;
+  tatakaiId?: string;
   anilistId?: number;
   malId?: number;
   title?: string;

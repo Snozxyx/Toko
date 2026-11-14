@@ -2,7 +2,7 @@
   "id": "tatakai.extension.toko",
   "name": "Toko",
   "type": "custom",
-  "version": "4.5.9",
+  "version": "4.5.11",
   "browserDomains": [
     "webnovel.com",
     "novelfull.com",
@@ -134,7 +134,6 @@
     "network:domain:vidmoly.me",
     "network:domain:download.openx.xyz",
     "network:domain:short.icu",
-    "network:domain:movieboxhd.net",
     "network:domain:movieboxhd.net",
     "network:domain:h5-api.aoneroom.com",
     "network:domain:netfilm.world",
@@ -346,8 +345,6 @@
     "network:domain:www.divinedaolibrary.com",
     "network:domain:divinedaolibrary.com",
     "network:domain:readnovelfull.com",
-    "network:domain:www.novelcool.com",
-    "network:domain:novelcool.com",
     "network:domain:novgo.net",
     "network:domain:www.re-library.com",
     "network:domain:re-library.com",
@@ -356,6 +353,17 @@
     "network:domain:manta.net",
     "network:domain:static.mantacdn.net",
     "network:domain:www.scribblehub.com",
-    "network:domain:scribblehub.com"
+    "network:domain:scribblehub.com",
+    "network:domain:hentaidb.xyz",
+    "network:domain:hstream.moe",
+    "network:domain:pornhwareader.com",
+    "network:domain:media.pornhwareader.com",
+    "network:domain:img.pornhwadb.com",
+    "network:domain:imoto-str.ane-h.xyz",
+    "network:domain:chibi-str.imoto-h.xyz",
+    "network:domain:koneko-str.musume-h.xyz",
+    "network:domain:shinobu-str.rorikon-h.xyz",
+    "network:domain:oppai-str.shoujo-h.org",
+    "network:domain:komako-b-str.musume-h.xyz"
   ]
 }
